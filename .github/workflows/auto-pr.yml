@@ -64,8 +64,8 @@ jobs:
       - name: 🔐 Authenticate GitHub CLI
         if: steps.branch.outputs.skip != 'true'
         run: |
-          echo "${GITHUB_TOKEN}" | gh auth login --with-token
-          # gh auth setup-git
+          # echo "${GITHUB_TOKEN}" | gh auth login --with-token
+          gh auth setup-git
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
