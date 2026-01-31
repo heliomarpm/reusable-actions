@@ -2,6 +2,12 @@
 
 A stack-agnostic CI/CD framework for GitHub Actions.
 
+> ⚠️ This project is production-ready and used as CI/CD foundation.
+> Versioning and releases are fully automated.
+
+![CI](https://github.com/heliomarpm/ci-cd-reusable/actions/workflows/ci.yml/badge.svg)
+
+
 ## ✨ Features
 - 🔍 Automatic stack detection (Node, PHP, .NET, Python, Go)
 - 🧪 Automated unit test execution
