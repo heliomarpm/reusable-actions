@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect stack
+        uses: ./.github/actions/detect-stack
+
+      - name: Run tests
+        uses: ./.github/actions/run-tests
