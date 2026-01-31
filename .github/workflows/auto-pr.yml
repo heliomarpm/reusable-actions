@@ -11,7 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: write  # ESSENCIAL: Concede permissão para criar e manipular Pull Requests.
+      actions: read
+
 
     steps:
       - name: Define PR base branch

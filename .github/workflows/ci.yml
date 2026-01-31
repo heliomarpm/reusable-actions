@@ -23,7 +23,6 @@ jobs:
 
     permissions:
       contents: write       # Necessário para operações gerais de escrita
-      pull-requests: write  # ESSENCIAL: Concede permissão para criar e manipular Pull Requests.
       actions: read
 
     steps:
