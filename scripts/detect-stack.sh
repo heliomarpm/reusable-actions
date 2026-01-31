@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🔍 Detecting project stack..."
+log() {
+  echo "$1" >&2
+}
+
+log "🔍 Detecting project stack..."
 
 if [ -f package.json ] || [ -f yarn.lock ] || [ -f pnpm-lock.yaml ]; then
   echo "node"
   exit 0
 fi
 
-if [ -f composer.json ] || [ -f "index.php" ] || [ -f "default.php" ]; then
+if [ -f composer.json ] || [ -f index.php ] || [ -f default.php ]; then
   echo "php"
   exit 0
 fi
@@ -28,7 +32,7 @@ if [ -f go.mod ]; then
   exit 0
 fi
 
-echo "❌ Unable to detect project stack."
-echo "👉 Supported stacks: node, php, dotnet, python, go"
-echo "👉 You can override by setting STACK env variable."
+log "❌ Unable to detect project stack."
+log "👉 Supported stacks: node, php, dotnet, python, go"
+log "👉 You can override by setting STACK env variable."
 exit 1
