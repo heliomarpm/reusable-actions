@@ -19,7 +19,8 @@ jobs:
       - name: Define PR base branch
         id: pr-base
         run: |
-          BRANCH="${GITHUB_REF_NAME}"
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          echo "Detected branch: $BRANCH"
 
           if [ "$BRANCH" = "develop" ]; then
             echo "base=main" >> $GITHUB_OUTPUT
@@ -39,10 +40,10 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN }}
           base: ${{ steps.pr-base.outputs.base }}
-          branch: ${{ github.ref_name }}
-          title: "Auto PR: ${{ github.ref_name }} → ${{ steps.pr-base.outputs.base }}"
+          branch: ${{ github.event.workflow_run.head_branch }}
+          title: "Auto PR: ${{ github.event.workflow_run.head_branch }} → ${{ steps.pr-base.outputs.base }}"
           body: |
             PR criada ou atualizada automaticamente após CI com sucesso.
 
-            Origem: `${{ github.ref_name }}`
+            Origem: `${{ github.event.workflow_run.head_branch }}`
             Destino: `${{ steps.pr-base.outputs.base }}`
