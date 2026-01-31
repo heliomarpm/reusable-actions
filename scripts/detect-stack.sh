@@ -18,7 +18,7 @@ if ls *.csproj >/dev/null 2>&1 || ls *.sln >/dev/null 2>&1; then
   exit 0
 fi
 
-if [ -f requirements.txt ] || [ -f pyproject.toml ] || [ -f Pipfile ] || [ -f uv.lock ] || [ -f poetry.lock] || [ -f setup.py ]; then
+if [ -f requirements.txt ] || [ -f pyproject.toml ] || [ -f Pipfile ] || [ -f uv.lock ] || [ -f poetry.lock ] || [ -f setup.py ]; then
   echo "python"
   exit 0
 fi
