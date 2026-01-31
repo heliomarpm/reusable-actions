@@ -2,11 +2,11 @@ name: Reusable Create/Update PR
 
 on:
   workflow_call:
-    inputs:
-      head_branch:
-        description: "Branch de origem (ex: develop, feature/**)"
-        required: true
-        type: string
+    # inputs:
+    #   head_branch:
+    #     description: "Branch de origem (ex: develop, feature/**)"
+    #     required: true
+    #     type: string
     secrets:
       GITHUB_TOKEN:
         required: true
