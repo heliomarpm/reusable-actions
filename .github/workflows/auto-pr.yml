@@ -106,6 +106,8 @@ jobs:
           # Tenta encontrar um PR existente
           PR_NUMBER=$(gh pr list --base "$BASE" --head "$HEAD" --json number --jq '.[0].number')
 
+          echo "👉 $TITLE"
+
           if [ -z "$PR_NUMBER" ]; then
             echo "No existing PR found. Creating new PR..."
             gh pr create \
