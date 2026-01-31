@@ -1,0 +1,40 @@
+name: PR Feature → Develop
+
+on:
+  push:
+    branches:
+      - feature/**
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create or update PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const head = context.ref.replace('refs/heads/', '');
+            const base = 'develop';
+
+            const prs = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: `${owner}:${head}`,
+              base
+            });
+
+            if (prs.data.length === 0) {
+              await github.rest.pulls.create({
+                owner,
+                repo,
+                title: `Merge ${head} into develop`,
+                head,
+                base,
+                body: 'Automated PR created by CI/CD framework.'
+              });
+              console.log('✅ PR created');
+            } else {
+              console.log('ℹ️ PR already exists');
+            }

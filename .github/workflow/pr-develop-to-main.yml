@@ -1,0 +1,40 @@
+name: PR Develop → Main
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create or update PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const head = 'develop';
+            const base = 'main';
+
+            const prs = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: `${owner}:${head}`,
+              base
+            });
+
+            if (prs.data.length === 0) {
+              await github.rest.pulls.create({
+                owner,
+                repo,
+                title: 'Release: develop → main',
+                head,
+                base,
+                body: 'Automated release PR.'
+              });
+              console.log('✅ PR created');
+            } else {
+              console.log('ℹ️ PR already exists');
+            }
