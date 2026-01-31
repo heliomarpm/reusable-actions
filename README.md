@@ -1,6 +1,6 @@
 # Agnostic CI/CD
 
-![CI](https://github.com/heliomarpm/ci-cd-reusable/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/heliomarpm/reusable-actions/actions/workflows/ci.yml/badge.svg)
 
 A **technology-agnostic, reusable CI/CD framework** for GitHub Actions.
 
@@ -79,7 +79,7 @@ on:
 
 jobs:
   ci:
-    uses: heliomarpm/ci-cd-reusable/.github/workflows/ci.yml@v1
+    uses: heliomarpm/reusable-actions/.github/workflows/ci.yml@v1
 ```    
 
 ---

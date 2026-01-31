@@ -30,10 +30,10 @@ jobs:
       - name: Checkout consumer repository
         uses: actions/checkout@v4
 
-      - name: Checkout ci-cd-reusable scripts
+      - name: Checkout reusable-actions scripts
         uses: actions/checkout@v4
         with:
-          repository: heliomarpm/ci-cd-reusable
+          repository: heliomarpm/reusable-actions
           ref: main
           path: ${{ env.CI_REUSABLE_PATH }}
 
