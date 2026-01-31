@@ -32,10 +32,10 @@ jobs:
       - name: Detect project stack
         id: detect
         run: |
-          chmod +x scripts/detect-stack.sh
+          chmod +x .ci/scripts/detect-stack.sh
           echo "stack=$(.ci/scripts/detect-stack.sh)" >> $GITHUB_OUTPUT
 
       - name: Run unit tests
         run: |
-          chmod +x scripts/test-${{ steps.detect.outputs.stack }}.sh
+          chmod +x .ci/scripts/test-${{ steps.detect.outputs.stack }}.sh
           .ci/scripts/test-${{ steps.detect.outputs.stack }}.sh
