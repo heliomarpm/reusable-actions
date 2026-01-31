@@ -1,0 +1,16 @@
+name: Detect Stack
+description: Detects the project technology stack
+runs:
+  using: composite
+  steps:
+    - name: Detect stack
+      shell: bash
+      run: |
+        if [ -n "$STACK" ]; then
+          echo "ℹ️ STACK overridden manually: $STACK"
+        else
+          STACK=$(./scripts/detect-stack.sh)
+        fi
+
+        echo "STACK=$STACK" >> $GITHUB_ENV
+        echo "✅ Stack detected: $STACK"
