@@ -3,6 +3,10 @@ name: Reusable CI
 on:
   workflow_call:
     inputs:
+      project_path:
+        required: false
+        type: string
+        default: "."
       stack:
         required: false
         type: string
@@ -28,16 +32,45 @@ jobs:
           ref: main
           path: .ci
 
+      - name: Debug workspace
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
+
+      - name: Debug workspace with input path
+        working-directory: ${{ inputs.project_path }}
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
+
+      - name: Debug workspace with workdir 2
+        working-directory: ${{ github.workspace }}
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
+
 
       - name: Detect project stack
         id: detect
-        working-directory: ${{ github.workspace }}
+        working-directory: ${{ inputs.project_path }}
         run: |
-          chmod +x .ci/scripts/detect-stack.sh
-          echo "stack=$(.ci/scripts/detect-stack.sh)" >> $GITHUB_OUTPUT
+          chmod +x ${{ github.workspace }}/.ci/scripts/detect-stack.sh
+          STACK=$(${{ github.workspace }}/.ci/scripts/detect-stack.sh)
+          echo "stack=$STACK" >> $GITHUB_OUTPUT
 
       - name: Run unit tests
-        working-directory: ${{ github.workspace }}
+        if: steps.detect.outputs.stack != ''
         run: |
           chmod +x .ci/scripts/test-${{ steps.detect.outputs.stack }}.sh
           .ci/scripts/test-${{ steps.detect.outputs.stack }}.sh
+
+      - name: Fail if stack not detected
+        if: steps.detect.outputs.stack == ''
+        run: |
+          echo "❌ Stack not detected. Check project_path or repository structure."
