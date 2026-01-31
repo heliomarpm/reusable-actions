@@ -26,16 +26,16 @@ jobs:
         with:
           repository: heliomarpm/ci-cd-reusable
           ref: main
-          path: .
+          path: .ci
 
 
       - name: Detect project stack
         id: detect
         run: |
           chmod +x scripts/detect-stack.sh
-          echo "stack=$(./scripts/detect-stack.sh)" >> $GITHUB_OUTPUT
+          echo "stack=$(.ci/scripts/detect-stack.sh)" >> $GITHUB_OUTPUT
 
       - name: Run unit tests
         run: |
           chmod +x scripts/test-${{ steps.detect.outputs.stack }}.sh
-          ./scripts/test-${{ steps.detect.outputs.stack }}.sh
+          .ci/scripts/test-${{ steps.detect.outputs.stack }}.sh
