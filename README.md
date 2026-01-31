@@ -1,36 +1,88 @@
 # Agnostic CI/CD
 
-A stack-agnostic CI/CD framework for GitHub Actions.
-
-> ⚠️ This project is production-ready and used as CI/CD foundation.
-> Versioning and releases are fully automated.
-
 ![CI](https://github.com/heliomarpm/ci-cd-reusable/actions/workflows/ci.yml/badge.svg)
 
+A **technology-agnostic, reusable CI/CD framework** for GitHub Actions.
+
+This project provides a complete CI/CD foundation that can be reused across multiple repositories, regardless of the programming language or stack.
+
+It handles:
+- Stack detection
+- Unit test execution
+- Pull Request automation
+- Semantic releases
+- Automatic changelog generation
+
+All with **zero vendor lock-in** and **minimal configuration**.
+
+---
 
 ## ✨ Features
-- 🔍 Automatic stack detection (Node, PHP, .NET, Python, Go)
-- 🧪 Automated unit test execution
-- 🔀 Automatic Pull Request creation
-- 🚀 Release automation (coming next)
-- 🧾 Changelog generation (coming next)
+
+- 🔍 **Automatic stack detection**
+  - Node.js
+  - PHP (Composer or pure PHP)
+  - .NET
+  - Python (pip, Poetry, Pipenv, UV)
+  - Go
+
+- 🧪 **Unit test execution** per stack
+- 🔀 **Automatic Pull Request creation**
+  - `feature/* → develop`
+  - `develop → main`
+- 🚀 **Automatic release on merge to `main`**
+- 🧾 **Semantic Versioning & CHANGELOG.md**
+- ♻️ **Reusable workflows** (`uses:`)
+- ⚙️ **Override-friendly via environment variables**
+
+---
+
+## 🧠 Design Principles
+
+- Stack-agnostic by default
+- Convention over configuration
+- Fail fast, fail clearly
+- No hidden magic
+- Easy to extend, easy to debug
+
+---
 
 ## 📦 Supported Stacks
-- Node.js
-- PHP
-- .NET
-- Python
-- Go
+
+| Stack   | Detection Strategy |
+|--------|--------------------|
+| Node.js | `package.json`, `yarn.lock`, `pnpm-lock.yaml` |
+| PHP | `composer.json`, `index.php`, `default.php` |
+| .NET | `*.csproj`, `*.sln` |
+| Python | `requirements.txt`, `pyproject.toml`, `Pipfile`, `poetry.lock`, `uv.lock`, `setup.py` |
+| Go | `go.mod` |
+
+---
 
 ## 🚀 Getting Started
 
-### Option 1: Template repository
-Click **Use this template** and start coding.
+### Option 1 — Use as a Template Repository
+Click **"Use this template"** on GitHub and start coding.
 
-### Option 2: Reuse workflows
+### Option 2 — Reuse in an existing project
+
+Create a workflow in your project:
+
 ```yaml
-uses: your-org/agnostic-ci-cd/.github/workflows/ci.yml@v1
-```
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+jobs:
+  ci:
+    uses: heliomarpm/ci-cd-reusable/.github/workflows/ci.yml@v1
+```    
+
+---
 
 ## ⚙️ Configuration
 
@@ -48,32 +100,89 @@ env:
   SKIP_TESTS: true
 ```
 
-## 📦 Release & Versioning
+---
 
-This project follows **Conventional Commits**.
+## 🔀 Pull Request Automation
 
-### Supported types
-- feat → minor
-- fix → patch
-- perf → patch
-- BREAKING CHANGE → major
+This project automatically creates and updates Pull Requests:
 
-### Release trigger
-- Merge to `main`
+| Source Branch | Target Branch |
+| ------------- | ------------- |
+| `feature/*`   | `develop`     |
+| `develop`     | `main`        |
 
-### Outputs
-- Git tag
-- GitHub Release
-- Updated CHANGELOG.md
+
+PRs are idempotent and never duplicated.
 
 ---
 
-## Roadmap
+## 🚀 Release & Versioning
+
+Releases are fully automated and triggered when a Pull Request is merged into `main`.
+
+**Versioning Rules (Conventional Commits)**
+
+| Commit Type       | Release Impact |
+| ----------------- | -------------- |
+| `feat:`           | minor          |
+| `fix:`            | patch          |
+| `perf:`           | patch          |
+| `BREAKING CHANGE` | major          |
+
+
+**What happens on release**
+
+- New Git tag (`vX.Y.Z`)
+- GitHub Release created
+- `CHANGELOG.md` updated and committed
+
+---
+
+## 🧾 CHANGELOG
+
+The `CHANGELOG.md` file is generated automatically from commit history.
+
+Do not edit it manually.
+
+---
+
+## 🧪 Unit Tests
+
+Each stack has its own test strategy:
+
+| Stack  | Command                      |
+| ------ | ---------------------------- |
+| Node   | `npm test`                   |
+| PHP    | `phpunit`                    |
+| .NET   | `dotnet test`                |
+| Python | `pytest` (pip / Poetry / UV) |
+| Go     | `go test ./...`              |
+
+---
+
+## 🛣 Roadmap
 
 - [x] Stack detection
+- [x] Unit test execution
 - [x] PR automation
-- [x] Test execution
-- [x] Release automation
-- [x] Semantic versioning
+- [x] Semantic releases
 - [x] Changelog automation
+- [ ] Deployment hooks
+- [ ] Matrix builds
+- [ ] Config via .ci-cd.yml
 
+--- 
+
+## 🤝 Contributing
+
+Contributions are welcome!
+
+Please follow:
+
+- Conventional Commits
+- Clear, minimal changes
+- Stack-agnostic mindset
+
+See [CONTRIBUTING](.github/CONTRIBUTING.md) for details.
+
+---
