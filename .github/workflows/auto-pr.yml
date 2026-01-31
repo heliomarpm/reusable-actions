@@ -1,0 +1,46 @@
+name: Auto PR
+
+on:
+  workflow_call:
+    secrets:
+      GH_TOKEN:
+        required: true
+
+jobs:
+  auto-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Define PR base branch
+        id: pr-base
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+
+          if [ "$BRANCH" = "develop" ]; then
+            echo "base=main" >> $GITHUB_OUTPUT
+          elif [ "$BRANCH" = "main" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "base=develop" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Skip if branch is main
+        if: steps.pr-base.outputs.skip == 'true'
+        run: echo "Branch main detected. Skipping auto PR."
+
+      - name: Create or update PR
+        if: steps.pr-base.outputs.skip != 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          base: ${{ steps.pr-base.outputs.base }}
+          branch: ${{ github.ref_name }}
+          title: "Auto PR: ${{ github.ref_name }} → ${{ steps.pr-base.outputs.base }}"
+          body: |
+            PR criada ou atualizada automaticamente após CI com sucesso.
+
+            Origem: `${{ github.ref_name }}`
+            Destino: `${{ steps.pr-base.outputs.base }}`
