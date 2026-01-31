@@ -1,4 +1,4 @@
-name: Auto PR
+name: Create/Update PR
 
 on:
   workflow_call:
