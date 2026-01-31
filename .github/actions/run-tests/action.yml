@@ -1,0 +1,39 @@
+name: Run Tests
+description: Run unit tests based on detected stack
+runs:
+  using: composite
+  steps:
+    - name: Check skip tests
+      shell: bash
+      run: |
+        if [ "$SKIP_TESTS" = "true" ]; then
+          echo "⚠️ Tests skipped (SKIP_TESTS=true)"
+          exit 0
+        fi
+
+    - name: Run stack tests
+      shell: bash
+      run: |
+        echo "🧪 Running tests for stack: $STACK"
+
+        case "$STACK" in
+          node)
+            ./scripts/test-node.sh
+            ;;
+          php)
+            ./scripts/test-php.sh
+            ;;
+          dotnet)
+            ./scripts/test-dotnet.sh
+            ;;
+          python)
+            ./scripts/test-python.sh
+            ;;
+          go)
+            ./scripts/test-go.sh
+            ;;
+          *)
+            echo "❌ Unsupported stack: $STACK"
+            exit 1
+            ;;
+        esac
