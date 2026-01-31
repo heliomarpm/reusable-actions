@@ -18,6 +18,8 @@ jobs:
   ci: 
     name: Detecta Stack e Executa Testes
     runs-on: ubuntu-latest
+    env:
+      CI_REUSABLE_PATH: .__ci_cd_reusable__
 
     permissions:
       contents: write       # Necessário para operações gerais de escrita
@@ -33,7 +35,7 @@ jobs:
         with:
           repository: heliomarpm/ci-cd-reusable
           ref: main
-          path: .ci
+          path: ${{ env.CI_REUSABLE_PATH }}
 
       - name: Debug workspace
         run: |
@@ -46,15 +48,17 @@ jobs:
         id: detect
         working-directory: ${{ inputs.project_path }}
         run: |
-          chmod +x ${{ github.workspace }}/.ci/scripts/detect-stack.sh
-          STACK=$(${{ github.workspace }}/.ci/scripts/detect-stack.sh)
+          # chmod +x ${{ github.workspace }}/$CI_REUSABLE_PATH/scripts/detect-stack.sh
+          chmod +x $CI_REUSABLE_PATH/scripts/detect-stack.sh
+          STACK=$($CI_REUSABLE_PATH/scripts/detect-stack.sh)
+          echo "✅ Stack detected: $STACK"
           echo "stack=$STACK" >> $GITHUB_OUTPUT
 
       - name: Run unit tests
         if: steps.detect.outputs.stack != ''
         run: |
-          chmod +x .ci/scripts/test-${{ steps.detect.outputs.stack }}.sh
-          .ci/scripts/test-${{ steps.detect.outputs.stack }}.sh
+          chmod +x $CI_REUSABLE_PATH/scripts/test-${{ steps.detect.outputs.stack }}.sh
+          $CI_REUSABLE_PATH/scripts/test-${{ steps.detect.outputs.stack }}.sh
 
       - name: Fail if stack not detected
         if: steps.detect.outputs.stack == ''
