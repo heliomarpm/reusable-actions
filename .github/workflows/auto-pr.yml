@@ -1,49 +1,126 @@
-name: Create/Update PR
+name: Reusable Create/Update PR
 
 on:
   workflow_call:
+    inputs:
+      head_branch:
+        description: "Branch de origem (ex: develop, feature/**)"
+        required: true
+        type: string
     secrets:
-      GH_TOKEN:
+      GITHUB_TOKEN:
         required: true
 
 jobs:
   auto-pr:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
-      pull-requests: write  # ESSENCIAL: Concede permissão para criar e manipular Pull Requests.
-      actions: read
-
+      pull-requests: write
 
     steps:
-      - name: Define PR base branch
-        id: pr-base
+      - name: 📌 Resolve PR base branch
+        id: branch
         run: |
-          BRANCH="${{ github.event.workflow_run.head_branch }}"
-          echo "Detected branch: $BRANCH"
+          # HEAD="${{ inputs.head_branch }}"
+          HEAD="${{ github.event.workflow_run.head_branch }}"
+          echo "Detected head branch: $HEAD"
 
-          if [ "$BRANCH" = "develop" ]; then
-            echo "base=main" >> $GITHUB_OUTPUT
-          elif [ "$BRANCH" = "main" ]; then
+          if [ "$HEAD" = "main" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
+          elif [ "$HEAD" = "develop" ]; then
+            echo "base=main" >> $GITHUB_OUTPUT
           else
             echo "base=develop" >> $GITHUB_OUTPUT
           fi
 
-      - name: Skip if branch is main
-        if: steps.pr-base.outputs.skip == 'true'
-        run: echo "Branch main detected. Skipping auto PR."
+          echo "head=$HEAD" >> $GITHUB_OUTPUT
 
-      - name: Create or update PR
-        if: steps.pr-base.outputs.skip != 'true'
-        uses: peter-evans/create-pull-request@v6
+      - name: 🚫 Skip main branch
+        if: steps.branch.outputs.skip == 'true'
+        run: echo "Main branch detected. Skipping auto PR."
+
+      - name: ⬇️ Checkout consumer repository
+        if: steps.branch.outputs.skip != 'true'
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN }}
-          base: ${{ steps.pr-base.outputs.base }}
-          branch: ${{ github.event.workflow_run.head_branch }}
-          title: "Auto PR: ${{ github.event.workflow_run.head_branch }} → ${{ steps.pr-base.outputs.base }}"
-          body: |
-            PR criada ou atualizada automaticamente após CI com sucesso.
+          fetch-depth: 0    # Necessário para evitar falhas do gh CLI em repositórios grandes
 
-            Origem: `${{ github.event.workflow_run.head_branch }}`
-            Destino: `${{ steps.pr-base.outputs.base }}`
+      # - name: Create or update PR
+      #   if: steps.pr-base.outputs.skip != 'true'
+      #   uses: peter-evans/create-pull-request@v6
+      #   with:
+      #     token: ${{ secrets.GH_TOKEN }}
+      #     base: ${{ steps.pr-base.outputs.base }}
+      #     branch: ${{ github.event.workflow_run.head_branch }}
+      #     title: "Auto PR: ${{ github.event.workflow_run.head_branch }} → ${{ steps.pr-base.outputs.base }}"
+      #     body: |
+      #       PR criada ou atualizada automaticamente após CI com sucesso.
+
+      #       Origem: `${{ github.event.workflow_run.head_branch }}`
+      #       Destino: `${{ steps.pr-base.outputs.base }}`
+
+      - name: 🔐 Authenticate GitHub CLI
+        if: steps.branch.outputs.skip != 'true'
+        run: |
+          echo "${GITHUB_TOKEN}" | gh auth login --with-token
+          # gh auth setup-git
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷 Ensure auto-generated label exists
+        if: steps.branch.outputs.skip != 'true'
+        run: |
+          gh label create auto-generated --description "Pull Request criada automaticamente" --color 006B75 --force 
+          # gh label create "pending-review" --description "Aguardando revisão" --color "FBCA04" || true
+          # gh label create "coverage-failed" --description "Cobertura de testes abaixo do limite mínimo." --color "D93F0B" || true
+          # gh label create "coverage-passed" --description "Cobertura de testes acima do limite mínimo." --color "0E8A16" || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📝 Generate PR body
+        if: steps.branch.outputs.skip != 'true'
+        run: |
+          cat <<EOF > pr_body.md
+          ## 🤖 Pull Request Automática
+
+          Esta PR foi criada ou atualizada automaticamente.
+
+          **Origem:** \`${{ steps.branch.outputs.head }}\`  
+          **Destino:** \`${{ steps.branch.outputs.base }}\`
+
+          ---
+          ✔ CI executado com sucesso  
+          ✔ Testes validados  
+          ✔ Processo automatizado
+          EOF
+
+      - name: 📜 Create or Update Pull Request
+        if: steps.branch.outputs.skip != 'true'
+        run: |
+          BASE="${{ steps.branch.outputs.base }}"
+          HEAD="${{ steps.branch.outputs.head }}"
+          TITLE="Auto PR: ${HEAD} → ${BASE}"
+
+          # Tenta encontrar um PR existente
+          PR_NUMBER=$(gh pr list --base "$BASE" --head "$HEAD" --json number --jq '.[0].number')
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No existing PR found. Creating new PR..."
+            gh pr create \
+              --base "$BASE" \
+              --head "$HEAD" \
+              --title "$TITLE" \
+              --body-file pr_body.md \
+              --label auto-generated \
+              --assignee "${{ github.actor }}"
+          else
+            echo "Existing PR #$PR_NUMBER found. Updating..."
+            gh pr edit "$PR_NUMBER" \
+              --title "$TITLE" \
+              --body-file pr_body.md \
+              --add-assignee "${{ github.actor }}"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
