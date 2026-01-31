@@ -1,10 +1,14 @@
-name: CI
+name: Reusable CI
 
 on:
-  pull_request:
-    branches: [develop, main]
-  push:
-    branches: [develop]
+  workflow_call:
+    inputs:
+      stack:
+        required: false
+        type: string
+      skip_tests:
+        required: false
+        type: boolean
 
 jobs:
   ci:
@@ -16,5 +20,5 @@ jobs:
       - name: Detect stack
         uses: ./.github/actions/detect-stack
 
-      - name: Run tests
+      - name: Run unit tests
         uses: ./.github/actions/run-tests
