@@ -11,14 +11,26 @@ on:
         type: boolean
 
 jobs:
-  ci:
+  ci: 
+    name: Detecta Stack e Executa Testes
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+    permissions:
+      contents: write       # Necessário para operações gerais de escrita
+      pull-requests: write  # ESSENCIAL: Concede permissão para criar e manipular Pull Requests.
+      actions: read
 
-      - name: Detect stack
-        uses: ./.github/actions/detect-stack
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect project stack
+        id: detect
+        run: |
+          chmod +x scripts/detect-stack.sh
+          echo "stack=$(scripts/detect-stack.sh)" >> $GITHUB_OUTPUT
 
       - name: Run unit tests
-        uses: ./.github/actions/run-tests
+        run: |
+          chmod +x scripts/test-${{ steps.detect.outputs.stack }}.sh
+          scripts/test-${{ steps.detect.outputs.stack }}.sh
