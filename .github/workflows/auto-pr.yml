@@ -225,12 +225,12 @@ jobs:
         run: |
           HEAD="${{ needs.check-branch.outputs.head }}"
           BASE="${{ needs.check-branch.outputs.base }}"
-          TITLE="Auto PR $(date +'%Y-%m-%d'): ${HEAD} → ${BASE}"
+          TITLE="🔀 PR ($(date +'%Y-%m-%d')):  ${HEAD} → ${BASE}"
 
           # Tenta encontrar um PR existente
           PR_NUMBER=$(gh pr list --base "$BASE" --head "$HEAD" --json number --jq '.[0].number')
 
-          echo "👉 $TITLE"
+          echo "$TITLE"
 
           if [ -z "$PR_NUMBER" ]; then
             echo "No existing PR found. Creating new PR..."
