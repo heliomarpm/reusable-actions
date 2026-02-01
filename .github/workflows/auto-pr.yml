@@ -3,6 +3,18 @@ name: Reusable Create/Update PR
 on:
   workflow_call:
     inputs:
+      # base_branch:
+      #   description: "Branch de destino do PR (e.g., main)."
+      #   required: false
+      #   default: "main"
+      #   type: string
+
+      # head_branch:
+      #   description: "Branch de origem do PR (e.g., develop)."
+      #   required: false
+      #   default: "develop"
+      #   type: string
+
       skip-tests:
         type: boolean
         required: false
@@ -209,9 +221,9 @@ jobs:
 
       - name: 📜 Create or Update Pull Request
         run: |
-          BASE="${{ steps.branch.outputs.base }}"
-          HEAD="${{ steps.branch.outputs.head }}"
-          TITLE="Auto PR: ${HEAD} → ${BASE}"
+          BASE="${{ needs.check-branch.outputs.base }}"
+          HEAD="${{ needs.check-branch.outputs.head }}"
+          TITLE="Auto PR $(date +'%Y-%m-%d'): ${HEAD} → ${BASE}"
 
           # Tenta encontrar um PR existente
           PR_NUMBER=$(gh pr list --base "$BASE" --head "$HEAD" --json number --jq '.[0].number')
