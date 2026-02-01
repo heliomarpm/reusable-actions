@@ -49,6 +49,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       skip: ${{ steps.branch.outputs.skip }}
+      head: ${{ steps.branch.outputs.head }}
+      base: ${{ steps.branch.outputs.base }}
 
     # permissions:
     #   contents: read
@@ -205,8 +207,8 @@ jobs:
 
           Esta PR foi criada ou atualizada automaticamente.
 
-          **Origem:** \`${{ steps.branch.outputs.head }}\`  
-          **Destino:** \`${{ steps.branch.outputs.base }}\`
+          **Origem:** \`${{ needs.check-branch.outputs.head }}\`  
+          **Destino:** \`${{ needs.check-branch.outputs.base }}\`
 
           ---
           ✔ CI executado com sucesso  
@@ -221,8 +223,8 @@ jobs:
 
       - name: 📜 Create or Update Pull Request
         run: |
-          BASE="${{ needs.check-branch.outputs.base }}"
           HEAD="${{ needs.check-branch.outputs.head }}"
+          BASE="${{ needs.check-branch.outputs.base }}"
           TITLE="Auto PR $(date +'%Y-%m-%d'): ${HEAD} → ${BASE}"
 
           # Tenta encontrar um PR existente
