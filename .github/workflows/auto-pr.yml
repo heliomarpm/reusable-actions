@@ -28,7 +28,7 @@ on:
       coverage-mode:
         type: string
         required: false
-        default: "info"    # info | block
+        default: "info"    # info | block | decrease-only (falha se a cobertura diminuir)
 
       # coverage-command:
       #   type: string
