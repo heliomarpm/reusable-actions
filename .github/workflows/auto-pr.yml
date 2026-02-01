@@ -68,58 +68,58 @@ jobs:
     if: needs.check-branch.outputs.skip != 'true' && inputs.skip-tests != true 
     runs-on: ubuntu-latest
 
-  steps:
-    - name: 📊 Generate coverage report
-      if: inputs.skip-tests != true
-      id: coverage
-      run: |
-        set -e
+    steps:
+      - name: 📊 Generate coverage report
+        if: inputs.skip-tests != true
+        id: coverage
+        run: |
+          set -e
 
-        mkdir -p coverage
+          mkdir -p coverage
 
-        if [ -n "${{ inputs.coverage-command }}" ]; then
-          echo "▶ Running custom coverage command"
-          eval "${{ inputs.coverage-command }}"
-        else
-          STACK=$(./scripts/detect-stack.sh)
-          echo "Detected stack: $STACK"
+          if [ -n "${{ inputs.coverage-command }}" ]; then
+            echo "▶ Running custom coverage command"
+            eval "${{ inputs.coverage-command }}"
+          else
+            STACK=$(./scripts/detect-stack.sh)
+            echo "Detected stack: $STACK"
 
-          case "$STACK" in
-            node) ./scripts/run-coverage-node.sh ;;
-            dotnet) ./scripts/run-coverage-dotnet.sh ;;
-            python) ./scripts/run-coverage-python.sh ;;
-            *)
-              echo "No coverage supported for this stack"
-              exit 0
-              ;;
-          esac
-        fi
-
-        FILE="coverage/coverage-summary.normalized.json"
-        LINE=$(jq '.line' "$FILE")
-
-        echo "line=$LINE" >> $GITHUB_OUTPUT
-
-
-    - name: ✅ Evaluate coverage
-      if: inputs.skip-tests != true
-      id: coverage-check
-      run: |
-        LINE=${{ steps.coverage.outputs.line }}
-        MIN=${{ inputs.min-coverage }}
-        MODE="${{ inputs.coverage-mode }}"
-
-        STATUS="passed"
-
-        if (( $(echo "$LINE < $MIN" | bc -l) )); then
-          STATUS="failed"
-          if [ "$MODE" = "blocking" ]; then
-            echo "Coverage below threshold"
-            exit 1
+            case "$STACK" in
+              node) ./scripts/run-coverage-node.sh ;;
+              dotnet) ./scripts/run-coverage-dotnet.sh ;;
+              python) ./scripts/run-coverage-python.sh ;;
+              *)
+                echo "No coverage supported for this stack"
+                exit 0
+                ;;
+            esac
           fi
-        fi
 
-        echo "status=$STATUS" >> $GITHUB_OUTPUT
+          FILE="coverage/coverage-summary.normalized.json"
+          LINE=$(jq '.line' "$FILE")
+
+          echo "line=$LINE" >> $GITHUB_OUTPUT
+
+
+      - name: ✅ Evaluate coverage
+        if: inputs.skip-tests != true
+        id: coverage-check
+        run: |
+          LINE=${{ steps.coverage.outputs.line }}
+          MIN=${{ inputs.min-coverage }}
+          MODE="${{ inputs.coverage-mode }}"
+
+          STATUS="passed"
+
+          if (( $(echo "$LINE < $MIN" | bc -l) )); then
+            STATUS="failed"
+            if [ "$MODE" = "blocking" ]; then
+              echo "Coverage below threshold"
+              exit 1
+            fi
+          fi
+
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
 
   create-pr:
     needs: check-branch
