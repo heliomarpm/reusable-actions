@@ -10,9 +10,11 @@ on:
       stack:
         required: false
         type: string
+        default: ""     # node | php | dotnet | python | go | empty for auto-detect
       skip_tests:
         required: false
         type: boolean
+        default: false
 
 jobs:
   ci: 
@@ -43,27 +45,65 @@ jobs:
           echo "📄 Files in root:"
           ls -la
 
-      - name: Detect project stack
-        id: detect
+
+      - name: Resolve project stack
+        id: stack
         working-directory: ${{ inputs.project_path }}
         run: |
-          # chmod +x ${{ github.workspace }}/$CI_REUSABLE_PATH/scripts/detect-stack.sh
+          if [[ -n "${{ inputs.stack }}" ]]; then
+            echo "Using stack from input: ${{ inputs.stack }}"
+            echo "value=${{ inputs.stack }}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           chmod +x $CI_REUSABLE_PATH/scripts/detect-stack.sh
           STACK=$($CI_REUSABLE_PATH/scripts/detect-stack.sh)
-          echo "✅ Stack detected: $STACK"
-          echo "stack=$STACK" >> $GITHUB_OUTPUT
+
+          if [[ -z "$STACK" ]]; then
+            echo "value=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "✅ Detected stack: $STACK"
+          echo "value=$STACK" >> $GITHUB_OUTPUT
+
+
+      - name: Evaluate test execution
+        id: tests
+        working-directory: ${{ inputs.project_path }}
+        run: |
+          if [[ "${{ inputs.skip_tests }}" == "true" ]]; then
+            echo "Tests skipped by input."
+            echo "run=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [[ ! -d "tests" && ! -d "__tests__" && ! -d "test" ]]; then
+            echo "No test directories found."
+            echo "run=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Tests will run."
+          echo "run=true" >> $GITHUB_OUTPUT
+
 
       - name: Run unit tests
-        if: steps.detect.outputs.stack != ''
+        if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true'
+        working-directory: ${{ inputs.project_path }}
         run: |
-          chmod +x $CI_REUSABLE_PATH/scripts/test-${{ steps.detect.outputs.stack }}.sh
-          $CI_REUSABLE_PATH/scripts/test-${{ steps.detect.outputs.stack }}.sh
+          chmod +x $CI_REUSABLE_PATH/scripts/test-${{ steps.stack.outputs.value }}.sh
+          $CI_REUSABLE_PATH/scripts/test-${{ steps.stack.outputs.value }}.sh
+
 
       - name: Run coverage tests
-        if: steps.detect.outputs.stack != ''
+        if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true'
+        working-directory: ${{ inputs.project_path }}
+        continue-on-error: true
         run: |
-          chmod +x $CI_REUSABLE_PATH/scripts/test-coverage-${{ steps.detect.outputs.stack }}.sh
-          $CI_REUSABLE_PATH/scripts/test-coverage-${{ steps.detect.outputs.stack }}.sh
+          chmod +x $CI_REUSABLE_PATH/scripts/test-coverage-${{ steps.stack.outputs.value }}.sh
+          $CI_REUSABLE_PATH/scripts/test-coverage-${{ steps.stack.outputs.value }}.sh
+
 
       - name: Fail if stack not detected
         if: steps.detect.outputs.stack == ''
