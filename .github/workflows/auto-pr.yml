@@ -16,7 +16,7 @@ on:
       coverage-mode:
         type: string
         required: false
-        default: "informative"    # informative | blocking
+        default: "info"    # info | block
 
       # coverage-command:
       #   type: string
@@ -86,31 +86,43 @@ jobs:
           if [ ! -f "$FILE" ]; then
             echo "⚠️ Coverage artifact not found"
             echo "line=" >> $GITHUB_OUTPUT
+            echo "status=missing" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           LINE=$(jq '.line' "$FILE")
           echo "line=$LINE" >> $GITHUB_OUTPUT
+          echo "status=found" >> $GITHUB_OUTPUT
        
 
       - name: ✅ Evaluate coverage
         id: coverage-check
         run: |
+          FOUND_STATUS="${{ steps.coverage.outputs.status }}"
           LINE=${{ steps.coverage.outputs.line }}
           MIN=${{ inputs.min-coverage }}
           MODE="${{ inputs.coverage-mode }}"
 
-          STATUS="passed"
+          FINAL_STATUS="passed"
 
-          if [ -n "$LINE" ] && (( $(echo "$LINE < $MIN" | bc -l) )); then
-            STATUS="failed"
-            if [ "$MODE" = "blocking" ]; then
-              echo "Coverage below threshold"
+          if [ "$FOUND_STATUS" = "missing" ]; then
+            FINAL_STATUS="missing"
+            echo "⚠️ No tests or coverage detected"
+
+            if [ "$MODE" = "block" ]; then
+              echo "❌ Blocking PR: tests not implemented"
+              exit 1
+            fi
+          elif  (( $(echo "$LINE < $MIN" | bc -l) )); then
+            FINAL_STATUS="failed"
+            echo "❌ Coverage below threshold ($LINE < $MIN)"
+
+            if [ "$MODE" = "block" ]; then
               exit 1
             fi
           fi
 
-          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "status=$FINAL_STATUS" >> $GITHUB_OUTPUT
 
 
   create-pr:
