@@ -167,9 +167,9 @@ jobs:
       - name: 🏷 Ensure auto-generated label exists
         run: |
           gh label create auto-generated --description "Pull Request criada automaticamente" --color 006B75 --force 
-          # gh label create "pending-review" --description "Aguardando revisão" --color "FBCA04" || true
-          # gh label create "coverage-failed" --description "Cobertura de testes abaixo do limite mínimo." --color "D93F0B" || true
-          # gh label create "coverage-passed" --description "Cobertura de testes acima do limite mínimo." --color "0E8A16" || true
+          gh label create "coverage-failed" --description "Cobertura de testes abaixo do limite mínimo." --color "D93F0B" || true
+          gh label create "coverage-passed" --description "Cobertura de testes acima do limite mínimo." --color "0E8A16" || true
+          gh label create "coverage-missing" --description "Cobertura de testes não encontrada." --color "E99695" || true
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
@@ -226,6 +226,18 @@ jobs:
           HEAD="${{ needs.check-branch.outputs.head }}"
           BASE="${{ needs.check-branch.outputs.base }}"
           TITLE="🔀 PR ($(date +'%Y-%m-%d')):  ${HEAD} → ${BASE}"
+          STATUS_COVERAGE="${{ needs.run-coverage.outputs.status }}"
+
+          if [ "$STATUS_COVERAGE" = "failed" ]; then
+            ADD_LABEL="coverage-failed"
+            DEL_LABEL="coverage-passed, coverage-missing"
+          elif [ "$STATUS_COVERAGE" = "passed" ]; then
+            ADD_LABEL="coverage-passed"
+            DEL_LABEL="coverage-failed, coverage-missing"
+          elif [ "$STATUS_COVERAGE" = "missing" ]; then
+            ADD_LABEL="coverage-missing"
+            DEL_LABEL="coverage-passed, coverage-failed"
+          fi
 
           # Tenta encontrar um PR existente
           PR_NUMBER=$(gh pr list --base "$BASE" --head "$HEAD" --json number --jq '.[0].number')
@@ -239,14 +251,16 @@ jobs:
               --head "$HEAD" \
               --title "$TITLE" \
               --body-file pr_body.md \
-              --label auto-generated \
+              --label "auto-generated, $ADD_LABEL" \
               --assignee "${{ github.actor }}"
           else
             echo "Existing PR #$PR_NUMBER found. Updating..."
             gh pr edit "$PR_NUMBER" \
               --title "$TITLE" \
               --body-file pr_body.md \
-              --add-assignee "${{ github.actor }}"
+              --add-assignee "${{ github.actor }}" \
+              --remove-label "$DEL_LABEL" \
+              --add-label "$ADD_LABEL"            
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
