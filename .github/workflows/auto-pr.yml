@@ -2,28 +2,50 @@ name: Reusable Create/Update PR
 
 on:
   workflow_call:
-    # inputs:
-    #   head_branch:
-    #     description: "Branch de origem (ex: develop, feature/**)"
-    #     required: true
-    #     type: string
+    inputs:
+      skip-tests:
+        type: boolean
+        required: false
+        default: false
+
+      min-coverage:
+        type: number
+        required: false
+        default: 80
+
+      coverage-mode:
+        type: string
+        required: false
+        default: "informative"    # informative | blocking | compare
+
+      coverage-command:
+        type: string
+        required: false
+        default: ""
+
+      coverage-file:
+        type: string
+        required: false
+        default: "coverage/coverage-summary.json"
+
     secrets:
       GH_TOKEN:
         required: true
 
 jobs:
-  auto-pr:
+  check-branch:
     runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check_files.outputs.skip-pr }}
 
-    permissions:
-      contents: read
-      pull-requests: write
+    # permissions:
+    #   contents: read
+    #   pull-requests: write
 
     steps:
       - name: 📌 Resolve PR base branch
         id: branch
         run: |
-          # HEAD="${{ inputs.head_branch }}"
           HEAD="${{ github.event.workflow_run.head_branch }}"
           echo "Detected head branch: $HEAD"
 
@@ -41,28 +63,80 @@ jobs:
         if: steps.branch.outputs.skip == 'true'
         run: echo "Main branch detected. Skipping auto PR."
 
+  coverage:
+    needs: check-branch
+    if: needs.check-branch.outputs.skip != 'true' && inputs.skip-tests != true 
+    runs-on: ubuntu-latest
+
+  steps:
+    - name: 📊 Generate coverage report
+      if: inputs.skip-tests != true
+      id: coverage
+      run: |
+        set -e
+
+        mkdir -p coverage
+
+        if [ -n "${{ inputs.coverage-command }}" ]; then
+          echo "▶ Running custom coverage command"
+          eval "${{ inputs.coverage-command }}"
+        else
+          STACK=$(./scripts/detect-stack.sh)
+          echo "Detected stack: $STACK"
+
+          case "$STACK" in
+            node) ./scripts/run-coverage-node.sh ;;
+            dotnet) ./scripts/run-coverage-dotnet.sh ;;
+            python) ./scripts/run-coverage-python.sh ;;
+            *)
+              echo "No coverage supported for this stack"
+              exit 0
+              ;;
+          esac
+        fi
+
+        FILE="coverage/coverage-summary.normalized.json"
+        LINE=$(jq '.line' "$FILE")
+
+        echo "line=$LINE" >> $GITHUB_OUTPUT
+
+
+    - name: ✅ Evaluate coverage
+      if: inputs.skip-tests != true
+      id: coverage-check
+      run: |
+        LINE=${{ steps.coverage.outputs.line }}
+        MIN=${{ inputs.min-coverage }}
+        MODE="${{ inputs.coverage-mode }}"
+
+        STATUS="passed"
+
+        if (( $(echo "$LINE < $MIN" | bc -l) )); then
+          STATUS="failed"
+          if [ "$MODE" = "blocking" ]; then
+            echo "Coverage below threshold"
+            exit 1
+          fi
+        fi
+
+        echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+  create-pr:
+    needs: check-branch
+    if: needs.check-branch.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
       - name: ⬇️ Checkout consumer repository
-        if: steps.branch.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0    # Necessário para evitar falhas do gh CLI em repositórios grandes
 
-      # - name: Create or update PR
-      #   if: steps.pr-base.outputs.skip != 'true'
-      #   uses: peter-evans/create-pull-request@v6
-      #   with:
-      #     token: ${{ secrets.GH_TOKEN }}
-      #     base: ${{ steps.pr-base.outputs.base }}
-      #     branch: ${{ github.event.workflow_run.head_branch }}
-      #     title: "Auto PR: ${{ github.event.workflow_run.head_branch }} → ${{ steps.pr-base.outputs.base }}"
-      #     body: |
-      #       PR criada ou atualizada automaticamente após CI com sucesso.
-
-      #       Origem: `${{ github.event.workflow_run.head_branch }}`
-      #       Destino: `${{ steps.pr-base.outputs.base }}`
-
       - name: 🔐 Authenticate GitHub CLI
-        if: steps.branch.outputs.skip != 'true'
         run: |
           # echo "${GITHUB_TOKEN}" | gh auth login --with-token
           gh auth setup-git
@@ -70,7 +144,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: 🏷 Ensure auto-generated label exists
-        if: steps.branch.outputs.skip != 'true'
         run: |
           gh label create auto-generated --description "Pull Request criada automaticamente" --color 006B75 --force 
           # gh label create "pending-review" --description "Aguardando revisão" --color "FBCA04" || true
@@ -80,8 +153,34 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: 📝 Generate PR body
-        if: steps.branch.outputs.skip != 'true'
         run: |
+          COVERAGE_LINE="${{ steps.coverage.outputs.line }}"
+          COVERAGE_STATUS="${{ steps.coverage-check.outputs.status }}"
+          MIN_COVERAGE="${{ inputs.min-coverage }}"
+          MODE="${{ inputs.coverage-mode }}"
+
+          if [ -n "$COVERAGE_LINE" ]; then
+            COVERAGE_BLOCK=$(cat <<EOF
+          ### 📊 Cobertura de Testes
+
+          | Métrica | Valor |
+          |--------|-------|
+          | Linhas | **${COVERAGE_LINE}%** |
+          | Mínimo exigido | ${MIN_COVERAGE}% |
+          | Status | ${COVERAGE_STATUS} |
+          | Modo | ${MODE} |
+
+          EOF
+          )
+          else
+            COVERAGE_BLOCK=$(cat <<EOF
+          ### 📊 Cobertura de Testes
+
+          ⚠️ Cobertura não gerada para este projeto.
+          EOF
+          )
+          fi
+
           cat <<EOF > pr_body.md
           ## 🤖 Pull Request Automática
 
@@ -94,10 +193,14 @@ jobs:
           ✔ CI executado com sucesso  
           ✔ Testes validados  
           ✔ Processo automatizado
+
+          ${COVERAGE_BLOCK}
+
+          ---
+          _Gerado automaticamente pela action **auto-pr**_
           EOF
 
       - name: 📜 Create or Update Pull Request
-        if: steps.branch.outputs.skip != 'true'
         run: |
           BASE="${{ steps.branch.outputs.base }}"
           HEAD="${{ steps.branch.outputs.head }}"

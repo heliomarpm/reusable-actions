@@ -59,6 +59,12 @@ jobs:
           chmod +x $CI_REUSABLE_PATH/scripts/test-${{ steps.detect.outputs.stack }}.sh
           $CI_REUSABLE_PATH/scripts/test-${{ steps.detect.outputs.stack }}.sh
 
+      - name: Run coverage tests
+        if: steps.detect.outputs.stack != ''
+        run: |
+          chmod +x $CI_REUSABLE_PATH/scripts/test-coverage-${{ steps.detect.outputs.stack }}.sh
+          $CI_REUSABLE_PATH/scripts/test-coverage-${{ steps.detect.outputs.stack }}.sh
+
       - name: Fail if stack not detected
         if: steps.detect.outputs.stack == ''
         run: |
