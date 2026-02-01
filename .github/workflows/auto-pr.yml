@@ -184,12 +184,14 @@ jobs:
             COVERAGE_BLOCK=$(cat <<EOF
           ### 📊 Cobertura de Testes
 
+          ```cmd
           | Métrica | Valor |
           |--------|-------|
           | Linhas | **${COVERAGE_LINE}%** |
           | Mínimo exigido | ${MIN_COVERAGE}% |
           | Status | ${COVERAGE_STATUS} |
           | Modo | ${MODE} |
+          ```
 
           EOF
           )
@@ -215,7 +217,7 @@ jobs:
           ✔ Testes validados  
           ✔ Processo automatizado
 
-          ${COVERAGE_BLOCK}
+          ${COVERAGE_BLOCK}          
 
           ---
           _Gerado automaticamente pela action **auto-pr**_
