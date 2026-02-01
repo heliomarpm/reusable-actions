@@ -232,13 +232,13 @@ jobs:
 
           if [ "$STATUS_COVERAGE" = "failed" ]; then
             ADD_LABEL="coverage-failed"
-            DEL_LABEL="coverage-passed, coverage-missing"
+            DEL_LABEL="coverage-passed,coverage-missing"
           elif [ "$STATUS_COVERAGE" = "passed" ]; then
             ADD_LABEL="coverage-passed"
-            DEL_LABEL="coverage-failed, coverage-missing"
+            DEL_LABEL="coverage-failed,coverage-missing"
           elif [ "$STATUS_COVERAGE" = "missing" ]; then
             ADD_LABEL="coverage-missing"
-            DEL_LABEL="coverage-passed, coverage-failed"
+            DEL_LABEL="coverage-passed,coverage-failed"
           fi
 
           # Tenta encontrar um PR existente
