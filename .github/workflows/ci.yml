@@ -24,7 +24,7 @@ jobs:
       CI_REUSABLE_PATH: .__ci_cd_reusable__
 
     permissions:
-      contents: write       # Necessário para operações gerais de escrita
+      contents: read
       actions: read
 
     steps:
@@ -86,7 +86,7 @@ jobs:
 
           echo "Tests will run."
           echo "run=true" >> $GITHUB_OUTPUT
-
+  
 
       - name: Run unit tests
         if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true'
@@ -104,8 +104,15 @@ jobs:
           chmod +x $CI_REUSABLE_PATH/scripts/test-coverage-${{ steps.stack.outputs.value }}.sh
           $CI_REUSABLE_PATH/scripts/test-coverage-${{ steps.stack.outputs.value }}.sh
 
+      - name: 📦 Upload coverage artifact
+        if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true' && hashFiles('coverage/coverage-summary.normalized.json') != ''
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: coverage-report
+          path: coverage/coverage-summary.normalized.json
 
       - name: Fail if stack not detected
-        if: steps.detect.outputs.stack == ''
+        if: steps.stack.outputs.value == ''
         run: |
           echo "❌ Stack not detected. Check project_path or repository structure."

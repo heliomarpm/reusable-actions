@@ -16,17 +16,17 @@ on:
       coverage-mode:
         type: string
         required: false
-        default: "informative"    # informative | blocking | compare
+        default: "informative"    # informative | blocking
 
-      coverage-command:
-        type: string
-        required: false
-        default: ""
+      # coverage-command:
+      #   type: string
+      #   required: false
+      #   default: ""
 
-      coverage-file:
-        type: string
-        required: false
-        default: "coverage/coverage-summary.json"
+      # coverage-file:
+      #   type: string
+      #   required: false
+      #   default: "coverage/coverage-summary.json"
 
     secrets:
       GH_TOKEN:
@@ -36,7 +36,7 @@ jobs:
   check-branch:
     runs-on: ubuntu-latest
     outputs:
-      skip: ${{ steps.check_files.outputs.skip-pr }}
+      skip: ${{ steps.branch.outputs.skip }}
 
     # permissions:
     #   contents: read
@@ -63,46 +63,37 @@ jobs:
         if: steps.branch.outputs.skip == 'true'
         run: echo "Main branch detected. Skipping auto PR."
 
-  coverage:
+  run-coverage:
     needs: check-branch
     if: needs.check-branch.outputs.skip != 'true' && inputs.skip-tests != true 
     runs-on: ubuntu-latest
+    outputs:
+      line: ${{ steps.coverage.outputs.line }}
+      status: ${{ steps.coverage-check.outputs.status }}
 
     steps:
-      - name: 📊 Generate coverage report
-        if: inputs.skip-tests != true
+      - name: 📥 Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: 📊 Read coverage report
         id: coverage
         run: |
-          set -e
+          FILE="coverage/coverage-summary.normalized.json"
 
-          mkdir -p coverage
-
-          if [ -n "${{ inputs.coverage-command }}" ]; then
-            echo "▶ Running custom coverage command"
-            eval "${{ inputs.coverage-command }}"
-          else
-            STACK=$(./scripts/detect-stack.sh)
-            echo "Detected stack: $STACK"
-
-            case "$STACK" in
-              node) ./scripts/run-coverage-node.sh ;;
-              dotnet) ./scripts/run-coverage-dotnet.sh ;;
-              python) ./scripts/run-coverage-python.sh ;;
-              *)
-                echo "No coverage supported for this stack"
-                exit 0
-                ;;
-            esac
+          if [ ! -f "$FILE" ]; then
+            echo "⚠️ Coverage artifact not found"
+            echo "line=" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
-          FILE="coverage/coverage-summary.normalized.json"
           LINE=$(jq '.line' "$FILE")
-
           echo "line=$LINE" >> $GITHUB_OUTPUT
-
+       
 
       - name: ✅ Evaluate coverage
-        if: inputs.skip-tests != true
         id: coverage-check
         run: |
           LINE=${{ steps.coverage.outputs.line }}
@@ -111,7 +102,7 @@ jobs:
 
           STATUS="passed"
 
-          if (( $(echo "$LINE < $MIN" | bc -l) )); then
+          if [ -n "$LINE" ] && (( $(echo "$LINE < $MIN" | bc -l) )); then
             STATUS="failed"
             if [ "$MODE" = "blocking" ]; then
               echo "Coverage below threshold"
@@ -121,8 +112,11 @@ jobs:
 
           echo "status=$STATUS" >> $GITHUB_OUTPUT
 
+
   create-pr:
-    needs: check-branch
+    needs:
+      - check-branch
+      - run-coverage
     if: needs.check-branch.outputs.skip != 'true'
     runs-on: ubuntu-latest
 
@@ -154,8 +148,8 @@ jobs:
 
       - name: 📝 Generate PR body
         run: |
-          COVERAGE_LINE="${{ steps.coverage.outputs.line }}"
-          COVERAGE_STATUS="${{ steps.coverage-check.outputs.status }}"
+          COVERAGE_LINE="${{ needs.run-coverage.outputs.line }}"
+          COVERAGE_STATUS="${{ needs.run-coverage.outputs.status }}"
           MIN_COVERAGE="${{ inputs.min-coverage }}"
           MODE="${{ inputs.coverage-mode }}"
 
