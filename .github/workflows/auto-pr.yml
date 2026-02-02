@@ -166,7 +166,7 @@ jobs:
 
       - name: 🏷 Ensure auto-generated label exists
         run: |
-          gh label create auto-generated --description "Pull Request criada automaticamente" --color 006B75 --force 
+          gh label create auto-generated --description "Pull Request criada automaticamente" --color 006B75 || true
           gh label create "coverage-failed" --description "Cobertura de testes abaixo do limite mínimo." --color "D93F0B" || true
           gh label create "coverage-passed" --description "Cobertura de testes acima do limite mínimo." --color "0E8A16" || true
           gh label create "coverage-missing" --description "Cobertura de testes não encontrada." --color "E99695" || true
@@ -253,7 +253,7 @@ jobs:
               --head "$HEAD" \
               --title "$TITLE" \
               --body-file pr_body.md \
-              --label "auto-generated, $ADD_LABEL" \
+              --label "auto-generated,$ADD_LABEL" \
               --assignee "${{ github.actor }}"
           else
             echo "Existing PR #$PR_NUMBER found. Updating..."
