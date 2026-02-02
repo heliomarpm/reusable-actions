@@ -21,7 +21,7 @@ jobs:
     name: Detecta Stack e Executa Testes
     runs-on: ubuntu-latest
     env:
-      CI_REUSABLE_PATH: .__ci_cd_reusable__
+      REUSABLE_PATH: .__reusable_actions__
 
     permissions:
       contents: read
@@ -36,9 +36,10 @@ jobs:
         with:
           repository: heliomarpm/reusable-actions
           ref: main
-          path: ${{ env.CI_REUSABLE_PATH }}
+          path: ${{ env.REUSABLE_PATH }}
 
-      - name: Debug workspace
+
+      - name: Files in workspace
         run: |
           echo "📂 Current directory:"
           pwd
@@ -46,7 +47,7 @@ jobs:
           ls -la
 
 
-      - name: Resolve project stack
+      - name: 🔍 Resolve project stack
         id: stack
         working-directory: ${{ inputs.project_path }}
         run: |
@@ -56,8 +57,8 @@ jobs:
             exit 0
           fi
 
-          chmod +x $CI_REUSABLE_PATH/scripts/detect-stack.sh
-          STACK=$($CI_REUSABLE_PATH/scripts/detect-stack.sh)
+          chmod +x $REUSABLE_PATH/scripts/detect-stack.sh
+          STACK=$($REUSABLE_PATH/scripts/detect-stack.sh)
 
           if [[ -z "$STACK" ]]; then
             echo "value=" >> $GITHUB_OUTPUT
@@ -92,8 +93,8 @@ jobs:
         if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true'
         working-directory: ${{ inputs.project_path }}
         run: |
-          chmod +x $CI_REUSABLE_PATH/scripts/test-${{ steps.stack.outputs.value }}.sh
-          $CI_REUSABLE_PATH/scripts/test-${{ steps.stack.outputs.value }}.sh
+          chmod +x $REUSABLE_PATH/scripts/test-${{ steps.stack.outputs.value }}.sh
+          $REUSABLE_PATH/scripts/test-${{ steps.stack.outputs.value }}.sh
 
 
       - name: Run coverage tests
@@ -101,8 +102,8 @@ jobs:
         working-directory: ${{ inputs.project_path }}
         continue-on-error: true
         run: |
-          chmod +x $CI_REUSABLE_PATH/scripts/test-coverage-${{ steps.stack.outputs.value }}.sh
-          $CI_REUSABLE_PATH/scripts/test-coverage-${{ steps.stack.outputs.value }}.sh
+          chmod +x $REUSABLE_PATH/scripts/test-coverage-${{ steps.stack.outputs.value }}.sh
+          $REUSABLE_PATH/scripts/test-coverage-${{ steps.stack.outputs.value }}.sh
 
       - name: 📦 Upload coverage artifact
         if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true' && hashFiles('coverage/coverage-summary.normalized.json') != ''
