@@ -1,0 +1,6 @@
+plugin_detect
+plugin_install_deps
+plugin_run_tests
+plugin_run_coverage
+plugin_release
+plugin_publish

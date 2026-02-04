@@ -71,6 +71,15 @@ jobs:
           echo "✅ Detected stack: $STACK"
           echo "value=$STACK" >> $GITHUB_OUTPUT
 
+      - name: Run Engine
+        run: |
+          chmod +x $REUSABLE_PATH/scripts/core/*.sh
+          chmod +x $REUSABLE_PATH/scripts/plugins/**/**/*.sh
+          
+          STACK="${{ teps.stack.outputs.value }}"          
+          $REUSABLE_PATH/scripts/core/engine.sh "$STACK"
+
+
       - name: 🚀 Run release
         if: steps.stack.outputs.value != ''
         # if: needs.resolve-stack.outputs.stack != ''

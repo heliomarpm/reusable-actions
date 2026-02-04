@@ -186,3 +186,30 @@ Please follow:
 See [CONTRIBUTING](.github/CONTRIBUTING.md) for details.
 
 ---
+
+```
+scripts/
+│
+├── core/
+│   ├── engine.sh
+│   ├── plugin-loader.sh
+│   ├── contracts.sh
+│   ├── lifecycle.sh
+│   ├── logger.sh
+│   └── utils.sh
+│
+├── plugins/
+│   ├── node/
+│   │    ├── plugin.sh
+│   │    ├── release.sh
+│   │    ├── test.sh
+│   │    ├── coverage.sh
+│   │    └── publish.sh
+│   │
+│   ├── php/
+│   ├── python/
+│   ├── dotnet/
+│   └── go/
+│
+└── detect-stack.sh
+```
