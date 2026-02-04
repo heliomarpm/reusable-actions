@@ -33,7 +33,7 @@ has_file() {
 # ------------------------------------------------------------
 # Detect semantic-release config
 # ------------------------------------------------------------
-CUSTOM_CONFIG=$(../detect-releaserc-consumer.sh)
+CUSTOM_CONFIG=$(./scripts/release/detect-releaserc-consumer.sh)
 
 # ----------------------------------------------------------
 # Install dependencies ONLY if needed
