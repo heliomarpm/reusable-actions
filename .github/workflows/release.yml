@@ -74,7 +74,7 @@ jobs:
       - name: 🚀 Run release
         if: steps.stack.outputs.value != ''
         # if: needs.resolve-stack.outputs.stack != ''
-        # working-directory: ${{ inputs.project_path }}
+        working-directory: ${{ inputs.project_path }}
         run: |
           chmod +x $REUSABLE_PATH/scripts/release/${{ steps.stack.outputs.value }}/release.sh
           $REUSABLE_PATH/scripts/release/${{ steps.stack.outputs.value }}/release.sh
