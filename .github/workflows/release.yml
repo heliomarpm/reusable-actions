@@ -76,7 +76,7 @@ jobs:
           chmod +x $REUSABLE_PATH/scripts/core/*.sh
           chmod +x $REUSABLE_PATH/scripts/plugins/**/**/*.sh
           
-          STACK="${{ teps.stack.outputs.value }}"          
+          STACK="${{ steps.stack.outputs.value }}"          
           $REUSABLE_PATH/scripts/core/engine.sh "$STACK"
 
 
