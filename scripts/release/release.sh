@@ -1,26 +1,4 @@
 #!/usr/bin/env bash
-set -e
-
-echo "🚀 Running Node.js release"
-
-npm install -g semantic-release \
-  @semantic-release/changelog \
-  @semantic-release/git \
-  @semantic-release/github \
-  @semantic-release/npm
-
-CONFIG_MODE=$(./scripts/release/detect-release-config.sh)
-
-if [ "$CONFIG_MODE" = "custom" ]; then
-  echo "✅ Using consumer semantic-release config"
-  semantic-release
-else
-  echo "⚠️ Using default Node.js release config"
-  semantic-release --extends ./scripts/release/default/node.releaserc.json
-fi
-
-
-# #!/usr/bin/env bash
 # set -e
 
 # MODE=$1 # CUSTOM | DEFAULT
@@ -40,3 +18,44 @@ fi
 #   npx semantic-release \
 #     --extends ./scripts/release/default.releaserc.json
 # fi
+
+set -euo pipefail
+
+echo "🚀 Starting release process"
+
+# ------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------
+
+log() {
+  echo "▶ $1"
+}
+
+has_file() {
+  [[ -f "$1" ]]
+}
+
+# ------------------------------------------------------------
+# Detect stack
+# ------------------------------------------------------------
+STACK=$(./scripts/detect-stack.sh)
+
+echo "Detected stack: $STACK"
+
+SCRIPT_DIR="$(dirname "$0")"
+
+echo "-> Executing $STACK release script from $SCRIPT_DIR"
+
+chmod +x "$SCRIPT_DIR/$STACK/release.sh"
+"$SCRIPT_DIR/$STACK/release.sh"
+
+
+# ------------------------------------------------------------
+# Unsupported project
+# ------------------------------------------------------------
+# echo "❌ Unsupported project type"
+# echo "Supported: Node.js (package.json) or PHP (composer.json)"
+# exit 1
+
+
+

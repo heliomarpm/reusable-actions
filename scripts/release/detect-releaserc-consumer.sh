@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
+log() {
+  echo "▶ $1"
+}
+
 for file in \
   .releaserc \
   .releaserc.json \
@@ -9,9 +13,10 @@ for file in \
   release.config.js
 do
   if [ -f "$file" ]; then
-    echo "CUSTOM"
+    log "Custom semantic-release config detected: $file"
+    echo "true"
     exit 0
   fi
 done
 
-echo "DEFAULT"
+echo "false"

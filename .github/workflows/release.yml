@@ -16,10 +16,10 @@ on:
       GH_TOKEN:
         required: true
 
-jobs:
   env:
     REUSABLE_PATH: .__reusable_actions__
 
+jobs:
   resolve-stack:
     runs-on: ubuntu-latest
     outputs:
@@ -66,15 +66,31 @@ jobs:
           echo "✅ Detected stack: $STACK"
           echo "value=$STACK" >> $GITHUB_OUTPUT
 
+
   release:
     runs-on: ubuntu-latest
+    if: needs.resolve-stack.outputs.stack != ''
     needs: resolve-stack
     permissions:
       contents: write
-      actions: write
-      issues: write  
+      pull-requests: write
 
     steps:
+      - name: ⬇️ Checkout do Código
+        uses: actions/checkout@v4
+        with: 
+          # A linha 'ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0 	  # Necessário para o semantic-release inspecionar histórico
+          fetch-tags: true 	# Necessário para o semantic-release inspecionar tags
+          # token: ${{ secrets.GH_TOKEN }} # Necessário para autenticar PUSH
+
+      - name: Checkout reusable-actions scripts
+        uses: actions/checkout@v4
+        with:
+          repository: heliomarpm/reusable-actions
+          ref: main
+          path: ${{ env.REUSABLE_PATH }}
+
       - name: 🚀 Run release
         # working-directory: ${{ inputs.project_path }}
         run: |
