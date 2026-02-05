@@ -24,7 +24,7 @@ echo "🚀 Running Node.js release"
 # Helpers
 # ------------------------------------------------------------
 log() {
-  echo "▶ $1"
+  echo "🔹 $1"
 }
 has_file() {
   [[ -f "$1" ]]
@@ -68,7 +68,7 @@ if [ "$CUSTOM_CONFIG" = "true" ]; then
   npx semantic-release
 else
   log "Running semantic-release with default config"
-  npx semantic-release --extends $REUSABLE_PATH/scripts/plugins/node/releaserc.json
+  npx semantic-release --extends "./$REUSABLE_PATH/scripts/plugins/node/releaserc.json"
 fi
 
 exit 0
