@@ -8,7 +8,6 @@ on:
         type: string
         default: "."
       stack:
-        description: 'Stack the project. (node | php | dotnet | python | go | empty for auto-detect)'
         required: false
         type: string
         default: null     # node | php | dotnet | python | go | empty for auto-detect
@@ -17,16 +16,12 @@ on:
       GH_TOKEN:
         required: true
 
+
 jobs:
   release:
     runs-on: ubuntu-latest
     env:
       REUSABLE_PATH: __reusable_actions__
-
-    defaults:
-      run:
-        shell: bash
-        working-directory: ${{ inputs.working-directory }}
 
     steps:
       - name: Checkout consumer repository
@@ -53,7 +48,7 @@ jobs:
           ls -la
 
 
-      - name: 🔍 Resolve project stack
+      - name: Resolve project stack
         id: stack
         working-directory: ${{ inputs.project_path }}
         run: |
@@ -63,8 +58,8 @@ jobs:
             exit 0
           fi
 
-          chmod +x $REUSABLE_PATH/scripts/shared/detect-stack.sh
-          STACK=$($REUSABLE_PATH/scripts/shared/detect-stack.sh)
+          chmod +x $REUSABLE_PATH/scripts/core/detect-stack.sh
+          STACK=$($REUSABLE_PATH/scripts/core/detect-stack.sh)
 
           if [[ -z "$STACK" ]]; then
             echo "value=" >> $GITHUB_OUTPUT
@@ -74,29 +69,17 @@ jobs:
           echo "✅ Detected stack: $STACK"
           echo "value=$STACK" >> $GITHUB_OUTPUT
 
-      # - name: 🔍 Detect release config
-      #   id: releaserc
-      #   run: |
-      #     chmod +x $REUSABLE_PATH/scripts/shared/detect-releaserc.sh
-      #     HAS_CONFIG=$($REUSABLE_PATH/scripts/shared/detect-releaserc.sh)
-      #     echo "has_config=$HAS_CONFIG" >> $GITHUB_OUTPUT
 
-      - name: 🚀 Run Release
+      - name: 🚀 Run Engine
         if: steps.stack.outputs.value != ''
         run: |
-          STACK="${{ steps.stack.outputs.value }}"
-          SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/release.sh"
+          chmod +x $REUSABLE_PATH/scripts/core/*.sh
+          chmod +x $REUSABLE_PATH/scripts/plugins/**/*.sh
+          chmod +x $REUSABLE_PATH/scripts/plugins/**/**/*.sh
+          
+          STACK="${{ steps.stack.outputs.value }}"          
+          $REUSABLE_PATH/scripts/core/engine.sh "$STACK"
 
-          if [[ ! -f "$SCRIPT" ]]; then
-            echo "❌ Release script not found for stack: $STACK"
-            exit 1
-          fi
-
-          chmod +x "$SCRIPT"
-          "$SCRIPT"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          REUSABLE_PATH: ${{ env.REUSABLE_PATH }}
 
       - name: Fail if stack not detected
         if: steps.stack.outputs.value == ''

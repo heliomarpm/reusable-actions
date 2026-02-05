@@ -2,8 +2,8 @@
 
 load_plugin() {
 
-  STACK="$1"
-  PLUGIN_PATH="$REUSABLE_PATH/scripts/plugins/$STACK/plugin.sh"
+  local STACK="$1"
+  local PLUGIN_PATH="$REUSABLE_PATH/scripts/plugins/$STACK/plugin.sh"
 
   if [[ ! -f "$PLUGIN_PATH" ]]; then
     echo "❌ Plugin not found for stack: $STACK"
