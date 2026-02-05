@@ -28,6 +28,10 @@ jobs:
         shell: bash
         working-directory: ${{ inputs.project_path }}
 
+    permissions:
+      contents: read
+      actions: read
+
     steps:
       - name: Checkout consumer repository
         uses: actions/checkout@v4
