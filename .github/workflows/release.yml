@@ -18,7 +18,7 @@ on:
         required: true
 
 jobs:
-  release:
+  semantic-release:
     runs-on: ubuntu-latest
     env:
       REUSABLE_PATH: __reusable_actions__
@@ -26,7 +26,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ${{ inputs.working-directory }}
+        working-directory: ${{ inputs.project_path }}
 
     steps:
       - name: Checkout consumer repository
