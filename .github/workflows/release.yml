@@ -51,7 +51,7 @@ jobs:
           # A linha 'ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0 	  # Necessário para o semantic-release inspecionar histórico
           fetch-tags: true 	# Necessário para o semantic-release inspecionar tags
-          # token: ${{ secrets.GH_TOKEN }} # Necessário para autenticar PUSH
+          token: ${{ secrets.GH_TOKEN }} # Necessário para autenticar PUSH
 
       - name: Checkout reusable-actions scripts
         uses: actions/checkout@v4
@@ -59,7 +59,7 @@ jobs:
           repository: heliomarpm/reusable-actions
           ref: main
           path: ${{ env.REUSABLE_PATH }}
-
+          token: ${{ secrets.GH_TOKEN }} # Necessário se o repositório for privado
 
       - name: Files in workspace
         run: |
@@ -68,6 +68,10 @@ jobs:
           echo "📄 Files in root:"
           ls -la
 
+      - name: ⚙️ Configurar Usuário Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: 🔍 Resolve project stack
         id: stack
