@@ -41,7 +41,7 @@ jobs:
         working-directory: ${{ inputs.project_path }}
 
     permissions:
-      contents: read
+      contents: write
       actions: read
 
     steps:
