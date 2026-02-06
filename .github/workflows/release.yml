@@ -12,6 +12,18 @@ on:
         required: false
         type: string
         default: null     # node | php | dotnet | python | go | empty for auto-detect
+      semantic_release_config:
+        description: 'Path to semantic-release config file.'
+        required: false
+        type: string
+      semantic_release_dry_run:
+        description: 'Dry run mode for semantic-release. (default: false -> true for PRs)'
+        required: false
+        type: boolean
+      semantic_release_debug_mode:
+        description: 'Debug mode for semantic-release. (default: false)'
+        required: false
+        type: boolean
 
     secrets:
       GH_TOKEN:
@@ -88,19 +100,16 @@ jobs:
       - name: 🚀 Run Release
         if: steps.stack.outputs.value != ''
         run: |
-          STACK="${{ steps.stack.outputs.value }}"
-          SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/release.sh"
-
-          if [[ ! -f "$SCRIPT" ]]; then
-            echo "❌ Release script not found for stack: $STACK"
-            exit 1
-          fi
-
+          SCRIPT="$REUSABLE_PATH/scripts/shared/semantic-release.sh"
           chmod +x "$SCRIPT"
           "$SCRIPT"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          STACK: ${{ steps.stack.outputs.value }}
           REUSABLE_PATH: ${{ env.REUSABLE_PATH }}
+          SEMANTIC_RELEASE_CONFIG: ${{ inputs.semantic_release_config }}
+          SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.semantic_release_dry_run }}
+          SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.semantic_release_debug_mode }}
 
       - name: Fail if stack not detected
         if: steps.stack.outputs.value == ''
