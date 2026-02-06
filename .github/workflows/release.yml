@@ -41,8 +41,10 @@ jobs:
         working-directory: ${{ inputs.project_path }}
 
     permissions:
-      contents: write
       actions: read
+      contents: write
+      issues: write
+      # pull-requests: write
 
     steps:
       - name: Checkout consumer repository
@@ -51,6 +53,7 @@ jobs:
           # A linha 'ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0 	  # Necessário para o semantic-release inspecionar histórico
           fetch-tags: true 	# Necessário para o semantic-release inspecionar tags
+          persist-credentials: true  # → permite push com GITHUB_TOKEN
           token: ${{ secrets.GH_TOKEN }} # Necessário para autenticar PUSH
 
       - name: Checkout reusable-actions scripts

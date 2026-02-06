@@ -7,7 +7,7 @@ echo "🚀 Running Node.js release"
 # Helpers
 # ------------------------------------------------------------
 log() {
-  echo "🔹 $1"
+  echo "→ $1"
 }
 has_file() {
   [[ -f "$1" ]]
@@ -141,5 +141,6 @@ if [[ "$INSTALL_TOOLCHAIN" == "true" ]]; then
 fi
 
 log "🚀 Running: $CMD"
-log "🎉 Done."
 eval "$CMD"
+
+log "🎉 Done."
