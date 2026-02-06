@@ -89,7 +89,7 @@ if [[ "$IS_DEBUG_MODE" == "true" ]]; then
   CMD="$CMD --debug"
 fi
 
-if INSTALL_SEMANTIC_RELEASE; then
+if [ "$INSTALL_SEMANTIC_RELEASE" = "true" ]; then
   log "Installing semantic-release core"
   npm install --no-save semantic-release
 
