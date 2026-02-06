@@ -108,8 +108,9 @@ jobs:
         working-directory: ${{ inputs.project_path }}
         run: |
           STACK="${{ steps.stack.outputs.value }}"
-          chmod +x $REUSABLE_PATH/scripts/$STACK/test.sh
-          $REUSABLE_PATH/scripts/$STACK/test.sh
+          SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/test.sh"
+          chmod +x "$SCRIPT"
+          "$SCRIPT"
 
       - name: Run coverage tests
         if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true'
@@ -117,8 +118,9 @@ jobs:
         continue-on-error: true
         run: |
           STACK="${{ steps.stack.outputs.value }}"
-          chmod +x $REUSABLE_PATH/scripts/$STACK/coverage.sh
-          $REUSABLE_PATH/scripts/$STACK/coverage.sh
+          SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/coverage.sh"
+          chmod +x "$SCRIPT"
+          "$SCRIPT"
 
       - name: 📦 Upload coverage artifact
         if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true' && hashFiles('coverage/coverage-summary.normalized.json') != ''
