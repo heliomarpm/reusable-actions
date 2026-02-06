@@ -3,6 +3,8 @@ set -euo pipefail
 
 echo "▶ Running Node.js coverage detection"
 
+RAW_FILE=""
+
 # ########################################
 # # 0️⃣ Detect test existence
 # ########################################
