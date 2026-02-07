@@ -33,11 +33,17 @@ DEFAULT_CONFIG="./$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.json"
 # ------------------------------------------------------------
 USE_CUSTOM_CONFIG=false
 
-if [[ -n "$CUSTOM_CONFIG_PATH" && -f "$CUSTOM_CONFIG_PATH" ]]; then
-  log "Using consumer config: $CUSTOM_CONFIG_PATH"
-  USE_CUSTOM_CONFIG=true
+if [[ -n "$CUSTOM_CONFIG_PATH" ]]; then
+  if [[ -f "$CUSTOM_CONFIG_PATH" ]]; then
+    log "Using consumer config: $CUSTOM_CONFIG_PATH"
+    USE_CUSTOM_CONFIG=true
+  else
+    echo "❌ SEMANTIC_RELEASE_CONFIG was provided but not found: $CUSTOM_CONFIG_PATH"
+    exit 1
+  fi
 else
   CUSTOM_CONFIG_PATH=$(bash "$REUSABLE_PATH/scripts/shared/detect-releaserc.sh" || true)
+
   if [[ -n "$CUSTOM_CONFIG_PATH" ]]; then
     log "Detected consumer config: $CUSTOM_CONFIG_PATH"
     USE_CUSTOM_CONFIG=true
@@ -165,11 +171,11 @@ if [[ "$STRICT_MODE" == "true" ]]; then
     fail "Strict mode failed: no valid conventional commits found"
   fi
 
-  log "✅ Conventional commits validation passed"
+  echo "✅ Conventional commits validation passed"
 fi
 
 
-log "🚀 Running: $CMD"
+echo "🚀 Running: $CMD"
 eval "$CMD"
 
-log "🎉 Done."
+echo "🎉 Done."
