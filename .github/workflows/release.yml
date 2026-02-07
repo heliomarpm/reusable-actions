@@ -123,7 +123,7 @@ jobs:
       - name: 🚀 Run Release
         if: steps.stack.outputs.value != ''
         run: |
-          SCRIPT="$REUSABLE_PATH/scripts/shared/semantic-release.sh"
+          SCRIPT="$REUSABLE_PATH/scripts/shared/semantic-release/run.sh"
           chmod +x "$SCRIPT"
           "$SCRIPT"
         env:

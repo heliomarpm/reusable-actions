@@ -3,82 +3,79 @@ name: Reusable Create/Update PR
 on:
   workflow_call:
     inputs:
-      # base_branch:
-      #   description: "Branch de destino do PR (e.g., main)."
-      #   required: false
-      #   default: "main"
-      #   type: string
-
-      # head_branch:
-      #   description: "Branch de origem do PR (e.g., develop)."
-      #   required: false
-      #   default: "develop"
-      #   type: string
-
-      skip-tests:
-        type: boolean
-        required: false
-        default: false
-
       min-coverage:
+        description: 'Minimum coverage percentage (0-100 | default: 80)'
         type: number
         required: false
         default: 80
 
       coverage-mode:
+        description: 'Coverage mode (info | block | decrease-only)'
         type: string
         required: false
-        default: "info" # info | block | decrease-only (falha se a cobertura diminuir)
-      # coverage-command:
-      #   type: string
-      #   required: false
-      #   default: ""
+        default: "info" 
 
-      # coverage-file:
-      #   type: string
-      #   required: false
-      #   default: "coverage/coverage-summary.json"
+      promotion_strategy:
+        description: 'Promotion strategy (direct | release-branch)'
+        required: false
+        type: string
+        default: direct
+      semantic_release_config:
+        description: 'Path to semantic-release config file. (only promotion_strategy=release-branch)'
+        required: false
+        type: string
+      strict_conventional_commits:
+        description: 'Fail pipeline if no conventional commits are found. (only promotion_strategy=release-branch)'
+        required: false
+        type: boolean
+        default: true
 
     secrets:
       GH_TOKEN:
         required: true
 
 jobs:
-  check-branch:
+  resolve-branch:
     runs-on: ubuntu-latest
     outputs:
-      skip: ${{ steps.branch.outputs.skip }}
       head: ${{ steps.branch.outputs.head }}
       base: ${{ steps.branch.outputs.base }}
-
-    # permissions:
-    #   contents: read
-    #   pull-requests: write
+      skip: ${{ steps.branch.outputs.skip }}
 
     steps:
-    - name: 📌 Resolve PR base branch
-      id: branch
-      run: |
-        HEAD="${{ github.event.workflow_run.head_branch }}"
-        echo "Detected head branch: $HEAD"
+      - name: 🔍 Resolve branches
+        id: resolve
+        run: |
+          HEAD="${{ github.event.workflow_run.head_branch }}"
+          STRATEGY="${{ inputs.promotion_strategy }}"
 
-        if [ "$HEAD" = "main" ]; then
-          echo "skip=true" >> $GITHUB_OUTPUT
-        elif [ "$HEAD" = "develop" ]; then
-          echo "base=main" >> $GITHUB_OUTPUT
-        else
-          echo "base=develop" >> $GITHUB_OUTPUT
-        fi
+          echo "→ Detected head branch: $HEAD ($STRATEGY)"
 
-        echo "head=$HEAD" >> $GITHUB_OUTPUT
+          echo "HEAD=$HEAD"
 
-    - name: 🚫 Skip main branch
-      if: steps.branch.outputs.skip == 'true'
-      run: echo "Main branch detected. Skipping auto PR."
+          if [[ "$HEAD" == "main" ]]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-  run-coverage:
-    needs: check-branch
-    if: needs.check-branch.outputs.skip != 'true' && inputs.skip-tests != true
+          if [[ "$STRATEGY" == "release-branch" && "$HEAD" == "develop" ]]; then
+            echo "base=__release__" >> $GITHUB_OUTPUT
+          elif [[ "$HEAD" == "develop" ]]; then
+            echo "base=main" >> $GITHUB_OUTPUT
+          else
+            echo "base=develop" >> $GITHUB_OUTPUT
+          fi
+
+          echo "head=$HEAD" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+      - name: 🚫 Skip - main branch detected
+        if: steps.resolve.outputs.skip == 'true'
+        run: echo "Main branch detected. Skipping auto PR."
+
+  get-coverage:
+    needs: resolve-branch
+    if: needs.resolve-branch.outputs.skip != 'true'
     runs-on: ubuntu-latest
     outputs:
       line: ${{ steps.coverage.outputs.line }}
@@ -139,10 +136,12 @@ jobs:
 
   create-pr:
     needs:
-    - check-branch
-    - run-coverage
-    if: needs.check-branch.outputs.skip != 'true'
+    - resolve-branch
+    - get-coverage
+    if: needs.resolve-branch.outputs.skip != 'true'
     runs-on: ubuntu-latest
+    env:
+      REUSABLE_PATH: __reusable_actions__
 
     permissions:
       contents: read
@@ -154,12 +153,47 @@ jobs:
       with:
         fetch-depth: 0 # Necessário para evitar falhas do gh CLI em repositórios grandes
 
-    - name: 🔐 Authenticate GitHub CLI
+    - name: 🔐 Auth GitHub CLI
       run: |
         # echo "${GITHUB_TOKEN}" | gh auth login --with-token
         gh auth setup-git
       env:
         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+    - name: 🌱 Create release branch
+      id: release-branch
+      if: needs.resolve-branches.outputs.base == '__release__' # && inputs.promotion_strategy == 'release-branch'
+      run: |
+        VERSION=$(bash "$REUSABLE_PATH/scripts/shared/semantic-release/next-version.sh")
+
+        if [[ -z "$VERSION" ]]; then
+          echo "skip=true" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        BRANCH="release-$VERSION"
+        git checkout -b "$BRANCH"
+        git push origin "$BRANCH"
+
+        echo "name=$BRANCH" >> $GITHUB_OUTPUT
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        REUSABLE_PATH: ${{ env.REUSABLE_PATH }}
+        SEMANTIC_RELEASE_CONFIG: ${{ inputs.semantic_release_config }}
+        STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict_conventional_commits }}
+
+
+    - name: 📌 Resolve final branches
+      id: resolve-branches
+      run: |
+        if [[ "${{ needs.resolve-branches.outputs.base }}" == "__release__" ]]; then
+          echo "base=${{ steps.release-branch.outputs.name }}" >> $GITHUB_OUTPUT
+        else
+          echo "base=${{ needs.resolve-branches.outputs.base }}" >> $GITHUB_OUTPUT
+        fi
+
+        echo "head=${{ needs.resolve-branches.outputs.head }}" >> $GITHUB_OUTPUT
+
 
     - name: 🏷 Ensure auto-generated label exists
       run: |
@@ -170,10 +204,11 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
+
     - name: 📝 Generate PR body
       run: |
-        COVERAGE_LINE="${{ needs.run-coverage.outputs.line }}"
-        COVERAGE_STATUS="${{ needs.run-coverage.outputs.status }}"
+        COVERAGE_LINE="${{ needs.get-coverage.outputs.line }}"
+        COVERAGE_STATUS="${{ needs.get-coverage.outputs.status }}"
         MIN_COVERAGE="${{ inputs.min-coverage }}"
         MODE="${{ inputs.coverage-mode }}"
 
@@ -206,8 +241,8 @@ jobs:
 
         Esta PR foi criada ou atualizada automaticamente.
 
-        **Origem:** \`${{ needs.check-branch.outputs.head }}\`  
-        **Destino:** \`${{ needs.check-branch.outputs.base }}\`
+        **Origem:** \`${{ steps.resolve-branches.outputs.head }}\`  
+        **Destino:** \`${{ steps.resolve-branches.outputs.base }}\`
 
         ---
         ✔ CI executado com sucesso  
@@ -223,10 +258,10 @@ jobs:
     - name: 📜 Create or Update Pull Request
       id: create-pr
       run: |
-        HEAD="${{ needs.check-branch.outputs.head }}"
-        BASE="${{ needs.check-branch.outputs.base }}"
+        HEAD="${{ steps.resolve-branches.outputs.head }}"
+        BASE="${{ steps.resolve-branches.outputs.base }}"
         TITLE="🔀 PR ($(date +'%Y-%m-%d')):  ${HEAD} → ${BASE}"
-        STATUS_COVERAGE="${{ needs.run-coverage.outputs.status }}"
+        STATUS_COVERAGE="${{ needs.get-coverage.outputs.status }}"
 
         if [ "$STATUS_COVERAGE" = "failed" ]; then
           ADD_LABEL="coverage-failed"
@@ -285,10 +320,10 @@ jobs:
 
         **Status:** ${{ steps.create-pr.outputs.pr_action || 'processed' }}
 
-        **From:** \`${{ needs.check-branch.outputs.head }}\`  
-        **To:** \`${{ needs.check-branch.outputs.base }}\`
+        **From:** \`${{ steps.resolve-branches.outputs.head }}\`  
+        **To:** \`${{ steps.resolve-branches.outputs.base }}\`
 
-        **Coverage:** ${{ needs.run-coverage.outputs.status }}
+        **Coverage:** ${{ needs.get-coverage.outputs.status }}
 
         🔗 **PR:** ${{ steps.create-pr.outputs.pr_url }}
 
