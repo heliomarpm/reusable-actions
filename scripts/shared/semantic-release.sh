@@ -11,7 +11,7 @@ log() {
 }
 
 fail() {
-  echo "❌ $1"
+  echo "❌ $1" >&2
   exit 1
 }
 
@@ -19,6 +19,17 @@ has_file() {
   [[ -f "$1" ]]
 }
 
+render_markdown() {
+  local file="$1"
+
+  echo ""
+  sed 's/^/│ /' "$file" >&2
+  echo ""
+}
+
+# ------------------------------------------------------------
+# Env
+# ------------------------------------------------------------
 REUSABLE_PATH="${REUSABLE_PATH:-.}"
 STACK="${STACK:-node}"
 IS_DRY_RUN="${SEMANTIC_RELEASE_DRY_RUN:-false}"
@@ -27,6 +38,7 @@ STRICT_MODE="${STRICT_CONVENTIONAL_COMMITS:-false}"
 CUSTOM_CONFIG_PATH="${SEMANTIC_RELEASE_CONFIG:-}"
 
 DEFAULT_CONFIG="./$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.json"
+STRICT_TEMPLATE="$REUSABLE_PATH/scripts/templates/strict-mode-error.md"
 
 # ------------------------------------------------------------
 # Detect semantic-release config
@@ -38,8 +50,7 @@ if [[ -n "$CUSTOM_CONFIG_PATH" ]]; then
     log "Using consumer config: $CUSTOM_CONFIG_PATH"
     USE_CUSTOM_CONFIG=true
   else
-    echo "❌ SEMANTIC_RELEASE_CONFIG was provided but not found: $CUSTOM_CONFIG_PATH"
-    exit 1
+    fail "SEMANTIC_RELEASE_CONFIG was provided but not found: $CUSTOM_CONFIG_PATH"
   fi
 else
   CUSTOM_CONFIG_PATH=$(bash "$REUSABLE_PATH/scripts/shared/detect-releaserc.sh" || true)
@@ -55,25 +66,20 @@ fi
 # ----------------------------------------------------------
 INSTALL_TOOLCHAIN=false
 
-if [ "$USE_CUSTOM_CONFIG" = "true" ]; then
+if [[ "$USE_CUSTOM_CONFIG" == "true" ]]; then
   log "Installing project dependencies (required by custom config)"
 
   if has_file "pnpm-lock.yaml"; then
-    log "Installing with pnpm"
     corepack enable
     pnpm install --frozen-lockfile
   elif has_file "yarn.lock"; then
-    log "Installing with yarn"
     corepack enable
     yarn install --frozen-lockfile
   elif has_file "package-lock.json"; then
-    log "Installing with npm (ci)"
     npm ci
   elif has_file "package.json"; then
-    log "Installing with npm"
     npm install
-  else 
-    log "Skipping custom config installation"
+  else
     INSTALL_TOOLCHAIN=true
   fi
 else
@@ -81,7 +87,7 @@ else
 fi
 
 # ----------------------------------------------------------
-# Run semantic-release
+# Build semantic-release command
 # ----------------------------------------------------------
 CMD="npx semantic-release"
 
@@ -89,8 +95,7 @@ if [[ "$USE_CUSTOM_CONFIG" == "true" ]]; then
   log "Running semantic-release with consumer config"
   CMD+=" --extends $CUSTOM_CONFIG_PATH"
 else
-  [[ -f "$DEFAULT_CONFIG" ]] || { echo "❌ Default config not found for stack: $STACK"; exit 1; }
-
+  [[ -f "$DEFAULT_CONFIG" ]] || fail "Default config not found for stack: $STACK"
   log "Running semantic-release with default config"
   CMD+=" --extends $DEFAULT_CONFIG"
 fi
@@ -109,34 +114,6 @@ fi
 # Install semantic-release toolchain (ONE SHOT)
 # ------------------------------------------------------------
 if [[ "$INSTALL_TOOLCHAIN" == "true" ]]; then
-  # log "Installing semantic-release core"
-  # npm install --no-save semantic-release
-
-  # if [ -f "$DEFAULT_CONFIG" ]; then
-  #   # ------------------------------------------------------------
-  #   # Detect plugins from config (JSON only for now)
-  #   # ------------------------------------------------------------
-  #   if [[ "$DEFAULT_CONFIG" == *.json ]]; then
-  #     PLUGINS=$(jq -r '.plugins[]? | if type=="string" then . else .[0] end' "$DEFAULT_CONFIG")
-  #   else
-  #     echo "⚠️ Non-JSON config detected, installing default plugin set"
-  #     PLUGINS="
-  #       @semantic-release/commit-analyzer
-  #       @semantic-release/release-notes-generator
-  #       @semantic-release/changelog
-  #       @semantic-release/github
-  #       @semantic-release/git
-  #       @semantic-release/exec
-  #       @semantic-release/npm
-  #     "
-  #   fi
-
-  #   for plugin in $PLUGINS; do
-  #     echo "📦 Installing $plugin"
-  #     npm install --no-save "$plugin"
-  #   done
-  # fi
-
   log "Installing semantic-release toolchain"
 
   TOOLCHAIN=(
@@ -160,22 +137,27 @@ if [[ "$STRICT_MODE" == "true" ]]; then
   log "Strict mode enabled — validating conventional commits"
 
   STRICT_CMD="$CMD --dry-run"
-
-  log "Running strict validation: $STRICT_CMD"
-
   OUTPUT=$(eval "$STRICT_CMD" 2>&1 || true)
 
-  echo "$OUTPUT"
-
   if echo "$OUTPUT" | grep -qiE "no release type found|There are no relevant changes"; then
-    fail "Strict mode failed: no valid conventional commits found"
+    echo "❌ Release blocked by STRICT MODE" >&2
+
+    if [[ -f "$STRICT_TEMPLATE" ]]; then
+      render_markdown "$STRICT_TEMPLATE"
+    else
+      echo "See Conventional Commits specification: https://www.conventionalcommits.org" >&2
+    fi
+
+    exit 1
   fi
 
-  echo "✅ Conventional commits validation passed"
+  log "Conventional commits validation passed"
 fi
 
-
-echo "🚀 Running: $CMD"
+# ------------------------------------------------------------
+# Run release
+# ------------------------------------------------------------
+log "🚀 Running: $CMD"
 eval "$CMD"
 
-echo "🎉 Done."
+log "🎉 Done."
