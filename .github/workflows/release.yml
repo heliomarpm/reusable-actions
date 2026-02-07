@@ -119,7 +119,7 @@ jobs:
           echo "❌ Stack not detected. Check project_path or repository structure."
           exit 1          
 
-          
+
       - name: 🚀 Run Release
         if: steps.stack.outputs.value != ''
         run: |
@@ -134,4 +134,5 @@ jobs:
           SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.semantic_release_dry_run }}
           SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.semantic_release_debug_mode }}
           STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict_conventional_commits }}
+          RELEASE_STRATEGY: ${{ inputs.release_strategy }}
 
