@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "🚀 Running Node.js release"
+echo "🚀 Semantic Release Script"
+echo "──────────────────────────"
 
 # ------------------------------------------------------------
 # Helpers
@@ -27,6 +28,7 @@ STACK="${STACK:-node}"
 IS_DRY_RUN="${SEMANTIC_RELEASE_DRY_RUN:-false}"
 IS_DEBUG_MODE="${SEMANTIC_RELEASE_DEBUG_MODE:-false}"
 STRICT_MODE="${STRICT_CONVENTIONAL_COMMITS:-false}"
+RELEASE_STRATEGY="${RELEASE_STRATEGY:-direct}" # direct | release-branch
 CUSTOM_CONFIG_PATH="${SEMANTIC_RELEASE_CONFIG:-}"
 
 DEFAULT_CONFIG="./$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.json"
@@ -94,13 +96,9 @@ if [[ "$USE_CUSTOM_CONFIG" == "true" ]]; then
   CMD+=" --extends $CUSTOM_CONFIG_PATH"
 else
   [[ -f "$DEFAULT_CONFIG" ]] || fail "Default config not found for stack: $STACK"
+
   log "Running semantic-release with default config"
   CMD+=" --extends $DEFAULT_CONFIG"
-fi
-
-if [[ "$IS_DRY_RUN" == "true" || "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
-  log "Dry-run enabled"
-  CMD+=" --dry-run"
 fi
 
 if [[ "$IS_DEBUG_MODE" == "true" ]]; then
@@ -149,7 +147,7 @@ if [[ "$STRICT_MODE" == "true" ]]; then
       echo "**Repositório:** \`$GITHUB_REPOSITORY\`"
       echo "**Branch:** \`${GITHUB_REF_NAME:-unknown}\`"
       echo ""
-      echo "❌ No valid **Conventional Commits** were found since the last release."
+      echo "❌ Nenhum **Conventional Commit** válido foi encontrado desde o último release."
       echo ""
       echo "---"
     } >> "$GITHUB_STEP_SUMMARY"
@@ -164,6 +162,58 @@ if [[ "$STRICT_MODE" == "true" ]]; then
   fi
 
   log "Conventional commits validation passed"
+fi
+
+# ------------------------------------------------------------
+# RELEASE STRATEGY: release-branch
+# ------------------------------------------------------------
+if [[ "$RELEASE_STRATEGY" == "release-branch" ]]; then
+  log "Release strategy: release-branch"
+
+  log "Running semantic-release dry-run to detect next version"
+  OUTPUT=$(eval "$CMD --dry-run" 2>&1 || true)
+
+  NEXT_VERSION=$(echo "$OUTPUT" | grep -oE 'next release version is ([0-9]+\.[0-9]+\.[0-9]+)' | awk '{print $5}')
+
+  if [[ -z "$NEXT_VERSION" ]]; then
+    log "No release detected. Exiting."
+    echo "ℹ️ No new release required." >> "$GITHUB_STEP_SUMMARY"
+    exit 0
+  fi
+
+  RELEASE_BRANCH="release-$NEXT_VERSION"
+
+  log "Next version detected: $NEXT_VERSION"
+  log "Creating branch: $RELEASE_BRANCH"
+
+  git checkout -b "$RELEASE_BRANCH"
+  git push origin "$RELEASE_BRANCH"
+
+  echo "::notice title=Release branch created::$RELEASE_BRANCH"
+
+  {
+    echo "## 🚀 Release Branch Criada"
+    echo ""
+    echo "- **Versão:** \`$NEXT_VERSION\`"
+    echo "- **Branch:** \`$RELEASE_BRANCH\`"
+    echo ""
+    echo "### Próximos passos"
+    echo "1. Criar PR: \`$RELEASE_BRANCH → main\`"
+    echo "2. Após merge, semantic-release criará:"
+    echo "   - Tag"
+    echo "   - GitHub Release"
+    echo "   - Changelog"
+  } >> "$GITHUB_STEP_SUMMARY"
+
+  exit 0
+fi
+
+# ------------------------------------------------------------
+# RELEASE STRATEGY: direct (default)
+# ------------------------------------------------------------
+if [[ "$IS_DRY_RUN" == "true" || "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
+  log "Dry-run enabled"
+  CMD+=" --dry-run"
 fi
 
 # ------------------------------------------------------------

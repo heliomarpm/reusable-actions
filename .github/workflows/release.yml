@@ -11,7 +11,7 @@ on:
         description: 'Stack the project. (node | php | dotnet | python | go | empty for auto-detect)'
         required: false
         type: string
-        default: null     # node | php | dotnet | python | go | empty for auto-detect
+        default: null
       semantic_release_config:
         description: 'Path to semantic-release config file.'
         required: false
@@ -22,7 +22,7 @@ on:
         type: boolean
         default: false
       semantic_release_debug_mode:
-        description: 'Debug mode for semantic-release. (default: false)'
+        description: 'Debug mode for semantic-release.'
         required: false
         type: boolean
         default: false
@@ -31,6 +31,11 @@ on:
         required: false
         type: boolean
         default: true
+      release_strategy:
+        description: 'Release flow strategy (direct | release-branch)'
+        required: false
+        type: string
+        default: direct
 
     secrets:
       GH_TOKEN:
@@ -51,7 +56,7 @@ jobs:
       actions: read
       contents: write
       issues: write
-      # pull-requests: write
+      pull-requests: write
 
     steps:
       - name: Checkout consumer repository
@@ -71,6 +76,7 @@ jobs:
           path: ${{ env.REUSABLE_PATH }}
           token: ${{ secrets.GH_TOKEN }} # Necessário se o repositório for privado
 
+
       - name: Files in workspace
         run: |
           echo "📂 Current directory:"
@@ -78,17 +84,19 @@ jobs:
           echo "📄 Files in root:"
           ls -la
 
+
       - name: ⚙️ Configurar Usuário Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
 
       - name: 🔍 Resolve project stack
         id: stack
         working-directory: ${{ inputs.project_path }}
         run: |
           if [[ -n "${{ inputs.stack }}" ]]; then
-            echo "Using stack from input: ${{ inputs.stack }}"
+            echo "→ Using stack from input: ${{ inputs.stack }}"
             echo "value=${{ inputs.stack }}" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -104,6 +112,14 @@ jobs:
           echo "✅ Detected stack: $STACK"
           echo "value=$STACK" >> $GITHUB_OUTPUT
 
+          
+      - name: Fail if stack not detected
+        if: steps.stack.outputs.value == ''
+        run: |
+          echo "❌ Stack not detected. Check project_path or repository structure."
+          exit 1          
+
+          
       - name: 🚀 Run Release
         if: steps.stack.outputs.value != ''
         run: |
@@ -118,10 +134,4 @@ jobs:
           SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.semantic_release_dry_run }}
           SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.semantic_release_debug_mode }}
           STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict_conventional_commits }}
-
-      - name: Fail if stack not detected
-        if: steps.stack.outputs.value == ''
-        run: |
-          echo "❌ Stack not detected. Check project_path or repository structure."
-          exit 1
 
