@@ -246,23 +246,77 @@ jobs:
 
           echo "$TITLE"
 
+          # if [ -z "$PR_NUMBER" ]; then
+          #   echo "No existing PR found. Creating new PR..."
+          #   gh pr create \
+          #     --base "$BASE" \
+          #     --head "$HEAD" \
+          #     --title "$TITLE" \
+          #     --body-file pr_body.md \
+          #     --label "auto-generated,$ADD_LABEL" \
+          #     --assignee "${{ github.actor }}"
+          # else
+          #   echo "Existing PR #$PR_NUMBER found. Updating..."
+          #   gh pr edit "$PR_NUMBER" \
+          #     --title "$TITLE" \
+          #     --body-file pr_body.md \
+          #     --add-assignee "${{ github.actor }}" \
+          #     --remove-label "$DEL_LABEL" \
+          #     --add-label "$ADD_LABEL"            
+          # fi
+
           if [ -z "$PR_NUMBER" ]; then
             echo "No existing PR found. Creating new PR..."
-            gh pr create \
+
+            PR_URL=$(gh pr create \
               --base "$BASE" \
               --head "$HEAD" \
               --title "$TITLE" \
               --body-file pr_body.md \
               --label "auto-generated,$ADD_LABEL" \
-              --assignee "${{ github.actor }}"
+              --assignee "${{ github.actor }}" \
+              --json url \
+              --jq '.url')
+
+            PR_ACTION="created"
           else
             echo "Existing PR #$PR_NUMBER found. Updating..."
+
             gh pr edit "$PR_NUMBER" \
               --title "$TITLE" \
               --body-file pr_body.md \
               --add-assignee "${{ github.actor }}" \
               --remove-label "$DEL_LABEL" \
-              --add-label "$ADD_LABEL"            
+              --add-label "$ADD_LABEL"
+
+            PR_URL="https://github.com/${{ github.repository }}/pull/$PR_NUMBER"
+            PR_ACTION="updated"
           fi
+
+          echo "::notice title=Auto PR ${PR_ACTION}::${HEAD} → ${BASE}"
+          echo "::notice title=Pull Request::${PR_URL}"
+
+          echo "pr_url=${PR_URL}" >> $GITHUB_OUTPUT
+          echo "pr_action=${PR_ACTION}" >> $GITHUB_OUTPUT
+
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: 🧾 Job summary
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ## 🔀 Auto Pull Request
+
+          **Status:** ${{ steps.create-pr.outputs.pr_action || 'processed' }}
+
+          **From:** \`${{ needs.check-branch.outputs.head }}\`  
+          **To:** \`${{ needs.check-branch.outputs.base }}\`
+
+          **Coverage:** ${{ needs.run-coverage.outputs.status }}
+
+          🔗 **PR:** ${{ steps.create-pr.outputs.pr_url }}
+
+          ---
+          _Gerado automaticamente pela action **auto-pr**_
+          EOF
+

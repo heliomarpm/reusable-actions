@@ -1,70 +1,72 @@
-## ❓ What does this mean?
+## ❓ O que isso significa?
 
-This project requires that **all changes promoted to production** follow the **Conventional Commits** specification.
+Este projeto exige que **todas as alterações promovidas para produção** sigam a especificação de **Commits Convencionais**.
 
-Without at least one valid commit, **semantic-release** cannot determine whether the next version should be a:
+Sem pelo menos um commit válido, o **semantic-release** não consegue determinar se a próxima versão deve ser:
 - patch
 - minor
 - major
 
-For safety reasons, the release process has been **intentionally blocked**.
+Por motivos de segurança, o processo de lançamento foi **intencionalmente bloqueado**.
 
 ---
 
-## ✅ How to fix
+## ✅ Como corrigir
 
-Create **at least one commit** following the Conventional Commits format and push it to the repository.
+Crie **pelo menos um commit** seguindo o formato de Commits Convencionais e envie-o para o repositório.
 
-### Required format
+### Formato obrigatório
 
-`<type>(<scope>): <short description>`
+`<tipo>(<escopo>): <descrição curta>`
 
-### Accepted Types
+### Tipos aceitos
 
-| Type   | Release impact |
-|--------|----------------|
-| feat   | minor          |
-| fix    | patch          |
-| revert | patch          |
-| chore  | ❌ none        |
-| docs   | ❌ none        |
-| test   | ❌ none        |
+| Tipo      | Impacto no lançamento
+|--------   |---------------- 
+| feat!     | _major_
+| feat      | _minor_
+| fix       | _patch_
+| revert    | _patch_
+| chore     | --
+| docs      | --
+| test      | --
 
 ---
 
-## ✅ Valid examples
+## ✅ Exemplos válidos
 
-<details><summary> details </summary>
+<details><summary> detalhes </summary>
 ```bash
-git commit -m "feat(auth): add refresh token support"
-git commit -m "fix(api): handle 500 error when saving request"
-git commit -m "fix(test): update test cases for new endpoint"
-git commit -m "chore: update README.md"
-git commit -m "test: add new test case for new endpoint"
+git commit -m "feat(auth): adicionar suporte a token de atualização"
+git commit -m "fix(api): lidar com erro 500 ao salvar requisição"
+git commit -m "fix(test): atualizar casos de teste para o novo endpoint"
+git commit -m "chore: atualizar README.md"
+git commit -m "test: adicionar novo caso de teste para o novo endpoint"
 ```
 
-### 🚨 Breaking change (major release)
+### 🚨 Alteração que quebra a compatibilidade (versão principal)
 
 ```bash
-git commit -m "feat!: remove legacy endpoint"
+git commit -m "feat!: remover endpoint legado"
 ```
-_or_
+
+_ou_
 
 ```text
-feat(core): nova API de autenticação
+feat(core): nova API de ativação
 
-BREAKING CHANGE: o endpoint /login foi removido
+BREAKING CHANGE: o endpoint de login foi removido
 ```
 </details>
 
-## 🧪 Tip to avoid future errors
+## 🧪 Dica para evitar erros futuros
 
-Use commit helpers to enforce the correct format:
+Use auxiliares de commit para garantir o formato correto:
 
-- Commitizen
-- Husky + commitlint
-- Git hook with commit-msg
+- `Commitizen`
+- `Husky` + `commitlint`
+- Git hook com `commit-msg`
 
-📖 See [Conventional Commits specification](https://www.conventionalcommits.org)
+📖 Consulte a [especificação de Commits Convencionais](https://www.conventionalcommits.org)
 
-> ℹ️ This block is intentional and is part of the project's quality policy.
+> ℹ️ Este bloco é intencional e faz parte da política de qualidade do projeto.

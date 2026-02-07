@@ -144,9 +144,9 @@ if [[ "$STRICT_MODE" == "true" ]]; then
 
     # Job Summary (markdown completo)
     {
-      echo "# 🚫 Release blocked by STRICT MODE ACTIVE"
+      echo "# 🚫 Release bloqueada por STRICT MODE"
       echo ""
-      echo "**Repository:** \`$GITHUB_REPOSITORY\`"
+      echo "**Repositório:** \`$GITHUB_REPOSITORY\`"
       echo "**Branch:** \`${GITHUB_REF_NAME:-unknown}\`"
       echo ""
       echo "❌ No valid **Conventional Commits** were found since the last release."
@@ -157,7 +157,7 @@ if [[ "$STRICT_MODE" == "true" ]]; then
     if [[ -f "$STRICT_TEMPLATE" ]]; then
       cat "$STRICT_TEMPLATE" >> "$GITHUB_STEP_SUMMARY"
     else
-      echo "📖 See [Conventional Commits specification](https://www.conventionalcommits.org)" >> "$GITHUB_STEP_SUMMARY"
+      echo "📖 Veja [Conventional Commits specification](https://www.conventionalcommits.org)" >> "$GITHUB_STEP_SUMMARY"
     fi
 
     exit 1
