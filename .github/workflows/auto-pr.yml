@@ -221,6 +221,7 @@ jobs:
         EOF
 
     - name: 📜 Create or Update Pull Request
+      id: create-pr
       run: |
         HEAD="${{ needs.check-branch.outputs.head }}"
         BASE="${{ needs.check-branch.outputs.base }}"
