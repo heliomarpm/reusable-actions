@@ -20,10 +20,17 @@ on:
         description: 'Dry run mode for semantic-release. (default: false -> true for PRs)'
         required: false
         type: boolean
+        default: false
       semantic_release_debug_mode:
         description: 'Debug mode for semantic-release. (default: false)'
         required: false
         type: boolean
+        default: false
+      strict_conventional_commits:
+        description: 'Fail pipeline if no conventional commits are found'
+        required: false
+        type: boolean
+        default: true
 
     secrets:
       GH_TOKEN:
@@ -97,13 +104,6 @@ jobs:
           echo "✅ Detected stack: $STACK"
           echo "value=$STACK" >> $GITHUB_OUTPUT
 
-      # - name: 🔍 Detect release config
-      #   id: releaserc
-      #   run: |
-      #     chmod +x $REUSABLE_PATH/scripts/shared/detect-releaserc.sh
-      #     HAS_CONFIG=$($REUSABLE_PATH/scripts/shared/detect-releaserc.sh)
-      #     echo "has_config=$HAS_CONFIG" >> $GITHUB_OUTPUT
-
       - name: 🚀 Run Release
         if: steps.stack.outputs.value != ''
         run: |
@@ -117,6 +117,7 @@ jobs:
           SEMANTIC_RELEASE_CONFIG: ${{ inputs.semantic_release_config }}
           SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.semantic_release_dry_run }}
           SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.semantic_release_debug_mode }}
+          STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict_conventional_commits }}
 
       - name: Fail if stack not detected
         if: steps.stack.outputs.value == ''

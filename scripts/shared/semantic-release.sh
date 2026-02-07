@@ -9,6 +9,12 @@ echo "🚀 Running Node.js release"
 log() {
   echo "→ $1"
 }
+
+fail() {
+  echo "❌ $1"
+  exit 1
+}
+
 has_file() {
   [[ -f "$1" ]]
 }
@@ -17,6 +23,7 @@ REUSABLE_PATH="${REUSABLE_PATH:-.}"
 STACK="${STACK:-node}"
 IS_DRY_RUN="${SEMANTIC_RELEASE_DRY_RUN:-false}"
 IS_DEBUG_MODE="${SEMANTIC_RELEASE_DEBUG_MODE:-false}"
+STRICT_MODE="${STRICT_CONVENTIONAL_COMMITS:-false}"
 CUSTOM_CONFIG_PATH="${SEMANTIC_RELEASE_CONFIG:-}"
 
 DEFAULT_CONFIG="./$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.json"
@@ -139,6 +146,28 @@ if [[ "$INSTALL_TOOLCHAIN" == "true" ]]; then
 
   npm install --no-save "${TOOLCHAIN[@]}"
 fi
+
+# ------------------------------------------------------------
+# STRICT MODE — Enforce conventional commits
+# ------------------------------------------------------------
+if [[ "$STRICT_MODE" == "true" ]]; then
+  log "Strict mode enabled — validating conventional commits"
+
+  STRICT_CMD="$CMD --dry-run"
+
+  log "Running strict validation: $STRICT_CMD"
+
+  OUTPUT=$(eval "$STRICT_CMD" 2>&1 || true)
+
+  echo "$OUTPUT"
+
+  if echo "$OUTPUT" | grep -qiE "no release type found|There are no relevant changes"; then
+    fail "Strict mode failed: no valid conventional commits found"
+  fi
+
+  log "✅ Conventional commits validation passed"
+fi
+
 
 log "🚀 Running: $CMD"
 eval "$CMD"
