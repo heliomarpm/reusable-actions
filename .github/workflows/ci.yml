@@ -26,6 +26,11 @@ on:
         required: false
         # default: 'npm test -- --no-watch --coverage --reporter=verbose'
         type: string
+      test_continue_on_failure:
+        description: 'Continue pipeline even if tests fail. (default: true)'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   ci: 
@@ -54,7 +59,6 @@ jobs:
           ref: main
           path: ${{ env.REUSABLE_PATH }}
 
-
       - name: Files in workspace
         run: |
           echo "📂 Current directory:"
@@ -62,14 +66,14 @@ jobs:
           echo "📄 Files in root:"
           ls -la
 
-
       - name: 🔍 Resolve project stack
         id: stack
         # working-directory: ${{ inputs.project_path }}
         run: |
           if [[ -n "${{ inputs.stack }}" ]]; then
-            echo "Using stack from input: ${{ inputs.stack }}"
+            echo "→ Using stack from input: ${{ inputs.stack }}"
             echo "value=${{ inputs.stack }}" >> $GITHUB_OUTPUT
+            echo "source=input" >> $GITHUB_OUTPUT
             exit 0
           fi
             
@@ -78,32 +82,43 @@ jobs:
           
           if [[ -z "$STACK" ]]; then
             echo "value=" >> $GITHUB_OUTPUT
+            echo "source=not-detected" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           echo "✅ Detected stack: $STACK"
           echo "value=$STACK" >> $GITHUB_OUTPUT
+          echo "source=not-detected" >> $GITHUB_OUTPUT
 
-      - name: Evaluate test execution
+      - name: Fail if stack not detected
+        if: steps.stack.outputs.value == ''
+        run: |
+          echo "❌ Stack not detected. Check project_path or repository structure."
+          exit 1
+
+      - name: 🧪 Evaluate test execution
         id: tests
         # working-directory: ${{ inputs.project_path }}
         run: |
           if [[ "${{ inputs.skip_tests }}" == "true" ]]; then
-            echo "Tests skipped by input."
+            echo "→ Tests skipped by input."
             echo "run=false" >> $GITHUB_OUTPUT
+            echo "reason=skip_tests input" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           if [[ ! -d "tests" && ! -d "__tests__" && ! -d "test" ]]; then
-            echo "No test directories found."
+            echo "→ No test directories found."
             echo "run=false" >> $GITHUB_OUTPUT
+            echo "reason=no test folders detected" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          echo "Tests will run."          
+          echo "✅ Tests will run."          
           echo "run=true" >> $GITHUB_OUTPUT
+          echo "reason=tests detected" >> $GITHUB_OUTPUT
   
-      - name: Run unit tests
+      - name: ▶️ Run unit tests
         if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true'
         working-directory: ${{ inputs.project_path }}
         run: |
@@ -112,25 +127,75 @@ jobs:
           chmod +x "$SCRIPT"
           "$SCRIPT"
 
-      - name: Run coverage tests
+      - name: 📊 Run coverage tests
+        id: coverage
         if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true'
         working-directory: ${{ inputs.project_path }}
-        continue-on-error: true
+        continue-on-error: ${{ inputs.test_continue_on_failure }}
         run: |
           STACK="${{ steps.stack.outputs.value }}"
           SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/coverage.sh"
           chmod +x "$SCRIPT"
           "$SCRIPT"
 
+          if "$SCRIPT"; then
+            echo "status=executed" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ -f coverage/coverage-summary.normalized.json ]]; then
+            PCT=$(jq -r '.total.lines.pct // empty' coverage/coverage-summary.normalized.json)
+            if [[ -n "$PCT" ]]; then
+              echo "pct=$PCT" >> $GITHUB_OUTPUT
+            fi
+          fi
+
       - name: 📦 Upload coverage artifact
-        if: steps.stack.outputs.value != '' && steps.tests.outputs.run == 'true' && hashFiles('coverage/coverage-summary.normalized.json') != ''
+        if: hashFiles('coverage/coverage-summary.normalized.json') != ''
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
           name: coverage-report
           path: coverage/coverage-summary.normalized.json
 
-      - name: Fail if stack not detected
-        if: steps.stack.outputs.value == ''
+      - name: 📝 CI Summary
+        if: always()
         run: |
-          echo "❌ Stack not detected. Check project_path or repository structure."
+          {
+            echo "## 🧪 CI Summary"
+            echo ""
+            echo "**📂 Project path:** \`${{ inputs.project_path }}\`"
+            echo ""
+
+            if [[ "${{ steps.stack.outputs.value }}" != "" ]]; then
+              echo "**🧱 Stack:** \`${{ steps.stack.outputs.value }}\` (_${{ steps.stack.outputs.source }}_)"
+            else
+              echo "**🧱 Stack:** ❌ not detected"
+            fi
+
+            echo ""
+            if [[ "${{ steps.tests.outputs.run }}" == "true" ]]; then
+              echo "**🧪 Tests:** executed"
+            else
+              echo "**🧪 Tests:** skipped (_${{ steps.tests.outputs.reason }}_)"
+            fi
+
+            echo ""
+            if [[ "${{ steps.coverage.outputs.status }}" == "executed" ]]; then
+              if [[ -n "${{ steps.coverage.outputs.pct }}" ]]; then
+                echo "**📊 Coverage:** ${{ steps.coverage.outputs.pct }}%"
+              else
+                echo "**📊 Coverage:** executed (no summary produced)"
+              fi
+            elif [[ "${{ steps.coverage.outputs.status }}" == "failed" ]]; then
+              echo "**📊 Coverage:** failed"
+            else
+              echo "**📊 Coverage:** not executed"
+            fi
+
+            echo ""
+            if [[ -f coverage/coverage-summary.normalized.json ]]; then
+              echo "**📦 Artifacts:** coverage-report"
+            fi
+          } >> $GITHUB_STEP_SUMMARY
