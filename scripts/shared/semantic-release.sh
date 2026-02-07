@@ -11,20 +11,12 @@ log() {
 }
 
 fail() {
-  echo "❌ $1" >&2
+  echo "::error::$1"
   exit 1
 }
 
 has_file() {
   [[ -f "$1" ]]
-}
-
-render_markdown() {
-  local file="$1"
-
-  echo ""
-  sed 's/^/│ /' "$file" >&2
-  echo ""
 }
 
 # ------------------------------------------------------------
@@ -38,7 +30,7 @@ STRICT_MODE="${STRICT_CONVENTIONAL_COMMITS:-false}"
 CUSTOM_CONFIG_PATH="${SEMANTIC_RELEASE_CONFIG:-}"
 
 DEFAULT_CONFIG="./$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.json"
-STRICT_TEMPLATE="$REUSABLE_PATH/scripts/templates/strict-mode-error.md"
+STRICT_TEMPLATE="$REUSABLE_PATH/templates/strict-mode-error.md"
 
 # ------------------------------------------------------------
 # Detect semantic-release config
@@ -48,7 +40,6 @@ USE_CUSTOM_CONFIG=false
 if [[ -n "$CUSTOM_CONFIG_PATH" ]]; then
   if [[ -f "$CUSTOM_CONFIG_PATH" ]]; then
     log "Using consumer config: $CUSTOM_CONFIG_PATH"
-    USE_CUSTOM_CONFIG=true
   else
     fail "SEMANTIC_RELEASE_CONFIG was provided but not found: $CUSTOM_CONFIG_PATH"
   fi
@@ -57,13 +48,20 @@ else
 
   if [[ -n "$CUSTOM_CONFIG_PATH" ]]; then
     log "Detected consumer config: $CUSTOM_CONFIG_PATH"
-    USE_CUSTOM_CONFIG=true
   fi
 fi
 
-# ----------------------------------------------------------
+if [[ -n "$CUSTOM_CONFIG_PATH" ]]; then 
+  # Normaliza para sempre começar com "./" 
+  CUSTOM_CONFIG_PATH="${CUSTOM_CONFIG_PATH#./}" 
+  CUSTOM_CONFIG_PATH="./$CUSTOM_CONFIG_PATH" 
+  
+  USE_CUSTOM_CONFIG=true
+fi
+
+# ------------------------------------------------------------
 # Install dependencies ONLY if needed
-# ----------------------------------------------------------
+# ------------------------------------------------------------
 INSTALL_TOOLCHAIN=false
 
 if [[ "$USE_CUSTOM_CONFIG" == "true" ]]; then
@@ -86,9 +84,9 @@ else
   INSTALL_TOOLCHAIN=true
 fi
 
-# ----------------------------------------------------------
+# ------------------------------------------------------------
 # Build semantic-release command
-# ----------------------------------------------------------
+# ------------------------------------------------------------
 CMD="npx semantic-release"
 
 if [[ "$USE_CUSTOM_CONFIG" == "true" ]]; then
@@ -140,12 +138,24 @@ if [[ "$STRICT_MODE" == "true" ]]; then
   OUTPUT=$(eval "$STRICT_CMD" 2>&1 || true)
 
   if echo "$OUTPUT" | grep -qiE "no release type found|There are no relevant changes"; then
-    echo "❌ Release blocked by STRICT MODE" >&2
+
+    # Annotation (curta, visível no PR / Job)
+    echo "::error title=RELEASE BLOCKED (STRICT MODE)::No valid Conventional Commits found since the last release. See job summary for instructions."
+
+    # Job Summary (markdown completo)
+    {
+      echo "# 🚫 Release blocked by STRICT MODE"
+      echo ""
+      echo "**Repository:** \`$GITHUB_REPOSITORY\`"
+      echo "**Branch:** \`${GITHUB_REF_NAME:-unknown}\`"
+      echo ""
+    } >> "$GITHUB_STEP_SUMMARY"
 
     if [[ -f "$STRICT_TEMPLATE" ]]; then
-      render_markdown "$STRICT_TEMPLATE"
+      cat "$STRICT_TEMPLATE" >> "$GITHUB_STEP_SUMMARY"
     else
-      echo "See Conventional Commits specification: https://www.conventionalcommits.org" >&2
+      echo "See Conventional Commits specification:" >> "$GITHUB_STEP_SUMMARY"
+      echo "https://www.conventionalcommits.org" >> "$GITHUB_STEP_SUMMARY"
     fi
 
     exit 1
