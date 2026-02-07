@@ -1,9 +1,3 @@
-# 🚫 RELEASE BLOCKED — STRICT MODE ACTIVE
-
-No valid **Conventional Commits** were found since the last release.
-
----
-
 ## ❓ What does this mean?
 
 This project requires that **all changes promoted to production** follow the **Conventional Commits** specification.
@@ -71,11 +65,6 @@ Use commit helpers to enforce the correct format:
 - Husky + commitlint
 - Git hook with commit-msg
 
-📘 Documentation:
+📖 See [Conventional Commits specification](https://www.conventionalcommits.org)
 
-https://www.conventionalcommits.org
-
-
-ℹ️ This block is intentional and is part of the project's quality policy.
-
-
+> ℹ️ This block is intentional and is part of the project's quality policy.
