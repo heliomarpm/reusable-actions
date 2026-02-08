@@ -200,11 +200,12 @@ jobs:
 
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
             echo "ℹ️ Branch $BRANCH already exists. Reusing."
+            git fetch origin "$BRANCH":"$BRANCH"
             git checkout "$BRANCH"
           else
             echo "🚀 Creating release branch $BRANCH"
             git checkout -b "$BRANCH"
-            git push origin "$BRANCH"
+            git push -u origin "$BRANCH"
           fi
 
           echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
