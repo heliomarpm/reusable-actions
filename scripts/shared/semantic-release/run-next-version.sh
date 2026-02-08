@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+
+trap 'echo "::error::Falha no step de criação/checkout da branch release ($BRANCH)"; echo "🔴 Último comando: $BASH_COMMAND"; exit 1' ERR
 
 echo "🚀 Semantic Release Next Version Script"
 
