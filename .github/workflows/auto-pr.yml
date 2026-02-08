@@ -49,9 +49,8 @@ jobs:
           HEAD="${{ github.event.workflow_run.head_branch }}"
           STRATEGY="${{ inputs.promotion_strategy }}"
 
-          echo "→ Detected head branch: $HEAD ($STRATEGY)"
-
-          echo "HEAD=$HEAD"
+          echo "→ Detected head branch: $HEAD"
+          echo "→ Promotion strategy: $STRATEGY"
 
           if [[ "$HEAD" == "main" ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
@@ -59,19 +58,20 @@ jobs:
           fi
 
           if [[ "$STRATEGY" == "release-branch" && "$HEAD" == "develop" ]]; then
-            echo "base=__release__" >> $GITHUB_OUTPUT
+            BASE="__release__"
           elif [[ "$HEAD" == "develop" ]]; then
-            echo "base=main" >> $GITHUB_OUTPUT
+            BASE="main"
           else
-            echo "base=develop" >> $GITHUB_OUTPUT
+            BASE="develop"
           fi
 
+          echo "base=$BASE" >> $GITHUB_OUTPUT
           echo "head=$HEAD" >> $GITHUB_OUTPUT
           echo "skip=false" >> $GITHUB_OUTPUT
 
       - name: 🚫 Skip - main branch detected
         if: steps.resolve.outputs.skip == 'true'
-        run: echo "Main branch detected. Skipping auto PR."
+        run: echo "→ Main branch detected. Skipping auto PR."
 
   get-coverage:
     needs: resolve-branch
@@ -112,6 +112,9 @@ jobs:
         LINE=${{ steps.coverage.outputs.line }}
         MIN=${{ inputs.min-coverage }}
         MODE="${{ inputs.coverage-mode }}"
+
+        echo "→ Minimum coverage: $MIN%"
+        echo "→ Coverage mode: $MODE"
 
         FINAL_STATUS="passed"
 
@@ -160,6 +163,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
+
     - name: 🌱 Create release branch
       id: release-branch
       if: needs.resolve-branches.outputs.base == '__release__' # && inputs.promotion_strategy == 'release-branch'
@@ -187,13 +191,17 @@ jobs:
       id: resolve-branches
       run: |
         if [[ "${{ needs.resolve-branches.outputs.base }}" == "__release__" ]]; then
-          echo "base=${{ steps.release-branch.outputs.name }}" >> $GITHUB_OUTPUT
+          BASE="${{ steps.release-branch.outputs.name }}"          
         else
-          echo "base=${{ needs.resolve-branches.outputs.base }}" >> $GITHUB_OUTPUT
+          BASE="${{ needs.resolve-branches.outputs.base }}"
         fi
-
-        echo "head=${{ needs.resolve-branches.outputs.head }}" >> $GITHUB_OUTPUT
-
+        
+        HEAD="${{ needs.resolve-branches.outputs.head }}"
+        
+        echo "→ Final branches: $BASE -> $HEAD"
+        
+        echo "base=$BASE" >> $GITHUB_OUTPUT
+        echo "head=$HEAD" >> $GITHUB_OUTPUT
 
     - name: 🏷 Ensure auto-generated label exists
       run: |

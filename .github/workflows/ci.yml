@@ -88,7 +88,7 @@ jobs:
 
           echo "✅ Detected stack: $STACK"
           echo "value=$STACK" >> $GITHUB_OUTPUT
-          echo "source=not-detected" >> $GITHUB_OUTPUT
+          echo "source=detected" >> $GITHUB_OUTPUT
 
       - name: Fail if stack not detected
         if: steps.stack.outputs.value == ''
