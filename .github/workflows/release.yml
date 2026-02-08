@@ -32,11 +32,6 @@ on:
         required: false
         type: boolean
         default: true
-      release_strategy:
-        description: 'Release flow strategy (direct | release-branch)'
-        required: false
-        type: string
-        default: direct
 
     secrets:
       GH_TOKEN:
@@ -136,5 +131,4 @@ jobs:
           SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.semantic_release_dry_run }}
           SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.semantic_release_debug_mode }}
           STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict_conventional_commits }}
-          RELEASE_STRATEGY: ${{ inputs.release_strategy }}
-
+          

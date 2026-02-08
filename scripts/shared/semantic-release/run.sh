@@ -23,7 +23,6 @@ STACK="${STACK:-node}"
 IS_DRY_RUN="${SEMANTIC_RELEASE_DRY_RUN:-false}"
 IS_DEBUG_MODE="${SEMANTIC_RELEASE_DEBUG_MODE:-false}"
 STRICT_MODE="${STRICT_CONVENTIONAL_COMMITS:-false}"
-RELEASE_STRATEGY="${RELEASE_STRATEGY:-direct}" # direct | release-branch
 
 CUSTOM_CONFIG_PATH=$(bash "$REUSABLE_PATH/scripts/shared/semantic-release/resolve-custom-releaserc.sh" "${SEMANTIC_RELEASE_CONFIG:-}")
 DEFAULT_CONFIG="./$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.json"
@@ -58,7 +57,7 @@ build_cmd() {
 # ------------------------------------------------------------
 # STRICT MODE — Enforce conventional commits
 # ------------------------------------------------------------
-string_mode() {
+strict_mode() {
   local STRICT_CMD="${1:-npx semantic-release} --dry-run"
   
   log "Strict mode enabled — validating conventional commits"
@@ -101,7 +100,7 @@ run() {
   CMD=$(build_cmd)
 
   if [[ "$STRICT_MODE" == "true" ]]; then
-    string_mode "$CMD"
+    strict_mode "$CMD"
   fi
 
   if [[ "$IS_DRY_RUN" == "true" || "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then

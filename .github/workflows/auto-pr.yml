@@ -197,10 +197,18 @@ jobs:
           fi
 
           BRANCH="release-$VERSION"
-          git checkout -b "$BRANCH"
-          git push origin "$BRANCH"
 
-          echo "name=$BRANCH" >> $GITHUB_OUTPUT
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "ℹ️ Branch $BRANCH already exists. Reusing."
+            git checkout "$BRANCH"
+          else
+            echo "🚀 Creating release branch $BRANCH"
+            git checkout -b "$BRANCH"
+            git push origin "$BRANCH"
+          fi
+
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           REUSABLE_PATH: ${{ env.REUSABLE_PATH }}

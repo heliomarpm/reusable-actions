@@ -21,11 +21,11 @@ on:
       #   required: false
       #   default: 'npm'
       #   type: string
-      test_coverage_command:
-        description: 'Command to run coverage tests.'
-        required: false
-        # default: 'npm test -- --no-watch --coverage --reporter=verbose'
-        type: string
+      # test_coverage_command:
+      #   description: 'Command to run coverage tests.'
+      #   required: false
+      #   # default: 'npm test -- --no-watch --coverage --reporter=verbose'
+      #   type: string
       test_continue_on_failure:
         description: 'Continue pipeline even if tests fail. (default: true)'
         required: false
