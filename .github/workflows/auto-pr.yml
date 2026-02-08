@@ -170,7 +170,7 @@ jobs:
         id: release-branch
         if: needs.resolve-branch.outputs.base == '__release__' # && inputs.promotion_strategy == 'release-branch'
         run: |
-          VERSION=$(bash "$REUSABLE_PATH/scripts/shared/semantic-release/next-version.sh")
+          VERSION=$(bash "$REUSABLE_PATH/scripts/shared/semantic-release/run-next-version.sh")
 
           if [[ -z "$VERSION" ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
