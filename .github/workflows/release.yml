@@ -4,6 +4,7 @@ on:
   workflow_call:
     inputs:
       project_path:
+        description: 'Project path (default: .)'
         required: false
         type: string
         default: "."
@@ -93,7 +94,7 @@ jobs:
 
       - name: 🔍 Resolve project stack
         id: stack
-        working-directory: ${{ inputs.project_path }}
+        # working-directory: ${{ inputs.project_path }}
         run: |
           STACK="${{ inputs.stack }}"
           if [[ -n "$STACK" ]]; then

@@ -3,12 +3,17 @@ name: Reusable Create/Update PR
 on:
   workflow_call:
     inputs:
+      project_path:
+        description: 'Project path (default: .)'
+        required: false
+        type: string
+        default: "."
+
       min-coverage:
         description: 'Minimum coverage percentage (0-100 | default: 80)'
         type: number
         required: false
         default: 80
-
       coverage-mode:
         description: 'Coverage mode (info | block | decrease-only)'
         type: string
@@ -147,6 +152,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REUSABLE_PATH: __reusable_actions__
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.project_path }}
 
     permissions:
       contents: read
