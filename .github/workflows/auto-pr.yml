@@ -191,6 +191,8 @@ jobs:
         run: |
           VERSION=$(bash "$REUSABLE_PATH/scripts/shared/semantic-release/run-next-version.sh")
 
+          echo "→ Next version: $VERSION"
+
           if [[ -z "$VERSION" ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             exit 0
@@ -198,9 +200,15 @@ jobs:
 
           BRANCH="release-$VERSION"
 
+          echo "🔎 Checking if branch exists on remote: $BRANCH"
+
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-            echo "ℹ️ Branch $BRANCH already exists. Reusing."
+            echo "🔹 Branch $BRANCH exists on remote"
+
+            echo "→ Fetching branch from origin"
             git fetch origin "$BRANCH":"$BRANCH"
+
+            echo "→ Checking out branch $BRANCH"
             git checkout "$BRANCH"
           else
             echo "🚀 Creating release branch $BRANCH"
