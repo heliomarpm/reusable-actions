@@ -35,7 +35,6 @@ on:
         required: true
 
 jobs:
-  name: app
   resolve-branch:
     runs-on: ubuntu-latest
     outputs:
