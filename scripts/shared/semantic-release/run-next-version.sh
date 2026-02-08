@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "🚀 Semantic Release Next Version Script"
+# echo "🚀 Semantic Release Next Version Script"
 
 REUSABLE_PATH="${REUSABLE_PATH:?}"
 STRICT="${STRICT_CONVENTIONAL_COMMITS:-false}"
