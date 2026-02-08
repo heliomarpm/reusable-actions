@@ -35,12 +35,13 @@ on:
         required: true
 
 jobs:
+  name: app
   resolve-branch:
     runs-on: ubuntu-latest
     outputs:
-      head: ${{ steps.branch.outputs.head }}
-      base: ${{ steps.branch.outputs.base }}
-      skip: ${{ steps.branch.outputs.skip }}
+      head: ${{ steps.resolve.outputs.head }}
+      base: ${{ steps.resolve.outputs.base }}
+      skip: ${{ steps.resolve.outputs.skip }}
 
     steps:
       - name: 🔍 Resolve branches
@@ -64,6 +65,8 @@ jobs:
           else
             BASE="develop"
           fi
+
+          echo "→ Base branch: $BASE"
 
           echo "base=$BASE" >> $GITHUB_OUTPUT
           echo "head=$HEAD" >> $GITHUB_OUTPUT
