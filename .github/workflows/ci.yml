@@ -136,23 +136,28 @@ jobs:
           STACK="${{ steps.stack.outputs.value }}"
           SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/coverage.sh"
           chmod +x "$SCRIPT"
-          "$SCRIPT"
+          # "$SCRIPT"
 
           if "$SCRIPT"; then
-            echo "status=executed" >> $GITHUB_OUTPUT
+            STATUS="executed"
           else
-            echo "status=failed" >> $GITHUB_OUTPUT
+            STATUS="failed"
           fi
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
 
           if [[ -f coverage/coverage-summary.normalized.json ]]; then
             PCT=$(jq -r '.total.lines.pct // empty' coverage/coverage-summary.normalized.json)
             if [[ -n "$PCT" ]]; then
               echo "pct=$PCT" >> $GITHUB_OUTPUT
             fi
+            echo "report=found" >> $GITHUB_OUTPUT
+          else
+            echo "report=not-found" >> $GITHUB_OUTPUT
           fi
 
       - name: 📦 Upload coverage artifact
-        if: hashFiles('coverage/coverage-summary.normalized.json') != ''
+        # if: hashFiles('coverage/coverage-summary.normalized.json') != ''
+        if: steps.coverage.outputs.report != 'not-found'
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:

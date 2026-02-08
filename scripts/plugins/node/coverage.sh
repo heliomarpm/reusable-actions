@@ -55,16 +55,16 @@ elif [ -x "node_modules/.bin/jest" ]; then
 
 else
   echo "⚠️ Tests detected, but no supported runner found (Vitest/Jest)."
-  log "Skipping coverage safely."
+#   log "Skipping coverage safely."
 
-  mkdir -p coverage
-  cat <<EOF > coverage/coverage-summary.normalized.json
-{
-  "line": 0,
-  "branch": 0,
-  "function": 0
-}
-EOF
+#   mkdir -p coverage
+#   cat <<EOF > coverage/coverage-summary.normalized.json
+# {
+#   "line": 0,
+#   "branch": 0,
+#   "function": 0
+# }
+# EOF
 
   exit 0
 fi
