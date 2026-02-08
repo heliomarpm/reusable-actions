@@ -25,7 +25,7 @@ install_toolchain() {
   echo "✅ Toolchain installation completed"
 }
 
-install_project_deps() {  
+run() {  
   echo "📦 Installing dependencies..."  
 
   if has_file "pnpm-lock.yaml"; then
@@ -43,7 +43,7 @@ install_project_deps() {
   fi
 }
 
-install_project_deps() {
+run
 
 # main() {
 #   local CUSTOM_CONFIG_PATH=$(detect_config "${1}")
