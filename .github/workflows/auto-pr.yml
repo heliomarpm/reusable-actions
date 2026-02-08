@@ -200,7 +200,7 @@ jobs:
           
           HEAD="${{ needs.resolve-branch.outputs.head }}"
           
-          echo "→ Final branches: $BASE -> $HEAD"
+          echo "🔹 Final branches: $HEAD → $BASE"
           
           echo "base=$BASE" >> $GITHUB_OUTPUT
           echo "head=$HEAD" >> $GITHUB_OUTPUT
@@ -270,7 +270,7 @@ jobs:
         run: |
           HEAD="${{ steps.final-branches.outputs.head }}"
           BASE="${{ steps.final-branches.outputs.base }}"
-          TITLE="🔀 PR ($(date +'%Y-%m-%d')):  ${HEAD} → ${BASE}"
+          TITLE="🔀 PR ($(date +'%Y-%m-%d')): ${HEAD} → ${BASE}"
           STATUS_COVERAGE="${{ needs.get-coverage.outputs.status }}"
 
           if [ "$STATUS_COVERAGE" = "failed" ]; then
