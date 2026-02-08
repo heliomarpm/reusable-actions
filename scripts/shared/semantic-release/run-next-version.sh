@@ -41,7 +41,7 @@ summary_string_mode() {
 }
 
 CMD="npx semantic-release --dry-run"
-[[ -n "$CUSTOM_CONFIG" ]] && CMD+=" --extends $CUSTOM_CONFIG"
+[[ -n "$CUSTOM_CONFIG_PATH" ]] && CMD+=" --extends $CUSTOM_CONFIG_PATH"
 
 OUTPUT=$(eval "$CMD" 2>&1 || true)
 
