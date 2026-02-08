@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# echo "🚀 Semantic Release Next Version Script"
+echo "🚀 Semantic Release Next Version Script"
 
-REUSABLE_PATH="${REUSABLE_PATH:?}"
+REUSABLE_PATH="${REUSABLE_PATH:-.}"
 STRICT="${STRICT_CONVENTIONAL_COMMITS:-false}"
 
 CUSTOM_CONFIG_PATH=$(bash "$REUSABLE_PATH/scripts/shared/semantic-release/resolve-custom-releaserc.sh" "${SEMANTIC_RELEASE_CONFIG:-}")
@@ -15,7 +15,9 @@ bash "$REUSABLE_PATH/scripts/shared/semantic-release/install.sh"
 # ------------------------------------------------------------
 # STRICT MODE — Enforce conventional commits
 # ------------------------------------------------------------
-summary_string_mode() {
+summary_string_mode() {  
+  echo "🚫 Release blocked by STRICT MODE" 
+
   # Annotation (curta, visível no PR / Job)
   echo "::error title=RELEASE BLOCKED (STRICT MODE)::No valid Conventional Commits found since the last release. See job summary for instructions."
 
