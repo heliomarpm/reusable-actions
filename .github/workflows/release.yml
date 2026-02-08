@@ -60,7 +60,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout consumer repository
+      - name: 📌 Checkout consumer repository
         uses: actions/checkout@v4
         with: 
           # A linha 'ref: ${{ github.event.workflow_run.head_sha }}
@@ -69,7 +69,7 @@ jobs:
           persist-credentials: true  # → permite push com GITHUB_TOKEN
           token: ${{ secrets.GH_TOKEN }} # Necessário para autenticar PUSH
 
-      - name: Checkout reusable-actions scripts
+      - name: 📌 Checkout reusable-actions scripts
         uses: actions/checkout@v4
         with:
           repository: heliomarpm/reusable-actions

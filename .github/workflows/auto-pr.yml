@@ -163,12 +163,13 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: ⬇️ Checkout consumer repository
+      - name: 📌 Checkout consumer repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Necessário para evitar falhas do gh CLI em repositórios grandes
+          token: ${{ secrets.GH_TOKEN }} # Necessário se o repositório for privado
 
-      - name: Checkout reusable-actions scripts
+      - name: 📌 Checkout reusable-actions scripts
         uses: actions/checkout@v4
         with:
           repository: heliomarpm/reusable-actions
