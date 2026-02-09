@@ -60,7 +60,7 @@ jobs:
           ref: main
           path: ${{ env.REUSABLE_PATH }}
 
-      - name: Files in workspace
+      - name: 👀 Files in workspace
         run: |
           ls_files
 
@@ -68,15 +68,17 @@ jobs:
         id: stack
         # working-directory: ${{ inputs.project_path }}
         run: |
-          if [[ -n "${{ inputs.stack }}" ]]; then
-            echo "→ Using stack from input: ${{ inputs.stack }}"
-            echo "value=${{ inputs.stack }}" >> $GITHUB_OUTPUT
+          STACK="${{ inputs.stack }}"
+          if [[ -n "$STACK" ]]; then
+            echo "🔹 Using stack from input: $STACK"
+            echo "value=$STACK" >> $GITHUB_OUTPUT
             echo "source=input" >> $GITHUB_OUTPUT
             exit 0
           fi
             
-          chmod +x $REUSABLE_PATH/scripts/shared/detect-stack.sh
-          STACK=$($REUSABLE_PATH/scripts/shared/detect-stack.sh)
+          SCRIPT="$REUSABLE_PATH/scripts/shared/detect-stack.sh"
+          chmod +x "$SCRIPT"
+          STACK=$("$SCRIPT")
           
           if [[ -z "$STACK" ]]; then
             echo "value=" >> $GITHUB_OUTPUT
@@ -117,7 +119,7 @@ jobs:
       - name: 📊 Run coverage tests
         id: coverage
         # working-directory: ${{ inputs.project_path }}
-        continue-on-error: true # ${{ inputs.coverage_continue_on_failure }}
+        continue-on-error: ${{ inputs.coverage_continue_on_failure }}
         run: |
           STACK="${{ steps.stack.outputs.value }}"
           SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/coverage.sh"
