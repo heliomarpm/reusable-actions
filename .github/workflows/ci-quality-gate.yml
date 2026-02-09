@@ -32,7 +32,6 @@ on:
 
 jobs:
   qualitys: 
-    name: resolve stack e executa testes
     runs-on: ubuntu-latest
     env:
       REUSABLE_PATH: __reusable_actions__
