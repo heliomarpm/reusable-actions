@@ -90,7 +90,7 @@ jobs:
           echo "value=$STACK" >> $GITHUB_OUTPUT
           echo "source=detected" >> $GITHUB_OUTPUT
 
-      - name: Fail if stack not detected
+      - name: ❌ Fail if stack not detected
         if: steps.stack.outputs.value == ''
         run: |
           fail "Stack not detected. Check project_path or repository structure."          
@@ -192,7 +192,6 @@ jobs:
         with:
           name: coverage-report
           path: coverage/coverage-summary.normalized.json
-
 
       - name: 🧾 Job Summary
         if: always()
