@@ -47,6 +47,30 @@ jobs:
           repository: heliomarpm/reusable-actions
           ref: main
           
+      - name: 👀 Files in workspace
+        working-directory: ${{ github.workspace }}
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
+
+      - name: 👀 Files in workspace
+        working-directory: ${{ inputs.project_path  }}
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
+
+      - name: 👀 Files in workspace
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
+
+
       - name: 📐 Resolve project path
         id: path
         run: |
