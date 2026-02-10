@@ -16,6 +16,7 @@ on:
         description: 'Source repository is private. GH_TOKEN will be required if the repository is private.'
         required: false
         type: boolean
+        default: false
 
       min-coverage:
         description: 'Minimum coverage percentage (0-100 | default: 80)'
@@ -56,13 +57,13 @@ jobs:
 
     steps:
       - name: 📌 Checkout consumer repository (private)
-        if: ${{ inputs.source_private == "true" }}
+        if: ${{ inputs.source_private }}
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN }} 
 
       - name: 📌 Checkout consumer repository
-        if: ${{ inputs.source_private != "true" }}
+        if: ${{ inputs.source_private == false }}
         uses: actions/checkout@v4
 
       - name: 📌 Checkout reusable-actions scripts
