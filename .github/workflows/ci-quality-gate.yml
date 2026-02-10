@@ -40,7 +40,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        # working-directory: ${{ inputs.project_path }}
+        working-directory: ${{ inputs.project_path }}
 
     permissions:
       contents: read
@@ -58,6 +58,7 @@ jobs:
           path: ${{ env.REUSABLE_PATH }}
 
       - name: 👀 Files in workspace
+        working-directory: ${{ github.workspace }}
         run: |
           echo "📂 Current directory:"
           pwd
