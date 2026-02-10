@@ -60,7 +60,7 @@ jobs:
           path: ${{ env.REUSABLE_PATH }}
 
       - name: 👀 Files in workspace
-        workdirectory: ${{ github.workspace }}
+        working-directory: ${{ github.workspace }}
         run: |
           echo "📂 Current directory:"
           pwd
