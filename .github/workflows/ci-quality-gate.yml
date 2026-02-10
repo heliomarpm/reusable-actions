@@ -9,9 +9,10 @@ on:
         type: string
         default: null     # node | php | dotnet | python | go | empty for auto-detect
       project_path:
+        description: 'Project path source code'
         required: false
         type: string
-        default: "."
+        default: ""
 
       min-coverage:
         description: 'Minimum coverage percentage (0-100 | default: 80)'
@@ -58,14 +59,6 @@ jobs:
           path: ${{ env.REUSABLE_PATH }}
 
       - name: 👀 Files in workspace
-        working-directory: ${{ github.workspace }}
-        run: |
-          echo "📂 Current directory:"
-          pwd
-          echo "📄 Files in root:"
-          ls -la
-
-      - name: 👀 Files in workspace
         run: |
           echo "📂 Current directory:"
           pwd
@@ -74,7 +67,6 @@ jobs:
 
       - name: 🔍 Resolve project stack
         id: stack
-        # working-directory: ${{ inputs.project_path }}
         run: |
           STACK="${{ inputs.stack }}"
           if [[ -n "$STACK" ]]; then
@@ -105,7 +97,6 @@ jobs:
 
       - name: 🧪 Evaluate test execution
         id: tests
-        # working-directory: ${{ inputs.project_path }}
         run: |
           if [[ ! -d "tests" && ! -d "__tests__" && ! -d "test" ]]; then
             echo "skip=false" >> $GITHUB_OUTPUT
@@ -117,7 +108,6 @@ jobs:
           echo "reason=tests detected" >> $GITHUB_OUTPUT
   
       - name: ▶️ Run unit tests
-        # working-directory: ${{ inputs.project_path }}
         run: |
           STACK="${{ steps.stack.outputs.value }}"
           SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/test.sh"
@@ -126,7 +116,6 @@ jobs:
 
       - name: 📊 Run coverage tests
         id: coverage
-        # working-directory: ${{ inputs.project_path }}
         continue-on-error: ${{ inputs.coverage_continue_on_failure }}
         run: |
           STACK="${{ steps.stack.outputs.value }}"
@@ -157,14 +146,6 @@ jobs:
             echo "line=" >> $GITHUB_OUTPUT
             echo "report=not-found" >> $GITHUB_OUTPUT
           fi
-
-      - name: 👀 Files in workspace
-        working-directory: ${{ inputs.project_path }}
-        run: |
-          echo "📂 Current directory:"
-          pwd
-          echo "📄 Files in root:"
-          ls -la
 
       - name: ✅ Evaluate coverage
         id: coverage-check
