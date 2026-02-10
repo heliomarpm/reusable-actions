@@ -32,12 +32,15 @@ on:
         default: true
 
 jobs:
-  tools: 
+  workdir: 
     runs-on: ubuntu-latest
     outputs:
       root: ${{ steps.path.outputs.value }}  
     
     steps:
+      - name: 📌 Checkout consumer repository
+        uses: actions/checkout@v4
+
       - name: 📌 Checkout reusable-actions scripts
         uses: actions/checkout@v4
         with:
@@ -53,15 +56,15 @@ jobs:
 
   qualitys: 
     runs-on: ubuntu-latest
-    needs: tools
+    needs: workdir
     env:
-      REUSABLE_PATH: ${{ needs.tools.outputs.root }}/__reusable_actions__
-      BASH_ENV: ${{ needs.tools.outputs.root }}/__reusable_actions__/scripts/shared/shell-helpers.sh
+      REUSABLE_PATH: ${{ needs.workdir.outputs.root }}/__reusable_actions__
+      BASH_ENV: ${{ needs.workdir.outputs.root }}/__reusable_actions__/scripts/shared/shell-helpers.sh
 
     defaults:
       run:
         shell: bash
-        working-directory: ${{ needs.tools.outputs.root }}
+        working-directory: ${{ needs.workdir.outputs.root }}
 
     steps:
       - name: 📌 Checkout consumer repository
