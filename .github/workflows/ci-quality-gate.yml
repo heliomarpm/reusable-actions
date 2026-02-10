@@ -30,6 +30,10 @@ on:
         type: boolean
         default: true
 
+  secrets:
+    GH_TOKEN:
+      required: false
+
 jobs:
   qualitys: 
     runs-on: ubuntu-latest
