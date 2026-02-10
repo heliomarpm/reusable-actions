@@ -26,6 +26,32 @@ ls_files() {
   ls -la
 }
 
+resolve_project_path() {
+  local raw="$1"
+  local workspace="${GITHUB_WORKSPACE:?GITHUB_WORKSPACE not set}"
+
+  raw="${raw:-.}"
+  raw="${raw#./}"
+  raw="${raw#/}"
+  raw="${raw%/}"
+
+  local resolved
+  if [[ -z "$raw" || "$raw" == "." ]]; then
+    resolved="$workspace"
+  else
+    resolved="$workspace/$raw"
+  fi
+
+  if [[ ! -d "$resolved" ]]; then
+    # fail "❌ Project path does not exist: $resolved" 
+    echo "❌ Project path does not exist: $resolved" >&2
+    return 1
+  fi
+
+  echo "$resolved"
+}
+
+
 require_env() {
   local VAR="$1"
   if [[ -z "${!VAR:-}" ]]; then
