@@ -34,13 +34,13 @@ jobs:
   qualitys: 
     runs-on: ubuntu-latest
     env:
-      REUSABLE_PATH: ${{ github.workspace }}/__reusable_actions__
-      BASH_ENV: ${{ github.workspace }}/__reusable_actions__/scripts/shared/shell-helpers.sh
+      REUSABLE_PATH: ${{ inputs.project_path }}/__reusable_actions__
+      BASH_ENV: ${{ inputs.project_path }}/__reusable_actions__/scripts/shared/shell-helpers.sh
 
     defaults:
       run:
         shell: bash
-        # working-directory: ${{ inputs.project_path }}
+        working-directory: ${{ inputs.project_path }}
 
     permissions:
       contents: read
@@ -65,9 +65,16 @@ jobs:
           echo "📄 Files in root:"
           ls -la
 
+      - name: 👀 Files in workspace
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
+
       - name: 🔍 Resolve project stack
         id: stack
-        working-directory: ${{ inputs.project_path }}
+        # working-directory: ${{ inputs.project_path }}
         run: |
           STACK="${{ inputs.stack }}"
           if [[ -n "$STACK" ]]; then
@@ -98,7 +105,7 @@ jobs:
 
       - name: 🧪 Evaluate test execution
         id: tests
-        working-directory: ${{ inputs.project_path }}
+        # working-directory: ${{ inputs.project_path }}
         run: |
           if [[ ! -d "tests" && ! -d "__tests__" && ! -d "test" ]]; then
             echo "skip=false" >> $GITHUB_OUTPUT
@@ -110,7 +117,7 @@ jobs:
           echo "reason=tests detected" >> $GITHUB_OUTPUT
   
       - name: ▶️ Run unit tests
-        working-directory: ${{ inputs.project_path }}
+        # working-directory: ${{ inputs.project_path }}
         run: |
           STACK="${{ steps.stack.outputs.value }}"
           SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/test.sh"
@@ -119,7 +126,7 @@ jobs:
 
       - name: 📊 Run coverage tests
         id: coverage
-        working-directory: ${{ inputs.project_path }}
+        # working-directory: ${{ inputs.project_path }}
         continue-on-error: ${{ inputs.coverage_continue_on_failure }}
         run: |
           STACK="${{ steps.stack.outputs.value }}"
