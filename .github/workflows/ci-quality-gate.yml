@@ -32,21 +32,36 @@ on:
         default: true
 
 jobs:
+  tools: 
+    runs-on: ubuntu-latest
+    outputs:
+      root: ${{ steps.path.outputs.value }}  
+    
+    steps:
+      - name: 📌 Checkout reusable-actions scripts
+        uses: actions/checkout@v4
+        with:
+          repository: heliomarpm/reusable-actions
+          ref: main
+          
+      - name: 📐 Resolve project path
+        id: path
+        run: |
+          source "$(pwd)/scripts/shared/shell-helpers.sh"
+          PROJECT_PATH="$(resolve_project_path "${{ inputs.project_path }}")"
+          echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
+
   qualitys: 
     runs-on: ubuntu-latest
+    needs: tools
     env:
-      PROJECT_PATH: ${{ inputs.project_path || '.' }}
-      REUSABLE_PATH: ${{ github.workspace }}/__reusable_actions__
-      BASH_ENV: ${{ github.workspace }}/__reusable_actions__/scripts/shared/shell-helpers.sh
+      REUSABLE_PATH: ${{ needs.tools.outputs.root }}/__reusable_actions__
+      BASH_ENV: ${{ needs.tools.outputs.root }}/__reusable_actions__/scripts/shared/shell-helpers.sh
 
     defaults:
       run:
         shell: bash
-        # working-directory: ${{ inputs.project_path || '.' }}
-
-    permissions:
-      contents: read
-      actions: read
+        working-directory: ${{ needs.tools.outputs.root }}
 
     steps:
       - name: 📌 Checkout consumer repository
@@ -68,7 +83,6 @@ jobs:
           ls -la
 
       - name: 🔍 Resolve project stack
-        working-directory: ${{ env.PROJECT_PATH }}
         id: stack
         run: |
           STACK="${{ inputs.stack }}"
