@@ -35,9 +35,9 @@ on:
         type: boolean
         default: true
 
-  secrets:
-    GH_TOKEN:
-      required: false
+    secrets:
+      GH_TOKEN:
+        required: false
 
 jobs:
   qualitys: 
