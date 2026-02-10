@@ -34,8 +34,8 @@ jobs:
   qualitys: 
     runs-on: ubuntu-latest
     env:
-      REUSABLE_PATH: __reusable_actions__
-      BASH_ENV: __reusable_actions__/scripts/shared/shell-helpers.sh
+      REUSABLE_PATH: ${{ github.workspace }}/__reusable_actions__
+      BASH_ENV: ${{ github.workspace }}/__reusable_actions__/scripts/shared/shell-helpers.sh
 
     defaults:
       run:
@@ -48,7 +48,6 @@ jobs:
 
     steps:
       - name: 📌 Checkout consumer repository
-        if: ${{ inputs.source_private == false }}
         uses: actions/checkout@v4
 
       - name: 📌 Checkout reusable-actions scripts
