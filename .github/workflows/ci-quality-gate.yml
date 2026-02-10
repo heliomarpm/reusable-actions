@@ -35,7 +35,7 @@ jobs:
   workdir: 
     runs-on: ubuntu-latest
     outputs:
-      root: ${{ steps.path.outputs.value }}  
+      path: ${{ steps.path.outputs.value }}  
     
     steps:
       - name: 📌 Checkout consumer repository
@@ -55,13 +55,6 @@ jobs:
           echo "📄 Files in root:"
           ls -la
 
-      - name: 👀 Files in workspace
-        working-directory: ${{ inputs.project_path  }}
-        run: |
-          echo "📂 Current directory:"
-          pwd
-          echo "📄 Files in root:"
-          ls -la
 
       - name: 👀 Files in workspace
         run: |
@@ -75,20 +68,29 @@ jobs:
         id: path
         run: |
           source "$(pwd)/scripts/shared/shell-helpers.sh"
-          PROJECT_PATH="$(resolve_project_path "${{ inputs.project_path }}")"
+          PROJECT_PATH="$(resolve_project_path '${{ inputs.project_path }}')"
           echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
+
+
+      - name: 👀 Files in workspace
+        working-directory: ${{ steps.path.outputs.value }} }}
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
 
   qualitys: 
     runs-on: ubuntu-latest
     needs: workdir
     env:
-      REUSABLE_PATH: ${{ needs.workdir.outputs.root }}/__reusable_actions__
-      BASH_ENV: ${{ needs.workdir.outputs.root }}/__reusable_actions__/scripts/shared/shell-helpers.sh
+      REUSABLE_PATH: ${{ needs.workdir.outputs.path }}/__reusable_actions__
+      BASH_ENV: ${{ needs.workdir.outputs.path }}/__reusable_actions__/scripts/shared/shell-helpers.sh
 
     defaults:
       run:
         shell: bash
-        working-directory: ${{ needs.workdir.outputs.root }}
+        working-directory: ${{ needs.workdir.outputs.path }}
 
     steps:
       - name: 📌 Checkout consumer repository
