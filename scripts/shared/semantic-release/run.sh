@@ -50,6 +50,12 @@ build_cmd() {
     log "Debug mode enabled"
     CMD+=" --debug"
   fi
+
+  log "Custom Path detected: $CUSTOM_CONFIG_PATH"
+  log "Default Path detected: $DEFAULT_CONFIG"
+  log "Dry run enabled: $IS_DRY_RUN"
+  log "Strict Mode enabled: $STRICT_MODE"
+  log "Command: $CMD"
   
   echo "$CMD" 
 }
@@ -114,4 +120,3 @@ run() {
 
 run
 log "🎉 Done."
-
