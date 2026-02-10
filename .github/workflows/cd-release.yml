@@ -42,8 +42,8 @@ jobs:
   semantic-release:
     runs-on: ubuntu-latest
     env:
-      REUSABLE_PATH: ${{ github.workspace }}/${{ inputs.project_path }}/__reusable_actions__
-      BASH_ENV: ${{ github.workspace }}/${{ inputs.project_path }}/__reusable_actions__/scripts/shared/shell-helpers.sh
+      REUSABLE_PATH: ${{ github.workspace }}${{ inputs.project_path || '/' }}__reusable_actions__
+      BASH_ENV: ${{ github.workspace }}${{ inputs.project_path || '/' }}__reusable_actions__/scripts/shared/shell-helpers.sh
 
     defaults:
       run:
