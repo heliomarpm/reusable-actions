@@ -12,6 +12,7 @@ on:
         description: 'Project path source code'
         required: false
         type: string
+        default: null
 
       semantic_release_config:
         description: 'Path to semantic-release config file.'
@@ -47,7 +48,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ${{ inputs.project_path || "." }}
+        working-directory: ${{ inputs.project_path || '.' }}
 
     permissions:
       actions: read

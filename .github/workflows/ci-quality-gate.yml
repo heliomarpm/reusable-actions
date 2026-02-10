@@ -12,6 +12,7 @@ on:
         description: 'Project path source code'
         required: false
         type: string
+        default: null
 
       min-coverage:
         description: 'Minimum coverage percentage (0-100 | default: 80)'
@@ -40,7 +41,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ${{ inputs.project_path || "." }}
+        working-directory: ${{ inputs.project_path || '.' }}
 
     permissions:
       contents: read
