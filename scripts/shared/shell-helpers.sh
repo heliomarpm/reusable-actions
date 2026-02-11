@@ -50,7 +50,7 @@ resolve_project_path() {
     # return 1
   fi
 
-  echo "$raw"
+  echo "$resolved"
 }
 
 
