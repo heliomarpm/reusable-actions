@@ -38,17 +38,19 @@ resolve_project_path() {
   local resolved
   if [[ -z "$raw" || "$raw" == "." ]]; then
     resolved="$workspace"
+    $raw=""
   else
     resolved="$workspace/$raw"
+    $raw+="/"
   fi
 
   if [[ ! -d "$resolved" ]]; then
-    # fail "❌ Project path does not exist: $resolved" 
-    echo "❌ Project path does not exist: $resolved" >&2
-    return 1
+    fail "❌ Project path does not exist: $resolved" 
+    # echo "❌ Project path does not exist: $resolved" >&2
+    # return 1
   fi
 
-  echo "$resolved"
+  echo "$raw"
 }
 
 
