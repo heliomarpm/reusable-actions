@@ -66,21 +66,12 @@ jobs:
           log "🔹 Using project path: $PROJECT_PATH"
           echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
 
-
-      - name: 👀 Files in workspace
-        working-directory: ${{ steps.path.outputs.value }}
-        run: |
-          echo "📂 Current directory:"
-          pwd
-          echo "📄 Files in root:"
-          ls -la
-
   qualitys: 
     runs-on: ubuntu-latest
     needs: workdir
     env:
-      REUSABLE_PATH: ${{ github.workspace }}/${{ needs.workdir.outputs.path }}__reusable_actions__
-      BASH_ENV: ${{ github.workspace }}/${{ needs.workdir.outputs.path }}__reusable_actions__/scripts/shared/shell-helpers.sh
+      REUSABLE_PATH: __reusable_actions__
+      BASH_ENV: __reusable_actions__/scripts/shared/shell-helpers.sh
 
     defaults:
       run:
