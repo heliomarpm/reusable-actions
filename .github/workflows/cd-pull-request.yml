@@ -154,7 +154,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: 🏷 Ensure auto-generated label exists
-        if: steps.resolve-branch.outputs.skip != 'true'
+        if: needs.resolve-branch.outputs.skip != 'true'
         run: |
           gh label create auto-generated --description "Pull Request criada automaticamente" --color 006B75 || true
           gh label create "coverage-failed" --description "Cobertura de testes abaixo do limite mínimo." --color "D93F0B" || true
@@ -165,7 +165,7 @@ jobs:
 
 
       - name: 📝 Generate PR body
-        if: steps.resolve-branch.outputs.skip != 'true'
+        if: needs.resolve-branch.outputs.skip != 'true'
         run: |
           COVERAGE_LINE="${{ needs.read-coverage.outputs.line }}"
           COVERAGE_STATUS="${{ needs.read-coverage.outputs.status }}"
@@ -201,8 +201,8 @@ jobs:
 
           Esta PR foi criada ou atualizada automaticamente.
 
-          **Origem:** \`${{ steps.resolve-branch.outputs.head }}\`  
-          **Destino:** \`${{ steps.resolve-branch.outputs.base }}\`
+          **Origem:** \`${{ needs.resolve-branch.outputs.head }}\`  
+          **Destino:** \`${{ needs.resolve-branch.outputs.base }}\`
 
           ---
           ✔ CI executado com sucesso  
@@ -218,8 +218,8 @@ jobs:
       - name: 📜 Create or Update Pull Request
         id: create-pr
         run: |
-          HEAD="${{ steps.resolve-branch.outputs.head }}"
-          BASE="${{ steps.resolve-branch.outputs.base }}"
+          HEAD="${{ needs.resolve-branch.outputs.head }}"
+          BASE="${{ needs.resolve-branch.outputs.base }}"
           TITLE="🔀 PR ($(date +'%Y-%m-%d')): ${HEAD} → ${BASE}"
           STATUS_COVERAGE="${{ needs.read-coverage.outputs.status }}"
 
@@ -280,8 +280,8 @@ jobs:
 
           **Status:** ${{ steps.create-pr.outputs.pr_action || 'processed' }}
 
-          **From:** \`${{ steps.resolve-branch.outputs.head }}\`  
-          **To:** \`${{ steps.resolve-branch.outputs.base }}\`
+          **From:** \`${{ needs.resolve-branch.outputs.head }}\`  
+          **To:** \`${{ needs.resolve-branch.outputs.base }}\`
 
           **Coverage:** ${{ needs.read-coverage.outputs.status }}
 
