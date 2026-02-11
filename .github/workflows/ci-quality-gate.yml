@@ -77,13 +77,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: workdir
     env:
-      REUSABLE_PATH: ${{ needs.workdir.outputs.path }}/__reusable_actions__
-      BASH_ENV: ${{ needs.workdir.outputs.path }}/__reusable_actions__/scripts/shared/shell-helpers.sh
+      REUSABLE_PATH: ${{ github.workspace }}/${{ needs.workdir.outputs.path }}__reusable_actions__
+      BASH_ENV: ${{ github.workspace }}/${{ needs.workdir.outputs.path }}__reusable_actions__/scripts/shared/shell-helpers.sh
 
     defaults:
       run:
         shell: bash
-        working-directory: ${{ needs.workdir.outputs.path }}
+        working-directory: ${{ needs.workdir.outputs.path || '.' }}
 
     steps:
       - name: 📌 Checkout consumer repository
