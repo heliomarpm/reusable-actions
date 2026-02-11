@@ -34,6 +34,8 @@ on:
 jobs:
   workdir: 
     runs-on: ubuntu-latest
+    env:
+      REUSABLE_PATH: __reusable_actions__
     outputs:
       path: ${{ steps.path.outputs.value }}  
     
@@ -46,9 +48,9 @@ jobs:
         with:
           repository: heliomarpm/reusable-actions
           ref: main
-          
+          path: ${{ env.REUSABLE_PATH }}
+
       - name: 👀 Files in workspace
-        working-directory: ${{ github.workspace }}
         run: |
           echo "📂 Current directory:"
           pwd
