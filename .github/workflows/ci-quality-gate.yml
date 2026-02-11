@@ -60,7 +60,7 @@ jobs:
       - name: 📐 Resolve project path
         id: path
         run: |
-          source "$(pwd)/scripts/shared/shell-helpers.sh"
+          source "$(pwd)/${{ env.REUSABLE_PATH }}/scripts/shared/shell-helpers.sh"
           PROJECT_PATH="$(resolve_project_path '${{ inputs.project_path }}')"
 
           log "🔹 Using project path: $PROJECT_PATH"
