@@ -38,10 +38,10 @@ resolve_project_path() {
   local resolved
   if [[ -z "$raw" || "$raw" == "." ]]; then
     resolved="$workspace"
-    $raw=""
+    raw=""
   else
     resolved="$workspace/$raw"
-    $raw+="/"
+    raw+="/"
   fi
 
   if [[ ! -d "$resolved" ]]; then
