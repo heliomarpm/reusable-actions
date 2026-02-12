@@ -18,6 +18,10 @@ on:
       GH_TOKEN:
         required: true
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   resolve-branch:
     runs-on: ubuntu-latest
@@ -126,10 +130,6 @@ jobs:
     env:
       REUSABLE_PATH: __reusable_actions__
       BASH_ENV: __reusable_actions__/scripts/shared/shell-helpers.sh
-
-    permissions:
-      contents: write
-      pull-requests: write
 
     steps:
       - name: 📌 Checkout consumer repository
