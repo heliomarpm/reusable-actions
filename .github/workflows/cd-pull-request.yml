@@ -128,7 +128,7 @@ jobs:
       BASH_ENV: __reusable_actions__/scripts/shared/shell-helpers.sh
 
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
 
     steps:

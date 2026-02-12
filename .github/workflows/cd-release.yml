@@ -39,16 +39,51 @@ on:
         required: true
 
 jobs:
-  semantic-release:
+  workdir: 
     runs-on: ubuntu-latest
     env:
-      REUSABLE_PATH: ${{ github.workspace }}${{ inputs.project_path || '/' }}__reusable_actions__
-      BASH_ENV: ${{ github.workspace }}${{ inputs.project_path || '/' }}__reusable_actions__/scripts/shared/shell-helpers.sh
+      REUSABLE_PATH: __reusable_actions__
+    outputs:
+      path: ${{ steps.path.outputs.value }}  
+    
+    steps:
+      - name: 📌 Checkout consumer repository
+        uses: actions/checkout@v4
+
+      - name: 📌 Checkout reusable-actions scripts
+        uses: actions/checkout@v4
+        with:
+          repository: heliomarpm/reusable-actions
+          ref: main
+          path: ${{ env.REUSABLE_PATH }}
+
+      - name: 👀 Files in workspace
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
+
+      - name: 📐 Resolve project path
+        id: path
+        run: |
+          source "$(pwd)/${{ env.REUSABLE_PATH }}/scripts/shared/shell-helpers.sh"
+          PROJECT_PATH="$(resolve_project_path '${{ inputs.project_path }}')"
+
+          log "🔹 Using project path: $PROJECT_PATH"
+          echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
+
+  semantic-release:
+    runs-on: ubuntu-latest
+    needs: workdir
+    env:
+      REUSABLE_PATH: ${{ github.workspace }}/__reusable_actions__
+      BASH_ENV: ${{ github.workspace }}/__reusable_actions__/scripts/shared/shell-helpers.sh
 
     defaults:
       run:
         shell: bash
-        working-directory: ${{ inputs.project_path || '.' }}
+        working-directory: ${{ needs.workdir.outputs.path || '.' }}
 
     permissions:
       actions: read
