@@ -165,8 +165,10 @@ jobs:
               echo "Branch '$BASE' does not exist."
               echo ""
               echo "### Available branches:"
-              git branch -r | sed 's/origin\///
+              git ls-remote --heads origin | awk '{print $2}' | sed 's|refs/heads/||'
             } >> "$GITHUB_STEP_SUMMARY"
+
+            echo "Expected branch: $BASE"
             exit 1
           fi
 
