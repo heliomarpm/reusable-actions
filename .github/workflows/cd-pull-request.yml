@@ -121,7 +121,7 @@ jobs:
 
           echo "status=$FINAL_STATUS" >> $GITHUB_OUTPUT
 
-  create-pr:
+  auto-pr:
     needs:
       - resolve-branch
       - read-coverage
@@ -152,6 +152,23 @@ jobs:
           gh auth setup-git
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: 🔎 Ensure Destination Branch
+        if: needs.resolve-branch.outputs.skip != 'true'
+        run: |
+          BASE="${{ needs.resolve-branch.outputs.base }}"
+
+          if ! git ls-remote --exit-code --heads origin "$BASE" > /dev/null 2>&1; then
+            {
+              echo "## ❌ Invalid destination branch"
+              echo ""
+              echo "Branch '$BASE' does not exist."
+              echo ""
+              echo "### Available branches:"
+              git branch -r | sed 's/origin\///
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: 🏷 Ensure auto-generated label exists
         if: needs.resolve-branch.outputs.skip != 'true'
