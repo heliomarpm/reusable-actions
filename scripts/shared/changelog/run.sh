@@ -244,7 +244,7 @@ HAS_FIX=false
 TOTAL_COMMITS=0
 
 # Coleta commits usando separadores seguros ASCII 0x1f (Unit Separator) e 0x1e (Record Separator)
-COMMITS_RAW="$(git log "$RANGE" --no-merges --pretty=format:"%H%x1f%h%x1f%s%x1f%b%x1e" 2>/dev/null || true)"
+COMMITS_RAW="$(git log "$RANGE" --no-merges --pretty=format:"%H%x1f%h%x1f%s%x1f%b%x1e" -- . 2>/dev/null || true)"
 
 if [[ -n "$COMMITS_RAW" ]]; then
   while IFS=$'\x1f' read -d $'\x1e' -r FULL_HASH SHORT_HASH SUBJECT BODY; do
