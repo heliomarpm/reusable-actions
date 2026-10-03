@@ -23,16 +23,6 @@ on:
         required: false
         type: string
         default: 'release-'
-      min-coverage:
-        description: 'Minimum coverage percentage required to promote (used only when coverage artifact is available)'
-        type: number
-        required: false
-        default: 80
-      coverage-mode:
-        description: 'Coverage mode to use (used only when coverage artifact is available. Options: block | line)'
-        type: string
-        required: false
-        default: 'info'
       semantic_release_config:
         description: 'Path to semantic-release configuration file (used only when strategy is gitflow or develop)'
         type: string
@@ -152,20 +142,31 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: 📥 Download coverage artifact
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: coverage-report
-          path: coverage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id || github.run_id }}"
+          mkdir -p coverage
+          echo "→ Buscando artefato de cobertura da execução CI #$RUN_ID..."
+          if gh run download "$RUN_ID" -n coverage-report -D coverage 2>/dev/null; then
+            echo "✅ Artefato de cobertura baixado com sucesso."
+          else
+            echo "ℹ️ Artefato de cobertura não encontrado para o run #$RUN_ID (opcional)."
+          fi
 
       - name: 📊 Read coverage report
         id: coverage
         run: |
           FILE="coverage/coverage-summary.normalized.json"
           if [ -f "$FILE" ]; then
-            LINE=$(jq '.line' "$FILE")
+            LINE=$(jq -r '.line // empty' "$FILE")
+            MIN=$(jq -r '.min // empty' "$FILE")
+            STATUS=$(jq -r '.status // "passed"' "$FILE")
+            MODE=$(jq -r '.mode // "info"' "$FILE")
             echo "line=$LINE" >> $GITHUB_OUTPUT
-            echo "status=found" >> $GITHUB_OUTPUT
+            echo "min=$MIN" >> $GITHUB_OUTPUT
+            echo "status=$STATUS" >> $GITHUB_OUTPUT
+            echo "mode=$MODE" >> $GITHUB_OUTPUT
           else
             echo "status=missing" >> $GITHUB_OUTPUT
           fi
@@ -235,8 +236,8 @@ jobs:
           base: ${{ steps.branch.outputs.base }}
           coverage-status: ${{ steps.coverage.outputs.status }}
           coverage-line: ${{ steps.coverage.outputs.line }}
-          min-coverage: ${{ inputs.min-coverage }}
-          coverage-mode: ${{ inputs.coverage-mode }}
+          coverage-min: ${{ steps.coverage.outputs.min }}
+          coverage-mode: ${{ steps.coverage.outputs.mode }}
           github-token: ${{ secrets.GH_TOKEN }}
 
       - name: 🧾 Job summary

@@ -3,20 +3,16 @@ description: 'Installs the appropriate runtime and dependencies for the detected
 
 inputs:
   stack:
-    description: 'Project stack (node, php, dotnet, python, go)'
+    description: 'Project stack (node, php, dotnet, python, go, ...)'
     required: true
+  stack-version:
+    description: 'Stack version (node, php, dotnet, python, go, ...)'
+    required: false
+    default: null
   project-path:
     description: 'Path to the project root'
     required: false
     default: '.'
-  node-version:
-    description: 'Node.js version (when stack=node)'
-    required: false
-    default: 'lts/*'
-  php-version:
-    description: 'PHP version (when stack=php)'
-    required: false
-    default: '8.3'
 
 runs:
   using: 'composite'
@@ -25,14 +21,14 @@ runs:
       if: inputs.stack == 'node'
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ inputs.node-version }}
+        node-version: ${{ inputs.stack-version || 'lts/*' }}
         node-version-file: ${{ inputs.project-path }}/.nvmrc
 
     - name: Setup PHP
       if: inputs.stack == 'php'
       uses: shivammathur/setup-php@v2
       with:
-        php-version: ${{ inputs.php-version }}
+        php-version: ${{ inputs.stack-version || '8.3' }}
         tools: composer
 
     - name: Install dependencies

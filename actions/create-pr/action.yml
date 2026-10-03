@@ -16,12 +16,12 @@ inputs:
     description: 'Line coverage percentage'
     required: false
     default: ''
-  min-coverage:
-    description: 'Minimum coverage percentage'
+  coverage-min:
+    description: 'Minimum coverage percentage evaluated by Quality Gate'
     required: false
-    default: '80'
+    default: ''
   coverage-mode:
-    description: 'Coverage Mode (info/block)'
+    description: 'Coverage Mode (info/block) evaluated by Quality Gate'
     required: false
     default: 'info'
   github-token:
@@ -70,7 +70,7 @@ runs:
         esac
 
         COVERAGE_LINE="${{ inputs.coverage-line }}"
-        MIN_COVERAGE="${{ inputs.min-coverage }}"
+        MIN_COVERAGE="${{ inputs.coverage-min }}"
         MODE="${{ inputs.coverage-mode }}"
 
         # 1. Renderiza o bloco de cobertura

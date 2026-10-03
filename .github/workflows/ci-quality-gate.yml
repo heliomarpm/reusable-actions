@@ -8,32 +8,27 @@ on:
         required: false
         type: string
         default: ''
-      project_path:
+      stack-version:
+        description: 'Runtime Stack version (node [default: lts/*], php [default: 8.3], dotnet [default: 9.0], python [default: 3.11], go [default: 1.25])'
+        required: false
+        type: string
+        default: ''
+      project-path:
         description: 'Project path'
         required: false
         type: string
         default: '.'
-      node-version:
-        description: 'Node.js version'
-        required: false
-        type: string
-        default: 'lts/*'
-      php-version:
-        description: 'PHP version'
-        required: false
-        type: string
-        default: '8.3'
-      min-coverage:
-        description: 'Minimum coverage (0-100)'
+      coverage-min:
+        description: 'Minimum coverage threshold (0-100)'
         type: number
         required: false
         default: 80
       coverage-mode:
-        description: 'Coverage mode (info | block)'
+        description: 'Enable strict mode for coverage (info | block | decrease)'
         type: string
         required: false
         default: 'info'
-      coverage_continue_on_failure:
+      coverage-continue-on-failure:
         description: 'Continue pipeline even if tests fail. (default: true)'
         required: false
         type: boolean
@@ -58,39 +53,38 @@ jobs:
         id: stack
         with:
           stack: ${{ inputs.stack }}
-          project-path: ${{ inputs.project_path }}
+          project-path: ${{ inputs.project-path }}
 
       - name: ⚙️ Setup Runtime
         uses: ./__reusable_actions__/actions/setup-runtime
         with:
           stack: ${{ steps.stack.outputs.stack }}
-          project-path: ${{ inputs.project_path }}
-          node-version: ${{ inputs.node-version }}
-          php-version: ${{ inputs.php-version }}
+          stack-version: ${{ inputs.stack-version }}
+          project-path: ${{ inputs.project-path }}
 
       - name: 🧪 Run Tests
         uses: ./__reusable_actions__/actions/run-tests
         id: tests
         with:
           stack: ${{ steps.stack.outputs.stack }}
-          project-path: ${{ inputs.project_path }}
+          project-path: ${{ inputs.project-path }}
 
       - name: 📊 Run Coverage
         uses: ./__reusable_actions__/actions/run-coverage
         id: coverage
-        continue-on-error: ${{ inputs.coverage_continue_on_failure }}
+        continue-on-error: ${{ inputs.coverage-continue-on-failure }}
         with:
           stack: ${{ steps.stack.outputs.stack }}
-          project-path: ${{ inputs.project_path }}
-          min-coverage: ${{ inputs.min-coverage }}
+          project-path: ${{ inputs.project-path }}
+          coverage-min: ${{ inputs.coverage-min }}
           coverage-mode: ${{ inputs.coverage-mode }}
 
       - name: 📦 Upload coverage artifact
-        if: steps.coverage.outputs.status != 'missing'
+        if: always() && steps.coverage.outputs.status != 'missing'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: ${{ inputs.project_path }}/coverage/coverage-summary.normalized.json
+          path: ${{ inputs.project-path }}/coverage/coverage-summary.normalized.json
 
       - name: 🧾 Job Summary
         if: always()

@@ -9,19 +9,19 @@ inputs:
     description: 'Path to the project root'
     required: false
     default: '.'
-  min-coverage:
-    description: 'Minimum coverage percentage (0-100)'
+  coverage-min:
+    description: 'Minimum coverage threshold (0-100)'
     required: false
-    default: '80'
+    default: 80
   coverage-mode:
-    description: 'Coverage mode (info | block)'
+    description: 'Enable strict mode for coverage (info | block | decrease)'
     required: false
     default: 'info'
 
 outputs:
   line:
     description: 'Line coverage percentage'
-    value: ${{ steps.coverage.outputs.line }}
+    value: ${{ steps.evaluate.outputs.line }}
   status:
     description: 'Coverage status: passed | failed | missing'
     value: ${{ steps.evaluate.outputs.status }}
@@ -55,21 +55,39 @@ runs:
 
     - id: evaluate
       shell: bash
+      working-directory: ${{ inputs.project-path }}
       env:
         BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
       run: |
         REPORT="${{ steps.coverage.outputs.report }}"
         LINE="${{ steps.coverage.outputs.line }}"
-        MIN="${{ inputs.min-coverage }}"
+        MIN="${{ inputs.coverage-min }}"
         MODE="${{ inputs.coverage-mode }}"
+        STATUS="missing"
 
-        if [[ "$REPORT" == "not-found" ]]; then
+        if [[ "$REPORT" == "not-found" || -z "$LINE" ]]; then
+          STATUS="missing"
           echo "status=missing" >> $GITHUB_OUTPUT
-          [[ "$MODE" == "block" ]] && fail "Blocking PR: tests/coverage not implemented"
+          echo "line=" >> $GITHUB_OUTPUT
+          if [[ "$MODE" == "block" ]]; then
+            fail "❌ Quality Gate Bloqueado: Cobertura de testes não encontrada e coverage-mode está como 'block'."
+          fi
         elif (( $(echo "$LINE < $MIN" | bc -l) )); then
+          STATUS="failed"
           echo "status=failed" >> $GITHUB_OUTPUT
-          [[ "$MODE" == "block" ]] && fail "Coverage below threshold ($LINE < $MIN)"
+          echo "line=$LINE" >> $GITHUB_OUTPUT
+          if [[ "$MODE" == "block" ]]; then
+            fail "❌ Quality Gate Bloqueado: Cobertura ($LINE%) abaixo da meta mínima ($MIN%) e coverage-mode está como 'block'."
+          fi
         else
+          STATUS="passed"
           echo "status=passed" >> $GITHUB_OUTPUT
+          echo "line=$LINE" >> $GITHUB_OUTPUT
         fi
-        exit 0
+
+        # Enriquece o arquivo de contrato normalizado com a decisão do Quality Gate
+        FILE="coverage/coverage-summary.normalized.json"
+        if [[ -f "$FILE" ]]; then
+          jq --arg status "$STATUS" --arg min "$MIN" --arg mode "$MODE" \
+            '.status = $status | .min = ($min | tonumber) | .mode = $mode' "$FILE" > "${FILE}.tmp" && mv "${FILE}.tmp" "$FILE"
+        fi
