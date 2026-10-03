@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-03.4]
+
+### 🐛 Bug Fixes
+- **tests**: 🐛 corrigir detecção de ausência de testes configurados ([5dc5041](https://github.com/heliomarpm/reusable-actions/commit/5dc50413106b9e2ca8bd6a2e6ad117f1f5b6195a))
+- **changelog**: 🐛 corrigir escopo do git log para diretório atual ([3b06e0d](https://github.com/heliomarpm/reusable-actions/commit/3b06e0dd19a02192fbbb6e7daf1c19bf53c56c4e))
+
 ## [2026-10-03.3]
 
 ### 🚀 Features
