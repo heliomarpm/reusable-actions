@@ -39,10 +39,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 📌 Checkout consumer repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 📌 Checkout reusable-actions scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: heliomarpm/reusable-actions
           ref: main
@@ -81,7 +81,7 @@ jobs:
 
       - name: 📦 Upload coverage artifact
         if: always() && steps.coverage.outputs.status != 'missing'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: ${{ inputs.project-path }}/coverage/coverage-summary.normalized.json

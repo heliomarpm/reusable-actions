@@ -48,10 +48,10 @@ jobs:
     
     steps:
       - name: 📌 Checkout consumer repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 📌 Checkout reusable-actions scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: heliomarpm/reusable-actions
           ref: main
@@ -93,7 +93,7 @@ jobs:
 
     steps:
       - name: 📌 Checkout consumer repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with: 
           # A linha 'ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0 	  # Necessário para o semantic-release inspecionar histórico
@@ -102,7 +102,7 @@ jobs:
           token: ${{ secrets.GH_TOKEN }} # Necessário para autenticar PUSH
 
       - name: 📌 Checkout reusable-actions scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: heliomarpm/reusable-actions
           ref: main

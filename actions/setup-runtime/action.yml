@@ -19,7 +19,7 @@ runs:
   steps:
     - name: Setup Node.js
       if: inputs.stack == 'node'
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
         node-version: ${{ inputs.stack-version || 'lts/*' }}
         node-version-file: ${{ inputs.project-path }}/.nvmrc

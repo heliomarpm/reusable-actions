@@ -157,7 +157,7 @@ jobs:
   custom-ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: stack
         uses: heliomarpm/reusable-actions/actions/detect-stack@main
       - uses: heliomarpm/reusable-actions/actions/setup-runtime@main
