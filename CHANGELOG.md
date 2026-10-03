@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-03.6]
+
+### 🔄 Other Changes
+- ``` ci(workflows): 🔧 adicionar fallback para variáveis de cobertura ([269a4c1](https://github.com/heliomarpm/reusable-actions/commit/269a4c1996987e9bb7794f1d8ef4dd9c14f657c8))
+
 ## [2026-10-03.5]
 
 ### ♻️ Code Refactoring
