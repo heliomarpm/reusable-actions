@@ -58,7 +58,7 @@ jobs:
       coverage-mode: block # 'block' falha o job se cobertura < 85%. 'info' apenas emite alertas. 'decrease' falha se cobertura diminuir desde o ultimo merge
 ```
 
-**Inputs principais:** `stack`, `project_path`, `coverage-min` (padrão: 80), `coverage-mode` (`info` | `block` | `decrease`).
+**Inputs principais:** `stack`, `project-path`, `coverage-min` (padrão: 80), `coverage-mode` (`info` | `block` | `decrease`).
 
 ---
 

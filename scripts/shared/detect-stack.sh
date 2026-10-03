@@ -33,7 +33,7 @@ if [[ ${#SIGNALS[@]} -eq 0 ]]; then
     HINT_BLOCK=$(cat <<EOF
 > [!WARNING]
 > **Encontramos arquivos de projeto na subpasta:** \`${hint_dir}\`  
-> 👉 Configure no seu workflow: \`project_path: ${hint_dir}\`
+> 👉 Configure no seu workflow: \`project-path: ${hint_dir}\`
 EOF
 )
   fi
