@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-03.1]
+
+### 🔧 CI & Build System
+- ⬆️ atualizar versões das actions do GitHub ([a5a0422](https://github.com/heliomarpm/reusable-actions/commit/a5a042283d64090f8a0159d007af1780d7a18967))
+
 ## [2026-10-03]
 
 ### ⚠️ Breaking Changes
