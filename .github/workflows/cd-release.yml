@@ -8,27 +8,27 @@ on:
         required: false
         type: string
         default: null
-      project_path:
+      project-path:
         description: 'Project path source code'
         required: false
         type: string
         default: null
 
-      semantic_release_config:
+      semantic-release-config:
         description: 'Path to semantic-release config file.'
         required: false
         type: string
-      semantic_release_dry_run:
+      semantic-release-dry-run:
         description: 'Dry run mode for semantic-release. (default: false -> true for PRs)'
         required: false
         type: boolean
         default: false
-      semantic_release_debug_mode:
+      semantic-release-debug-mode:
         description: 'Debug mode for semantic-release.'
         required: false
         type: boolean
         default: false
-      strict_conventional_commits:
+      strict-conventional-commits:
         description: 'Fail pipeline if no conventional commits are found'
         required: false
         type: boolean
@@ -68,10 +68,10 @@ jobs:
         id: path
         run: |
           source "$(pwd)/${{ env.REUSABLE_PATH }}/scripts/shared/shell-helpers.sh"
-          PROJECT_PATH="$(resolve_project_path '${{ inputs.project_path }}')"
+          project-path="$(resolve_project-path '${{ inputs.project-path }}')"
 
-          log "🔹 Using project path: $PROJECT_PATH"
-          echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
+          log "🔹 Using project path: $project-path"
+          echo "value=$project-path" >> "$GITHUB_OUTPUT"
 
   semantic-release:
     runs-on: ubuntu-latest
@@ -141,7 +141,7 @@ jobs:
       - name: ❌ Fail if stack not detected
         if: steps.stack.outputs.value == ''
         run: |
-          fail "Stack not detected. Check project_path or repository structure."          
+          fail "Stack not detected. Check project-path or repository structure."          
 
       - name: ⚙️ Configurar Usuário Git
         run: |
@@ -158,10 +158,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           STACK: ${{ steps.stack.outputs.value }}
           REUSABLE_PATH: ${{ env.REUSABLE_PATH }}
-          SEMANTIC_RELEASE_CONFIG: ${{ inputs.semantic_release_config }}
-          SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.semantic_release_dry_run }}
-          SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.semantic_release_debug_mode }}
-          STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict_conventional_commits }}
+          SEMANTIC_RELEASE_CONFIG: ${{ inputs.semantic-release-config }}
+          semantic-release-dry-run: ${{ inputs.semantic-release-dry-run }}
+          semantic-release-debug-mode: ${{ inputs.semantic-release-debug-mode }}
+          strict-conventional-commits: ${{ inputs.strict-conventional-commits }}
 
       - name: 🧾 Job Summary
         if: always()
@@ -169,7 +169,7 @@ jobs:
           {
             echo "## 📌 Semantic Release"
             echo ""
-            echo "**📂 Project path:** \`${{ inputs.project_path }}\`"
+            echo "**📂 Project path:** \`${{ inputs.project-path }}\`"
             echo ""
 
             if [[ "${{ steps.stack.outputs.value }}" != "" ]]; then

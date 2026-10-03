@@ -8,26 +8,26 @@ on:
         required: false
         type: string
         default: 'develop'
-      main_branch:
+      main-branch:
         description: 'Main branch name'
         required: false
         type: string
         default: 'main'
-      develop_branch:
+      develop-branch:
         description: 'Develop branch name'
         required: false
         type: string
         default: 'develop'
-      prefix_release_branch:
+      prefix-release-branch:
         description: 'Release branch prefix (Used for gitflow strategy. ex. release-)'
         required: false
         type: string
         default: 'release-'
-      semantic_release_config:
+      semantic-release-config:
         description: 'Path to semantic-release configuration file (used only when strategy is gitflow or develop)'
         type: string
         required: false
-      strict_conventional_commits:
+      strict-conventional-commits:
         description: 'Enable strict mode for semantic-release (used only when strategy is gitflow or develop)'
         type: boolean
         required: false
@@ -54,9 +54,9 @@ jobs:
         run: |
           STRATEGY="${{ inputs.strategy }}"
           HEAD="${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}"
-          MAIN="${{ inputs.main_branch }}"
-          DEV="${{ inputs.develop_branch }}"
-          PREFIX="${{ inputs.prefix_release_branch }}"
+          MAIN="${{ inputs.main-branch }}"
+          DEV="${{ inputs.develop-branch }}"
+          PREFIX="${{ inputs.prefix-release-branch }}"
 
           echo "→ Strategy: $STRATEGY"
           echo "→ Head: $HEAD"
@@ -176,9 +176,9 @@ jobs:
         if: contains(needs.resolve.outputs.action, 'release') || contains(needs.resolve.outputs.action, 'on_release')
         uses: ./__reusable_actions__/actions/semantic-release
         with:
-          config: ${{ inputs.semantic_release_config }}
+          config: ${{ inputs.semantic-release-config }}
           dry-run: 'true'
-          strict-mode: ${{ inputs.strict_conventional_commits }}
+          strict-mode: ${{ inputs.strict-conventional-commits }}
           github-token: ${{ secrets.GH_TOKEN }}
 
       - name: 🌱 Resolve and Ensure Target Branch
@@ -186,8 +186,8 @@ jobs:
         run: |
           ACTION="${{ needs.resolve.outputs.action }}"
           BASE="${{ needs.resolve.outputs.base }}"
-          MAIN="${{ inputs.main_branch }}"
-          DEV="${{ inputs.develop_branch }}"
+          MAIN="${{ inputs.main-branch }}"
+          DEV="${{ inputs.develop-branch }}"
           VERSION="${{ steps.semantic-release.outputs.version }}"
 
           if [[ "$ACTION" == "pr_to_main_on_release" || "$ACTION" == "pr_to_release" ]]; then
@@ -199,7 +199,7 @@ jobs:
           fi
 
           if [[ "$ACTION" == "pr_to_release" ]]; then
-            BASE="${{ inputs.prefix_release_branch }}$VERSION"
+            BASE="${{ inputs.prefix-release-branch }}$VERSION"
           fi
 
           # Garante que a branch de destino existe no remoto
