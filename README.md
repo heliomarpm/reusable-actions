@@ -41,38 +41,101 @@ Branches prefixadas com `hotfix/*` são a exceção arquitetural controlada. Ela
 
 ### 1️⃣ CI — Quality Gate (Testes e Cobertura)
 
-Este workflow detecta a stack do seu projeto, configura o runtime, executa os testes e normaliza a cobertura.
+Este workflow detecta a stack do seu projeto, configura o runtime, executa os testes e normaliza a cobertura, atuando como o **Juiz Único** da qualidade do código.
 
 ```yaml
-name: CI
+name: "1. Quality Assurance"
+
+on:
+  push:
+    branches: ["develop", "feature/**", "hotfix/**"]
+
 jobs:
-  ci:
+  qa:
     uses: heliomarpm/reusable-actions/.github/workflows/ci-quality-gate.yml@main
     with:
-      min-coverage: 80
-      coverage-mode: info
+      coverage-min: 85
+      coverage-mode: block # 'block' falha o job se cobertura < 85%. 'info' apenas emite alertas. 'decrease' falha se cobertura diminuir desde o ultimo merge
 ```
 
-**Inputs principais:** `stack`, `project_path`, `min-coverage`, `coverage-mode` (info | block).
+**Inputs principais:** `stack`, `project_path`, `coverage-min` (padrão: 80), `coverage-mode` (`info` | `block` | `decrease`).
 
-### 2️⃣ CD — Promoção Automática de Branches
+---
 
-Orquestra a estratégia escolhida, checa a cobertura validada e decide quando abrir PRs de promoção.
+### 2️⃣ CD — Promoção Automática de Branches (Auto PR)
+
+Orquestra a estratégia escolhida (`trunk`, `develop` ou `gitflow`) e cria ou atualiza o Pull Request automaticamente.
+
+> 💡 **Single Source of Truth (SSOT):** O Auto PR **não** requer parâmetros de cobertura (`min-coverage` ou `coverage-mode`). Ele consome automaticamente o laudo já avaliado pelo Quality Gate, aplicando as labels (`coverage-passed`, `coverage-failed`) e formatando a tabela no corpo do PR!
 
 ```yaml
-name: Auto PR
+name: "2. Auto PR"
+
+on:
+  workflow_run:
+    workflows: ["1. Quality Assurance"]
+    types:
+      - completed
+
 jobs:
   promote:
+    # ⚠️ IMPORTANTE: Garante que a PR SÓ será aberta se o Quality Assurance PASSOU!
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     uses: heliomarpm/reusable-actions/.github/workflows/cd-pull-request.yml@main
     with:
-      strategy: gitflow # trunk | develop | gitflow
+      strategy: develop # trunk | develop | gitflow
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+---
+
+### 🛡️ Como Funciona o Bloqueio por Cobertura Mínima
+
+O controle de qualidade segue o princípio de **separação de responsabilidades**:
+
+```
+[ Push no Código ]
+       │
+       ▼
+┌─────────────────────────────────┐
+│     1. Quality Assurance        │
+│                                 │
+│  • Executa testes unitários     │
+│  • Calcula cobertura (ex: 78%)  │
+│  • coverage-min: 85             │
+│  • coverage-mode: block         │
+└────────────────┬────────────────┘
+                 │
+       ┌─────────┴─────────┐
+       │ Cobertura < 85%?  │
+       └─────────┬─────────┘
+                 │
+        ┌────────┴────────┐
+        │                 │
+     Sim (FALHA)       Não (SUCESSO)
+        │                 │
+        ▼                 ▼
+ 🚫 Job Cancelado   ✅ Dispara: 2. Auto PR
+ (PR NUNCA abre!)   (Abre PR com tabela de métricas)
+```
+
+1. **Modo `block` no Quality Gate:**  
+   Se você definir `coverage-mode: block` no CI e a cobertura ficar abaixo de `coverage-min`, o job do CI **falha com erro vermelho**.
+2. **Condição no Auto PR:**  
+   Como o workflow de PR contém a cláusula:
+   ```yaml
+   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+   ```
+   Ele **não é executado** caso o CI tenha falhado. A criação do Pull Request é bloqueada logo na entrada!
+3. **Modo `info` (Informativo):**  
+   Se usar `coverage-mode: info`, o CI sempre passará com sucesso. O PR será aberto normalmente, mas exibirá o status `failed` e a etiqueta vermelha `coverage-failed` como feedback visual para os revisores.
+
+---
+
 ### 3️⃣ CD — Semantic Release
 
-Workflow unificado de execução final do Release baseado nas mensagens de commit.
+Workflow unificado de execução final do Release baseado nas mensagens de commit convencionais ao mergir na `main`.
 
 ---
 
@@ -102,7 +165,7 @@ jobs:
       - uses: heliomarpm/reusable-actions/actions/run-coverage@main
         with:
           stack: ${{ steps.stack.outputs.stack }}
-          min-coverage: 85
+          coverage-min: 85
           coverage-mode: block
 ```
 
