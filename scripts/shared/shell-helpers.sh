@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # Guard contra execução dupla
 [[ -n "${__SHELL_HELPERS_LOADED:-}" ]] && return 0
-export __SHELL_HELPERS_LOADED=true
+__SHELL_HELPERS_LOADED=true
 
 # ────────────────────────────────────────
 # Logging (apenas stderr para não poluir stdout)

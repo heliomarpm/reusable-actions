@@ -12,7 +12,11 @@ SIGNALS=()
 # Coleta todos os sinais
 [[ -f package.json || -f yarn.lock || -f pnpm-lock.yaml ]] && SIGNALS+=("node")
 [[ -f composer.json || -f index.php ]]                     && SIGNALS+=("php")
-ls *.csproj >/dev/null 2>&1 || ls *.sln >/dev/null 2>&1    && SIGNALS+=("dotnet")
+
+shopt -s nullglob
+dotnet_files=(*.csproj *.sln)
+[[ ${#dotnet_files[@]} -gt 0 ]] && SIGNALS+=("dotnet")
+
 [[ -f requirements.txt || -f pyproject.toml || -f Pipfile || -f uv.lock || -f setup.py ]] && SIGNALS+=("python")
 [[ -f go.mod ]]                                             && SIGNALS+=("go")
 
