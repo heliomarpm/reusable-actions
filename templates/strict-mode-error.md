@@ -21,21 +21,24 @@ Crie **pelo menos um commit** seguindo o formato de Commits Convencionais e envi
 
 ### Tipos aceitos
 
-| Tipo      | Impacto no lançamento
-|--------   |---------------- 
-| feat!     | _major_
-| feat      | _minor_
-| fix       | _patch_
-| revert    | _patch_
-| chore     | --
-| docs      | --
-| test      | --
+| Tipo      | Impacto no lançamento |
+|:---|:---|
+| feat!     | _major_ |
+| refactor! | _major_ |
+| feat      | _minor_ |
+| fix       | _patch_ |
+| revert    | _patch_ |
+| perf      | _patch_ |
+| chore     | -- |
+| docs      | -- |
+| test      | -- |
 
 ---
 
 ## ✅ Exemplos válidos
 
 <details><summary> detalhes </summary>
+
 ```bash
 git commit -m "feat(auth): adicionar suporte a token de atualização"
 git commit -m "fix(api): lidar com erro 500 ao salvar requisição"
