@@ -202,7 +202,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
+      # OBRIGATÓRIO: Clona o repositório com histórico completo para leitura de commits e tags
+      - name: 📌 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+              
       - name: 📝 Update Changelog
         uses: heliomarpm/reusable-actions/actions/changelog@main
         with:

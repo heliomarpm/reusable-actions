@@ -6,17 +6,21 @@ source "$SCRIPT_DIR/../../shared/shell-helpers.sh"
 
 echo "🧪 Running unit tests..."
 
+MARKER_FILE="${RUNNER_TEMP:-/tmp}/reusable_tests_skipped"
+rm -f "$MARKER_FILE"
+
 if [[ ! -f package.json ]]; then
   echo "⚠️ No package.json found"
-  exit 2
+  touch "$MARKER_FILE"
+  exit 0
 fi
 
 TEST_SCRIPT=$(jq -r '.scripts.test // empty' package.json 2>/dev/null || echo "")
 
-# Verifica se o script de teste não existe ou é o placeholder padrão do npm
 if [[ -z "$TEST_SCRIPT" || "$TEST_SCRIPT" == *"no test specified"* ]]; then
   echo "⚠️ No test script configured in package.json"
-  exit 2
+  touch "$MARKER_FILE"
+  exit 0
 fi
 
 npm test

@@ -41,19 +41,27 @@ runs:
         fi
 
         chmod +x "$SCRIPT"
+        MARKER_FILE="${RUNNER_TEMP:-/tmp}/reusable_tests_skipped"
+        rm -f "$MARKER_FILE"
+
         TEST_EXIT=0
         "$SCRIPT" || TEST_EXIT=$?
 
-        if [[ "$TEST_EXIT" -eq 0 ]]; then
-          echo "status=passed" >> $GITHUB_OUTPUT
-          echo "✅ Testes unitários executados com sucesso."
-          exit 0
-        elif [[ "$TEST_EXIT" -eq 2 ]]; then
+        # 1. Se o script sinalizou que não há testes configurados
+        if [[ -f "$MARKER_FILE" ]]; then
+          rm -f "$MARKER_FILE"
           echo "status=skipped" >> $GITHUB_OUTPUT
           echo "⚠️ Nenhum runner ou script de testes configurado para este projeto."
           if [[ "$MODE" == "block" || "$MODE" == "decrease" ]]; then
             fail "❌ Quality Gate Bloqueado: Nenhum teste configurado e coverage-mode está como '$MODE'."
           fi
+          exit 0
+        fi
+
+        # 2. Testes foram executados
+        if [[ "$TEST_EXIT" -eq 0 ]]; then
+          echo "status=passed" >> $GITHUB_OUTPUT
+          echo "✅ Testes unitários executados com sucesso."
           exit 0
         else
           echo "status=failed" >> $GITHUB_OUTPUT
