@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-03.5]
+
+### ♻️ Code Refactoring
+- **coverage**: ♻️ limpar script de cobertura Node.js ([81ed468](https://github.com/heliomarpm/reusable-actions/commit/81ed468d65d6d348bf41f0fee32800fa25e91fc9))
+
 ## [2026-10-03.4]
 
 ### 🐛 Bug Fixes
