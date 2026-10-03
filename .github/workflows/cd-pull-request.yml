@@ -19,30 +19,36 @@ on:
         type: string
         default: 'develop'
       prefix_release_branch:
-        description: 'Release branch prefix'
+        description: 'Release branch prefix (Used for gitflow strategy. ex. release-)'
         required: false
         type: string
         default: 'release-'
       min-coverage:
+        description: 'Minimum coverage percentage required to promote (used only when coverage artifact is available)'
         type: number
         required: false
         default: 80
       coverage-mode:
+        description: 'Coverage mode to use (used only when coverage artifact is available. Options: block | line)'
         type: string
         required: false
         default: 'info'
       semantic_release_config:
+        description: 'Path to semantic-release configuration file (used only when strategy is gitflow or develop)'
         type: string
         required: false
       strict_conventional_commits:
+        description: 'Enable strict mode for semantic-release (used only when strategy is gitflow or develop)'
         type: boolean
         required: false
         default: true
       stack:
+        description: 'Stack to use (used only when coverage artifact is available. Options: php | nodejs)'
         type: string
         required: false
         default: ''
       project_path:
+        description: 'Path to the project root (default: .)'
         type: string
         required: false
         default: '.'
@@ -67,7 +73,7 @@ jobs:
         id: engine
         run: |
           STRATEGY="${{ inputs.strategy }}"
-          HEAD="${{ github.ref_name }}"
+          HEAD="${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}"
           MAIN="${{ inputs.main_branch }}"
           DEV="${{ inputs.develop_branch }}"
           PREFIX="${{ inputs.prefix_release_branch }}"
@@ -87,6 +93,12 @@ jobs:
           # Main branch — nada a promover
           if [[ "$HEAD" == "$MAIN" ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
+            {
+              echo "## 🔀 Auto PR (Ignorado)"
+              echo ""
+              echo "ℹ️ A branch atual é a \`$MAIN\` (destino final). Não há níveis superiores para criar um Pull Request de promoção."
+              echo "👉 *Para gerar uma versão final, certifique-se de executar o workflow de Semantic Release.*"
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
@@ -240,7 +252,7 @@ jobs:
           EOF
 
           if [[ "${{ steps.branch.outputs.skip }}" == "true" ]]; then
-            echo "ℹ️ **Skipped**: No new release detected by semantic-release." >> $GITHUB_STEP_SUMMARY
+            echo "ℹ️ **Ignorado**: Nenhuma nova versão foi detectada pelo semantic-release." >> $GITHUB_STEP_SUMMARY
           else
             echo "**From:** \`${{ needs.resolve.outputs.head }}\`  " >> $GITHUB_STEP_SUMMARY
             echo "**To:** \`${{ steps.branch.outputs.base }}\`  " >> $GITHUB_STEP_SUMMARY
