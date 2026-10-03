@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Carrega helpers (se não carregado via BASH_ENV)
+# Carrega helpers
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/shell-helpers.sh"
 
 log "🔍 Detecting project stack..."
 
+CURRENT_DIR="$(pwd)"
 SIGNALS=()
 
 # Coleta todos os sinais
@@ -21,8 +22,47 @@ dotnet_files=(*.csproj *.sln)
 [[ -f go.mod ]]                                             && SIGNALS+=("go")
 
 if [[ ${#SIGNALS[@]} -eq 0 ]]; then
-  log "❌ No stack signals found"
-  log "👉 Supported: node, php, dotnet, python, go"
+  log "❌ No stack signals found in $CURRENT_DIR"
+
+  # Verifica se há manifestos em subpastas para dar dica precisa
+  sub_signals=(*/package.json */composer.json */*.csproj */requirements.txt */go.mod)
+  HINT_BLOCK=""
+  if [[ ${#sub_signals[@]} -gt 0 ]]; then
+    hint_dir="${sub_signals[0]%/*}"
+    log "💡 Detected project files in subfolder: '${hint_dir}'"
+    HINT_BLOCK=$(cat <<EOF
+> [!WARNING]
+> **Encontramos arquivos de projeto na subpasta:** \`${hint_dir}\`  
+> 👉 Configure no seu workflow: \`project_path: ${hint_dir}\`
+EOF
+)
+  fi
+
+  # Renderiza um Job Summary rico e amigável no GitHub Actions
+  {
+    echo "# 🔍 Falha na Detecção de Stack"
+    echo ""
+    echo "Não foi possível identificar a linguagem/tecnologia do projeto no diretório:"
+    echo "> \`$CURRENT_DIR\`"
+    echo ""
+    if [[ -n "$HINT_BLOCK" ]]; then
+      echo "$HINT_BLOCK"
+      echo ""
+    fi
+    echo "### 💡 Como resolver:"
+    echo "1. **Projeto em subpasta:** Se o código não estiver na raiz, adicione \`with: project_path: <pasta>\` no workflow."
+    echo "2. **Definição explícita:** Você também pode forçar a stack sem autodetecção via \`with: stack: <linguagem>\`."
+    echo ""
+    echo "### 📋 Arquivos reconhecidos por stack:"
+    echo "| Stack | Arquivos Reconhecidos |"
+    echo "| :--- | :--- |"
+    echo "| **Node.js** | \`package.json\`, \`yarn.lock\`, \`pnpm-lock.yaml\` |"
+    echo "| **PHP** | \`composer.json\`, \`index.php\` |"
+    echo "| **.NET** | \`*.csproj\`, \`*.sln\` |"
+    echo "| **Python** | \`requirements.txt\`, \`pyproject.toml\`, \`Pipfile\`, \`uv.lock\`, \`setup.py\` |"
+    echo "| **Go** | \`go.mod\` |"
+  } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
   exit 1
 fi
 

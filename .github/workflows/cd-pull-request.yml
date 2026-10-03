@@ -181,6 +181,7 @@ jobs:
           fi
 
       - name: 🔍 Detect Stack
+        if: contains(needs.resolve.outputs.action, 'release') || contains(needs.resolve.outputs.action, 'on_release')
         uses: ./__reusable_actions__/actions/detect-stack
         id: stack
         with:
