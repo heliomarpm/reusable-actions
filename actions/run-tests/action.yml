@@ -1,0 +1,40 @@
+name: 'Run Tests'
+description: 'Runs unit tests for the detected stack'
+
+inputs:
+  stack:
+    description: 'Project stack'
+    required: true
+  project-path:
+    description: 'Path to the project root'
+    required: false
+    default: '.'
+
+outputs:
+  status:
+    description: 'Test result: passed | failed | skipped'
+    value: ${{ steps.tests.outputs.status }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: tests
+      shell: bash
+      working-directory: ${{ inputs.project-path }}
+      env:
+        BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
+      run: |
+        SCRIPT="${{ github.action_path }}/../../scripts/plugins/${{ inputs.stack }}/test.sh"
+        if [[ ! -f "$SCRIPT" ]]; then
+          echo "⚠️ No test.sh found for stack ${{ inputs.stack }}"
+          echo "status=skipped" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        chmod +x "$SCRIPT"
+        if "$SCRIPT"; then
+          echo "status=passed" >> $GITHUB_OUTPUT
+        else
+          echo "status=failed" >> $GITHUB_OUTPUT
+          exit 1
+        fi

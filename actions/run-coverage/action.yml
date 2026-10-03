@@ -1,0 +1,75 @@
+name: 'Run Coverage'
+description: 'Runs test coverage and normalizes output'
+
+inputs:
+  stack:
+    description: 'Project stack'
+    required: true
+  project-path:
+    description: 'Path to the project root'
+    required: false
+    default: '.'
+  min-coverage:
+    description: 'Minimum coverage percentage (0-100)'
+    required: false
+    default: '80'
+  coverage-mode:
+    description: 'Coverage mode (info | block)'
+    required: false
+    default: 'info'
+
+outputs:
+  line:
+    description: 'Line coverage percentage'
+    value: ${{ steps.coverage.outputs.line }}
+  status:
+    description: 'Coverage status: passed | failed | missing'
+    value: ${{ steps.evaluate.outputs.status }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: coverage
+      shell: bash
+      working-directory: ${{ inputs.project-path }}
+      env:
+        BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
+      run: |
+        SCRIPT="${{ github.action_path }}/../../scripts/plugins/${{ inputs.stack }}/coverage.sh"
+        if [[ -f "$SCRIPT" ]]; then
+          chmod +x "$SCRIPT"
+          "$SCRIPT" || true
+        else
+          echo "⚠️ No coverage.sh found for stack ${{ inputs.stack }}"
+        fi
+
+        FILE="coverage/coverage-summary.normalized.json"
+        if [[ -f "$FILE" ]]; then
+          LINE=$(jq -r '.line // empty' "$FILE")
+          echo "line=$LINE" >> $GITHUB_OUTPUT
+          echo "report=found" >> $GITHUB_OUTPUT
+        else
+          echo "line=" >> $GITHUB_OUTPUT
+          echo "report=not-found" >> $GITHUB_OUTPUT
+        fi
+
+    - id: evaluate
+      shell: bash
+      env:
+        BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
+      run: |
+        REPORT="${{ steps.coverage.outputs.report }}"
+        LINE="${{ steps.coverage.outputs.line }}"
+        MIN="${{ inputs.min-coverage }}"
+        MODE="${{ inputs.coverage-mode }}"
+
+        if [[ "$REPORT" == "not-found" ]]; then
+          echo "status=missing" >> $GITHUB_OUTPUT
+          [[ "$MODE" == "block" ]] && fail "Blocking PR: tests/coverage not implemented"
+        elif (( $(echo "$LINE < $MIN" | bc -l) )); then
+          echo "status=failed" >> $GITHUB_OUTPUT
+          [[ "$MODE" == "block" ]] && fail "Coverage below threshold ($LINE < $MIN)"
+        else
+          echo "status=passed" >> $GITHUB_OUTPUT
+        fi
+        exit 0

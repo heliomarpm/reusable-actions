@@ -3,17 +3,49 @@ name: CD - Pull Request
 on:
   workflow_call:
     inputs:
+      strategy:
+        description: 'Promotion strategy (trunk | develop | gitflow)'
+        required: false
+        type: string
+        default: 'develop'
+      main_branch:
+        description: 'Main branch name'
+        required: false
+        type: string
+        default: 'main'
+      develop_branch:
+        description: 'Develop branch name'
+        required: false
+        type: string
+        default: 'develop'
+      prefix_release_branch:
+        description: 'Release branch prefix'
+        required: false
+        type: string
+        default: 'release-'
       min-coverage:
-        description: 'Minimum coverage percentage (0-100 | default: 80)'
         type: number
         required: false
         default: 80
       coverage-mode:
-        description: 'Coverage mode (info | block)'
         type: string
         required: false
-        default: "info" 
-
+        default: 'info'
+      semantic_release_config:
+        type: string
+        required: false
+      strict_conventional_commits:
+        type: boolean
+        required: false
+        default: true
+      stack:
+        type: string
+        required: false
+        default: ''
+      project_path:
+        type: string
+        required: false
+        default: '.'
     secrets:
       GH_TOKEN:
         required: true
@@ -23,49 +55,100 @@ permissions:
   pull-requests: write
 
 jobs:
-  resolve-branch:
+  resolve:
     runs-on: ubuntu-latest
     outputs:
-      head: ${{ steps.resolve.outputs.head }}
-      base: ${{ steps.resolve.outputs.base }}
-      skip: ${{ steps.resolve.outputs.skip }}
-
+      head: ${{ steps.engine.outputs.head }}
+      base: ${{ steps.engine.outputs.base }}
+      action: ${{ steps.engine.outputs.action }}
+      skip: ${{ steps.engine.outputs.skip }}
     steps:
-      - name: 🔍 Resolve branches
-        id: resolve
+      - name: 🧠 Promotion Engine
+        id: engine
         run: |
-          HEAD="${{ github.event.workflow_run.head_branch }}"
+          STRATEGY="${{ inputs.strategy }}"
+          HEAD="${{ github.ref_name }}"
+          MAIN="${{ inputs.main_branch }}"
+          DEV="${{ inputs.develop_branch }}"
+          PREFIX="${{ inputs.prefix_release_branch }}"
 
-          if [[ "$HEAD" == "main" ]]; then
+          echo "→ Strategy: $STRATEGY"
+          echo "→ Head: $HEAD"
+
+          # Hotfix override
+          if [[ "$HEAD" == hotfix/* ]]; then
+            echo "base=$MAIN" >> $GITHUB_OUTPUT
+            echo "head=$HEAD" >> $GITHUB_OUTPUT
+            echo "action=pr_to_main" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Main branch — nada a promover
+          if [[ "$HEAD" == "$MAIN" ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          if [[ "$HEAD" == "develop" ]]; then
-            BASE="main"
-          else
-            BASE="develop"
-          fi
+          case "$STRATEGY" in
+            trunk)
+              echo "base=$MAIN" >> $GITHUB_OUTPUT
+              echo "action=pr_to_main" >> $GITHUB_OUTPUT
+              ;;
+            develop)
+              if [[ "$HEAD" == "$DEV" ]]; then
+                echo "base=$MAIN" >> $GITHUB_OUTPUT
+                echo "action=pr_to_main_on_release" >> $GITHUB_OUTPUT
+              else
+                echo "base=$DEV" >> $GITHUB_OUTPUT
+                echo "action=pr_to_develop" >> $GITHUB_OUTPUT
+              fi
+              ;;
+            gitflow)
+              if [[ "$HEAD" == "$DEV" ]]; then
+                echo "base=__release__" >> $GITHUB_OUTPUT
+                echo "action=pr_to_release" >> $GITHUB_OUTPUT
+              elif [[ "$HEAD" == ${PREFIX}* ]]; then
+                echo "base=$MAIN" >> $GITHUB_OUTPUT
+                echo "action=pr_to_main" >> $GITHUB_OUTPUT
+              else
+                echo "base=$DEV" >> $GITHUB_OUTPUT
+                echo "action=pr_to_develop" >> $GITHUB_OUTPUT
+              fi
+              ;;
+            *)
+              echo "::error::Unknown strategy: $STRATEGY"
+              exit 1
+              ;;
+          esac
 
-          echo "🔹 Pull Request: $HEAD → $BASE"
-
-          echo "base=$BASE" >> $GITHUB_OUTPUT
           echo "head=$HEAD" >> $GITHUB_OUTPUT
           echo "skip=false" >> $GITHUB_OUTPUT
 
-      - name: 🚫 Skip - main branch detected
-        if: steps.resolve.outputs.skip == 'true'
-        run: echo "→ Main branch detected. Skipping auto PR."
-
-  read-coverage:
-    needs: resolve-branch
-    if: needs.resolve-branch.outputs.skip != 'true'
+  promote:
+    needs: resolve
+    if: needs.resolve.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    outputs:
-      line: ${{ steps.coverage.outputs.line }}
-      status: ${{ steps.eval-coverage.outputs.status }}
-
     steps:
+      - name: 📌 Checkout consumer repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: 📌 Checkout reusable-actions scripts
+        uses: actions/checkout@v4
+        with:
+          repository: heliomarpm/reusable-actions
+          ref: main
+          path: __reusable_actions__
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: 🔐 Auth GitHub CLI
+        run: gh auth setup-git
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
       - name: 📥 Download coverage artifact
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -77,235 +160,89 @@ jobs:
         id: coverage
         run: |
           FILE="coverage/coverage-summary.normalized.json"
-
-          if [ ! -f "$FILE" ]; then
-            echo "⚠️ Coverage artifact not found"
-            echo "line=" >> $GITHUB_OUTPUT
-            echo "status=missing" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          LINE=$(jq '.line' "$FILE")
-          echo "line=$LINE" >> $GITHUB_OUTPUT
-          echo "status=found" >> $GITHUB_OUTPUT
-
-      - name: ✅ Evaluate coverage
-        id: eval-coverage
-        run: |
-          FOUND_STATUS="${{ steps.coverage.outputs.status }}"
-          LINE=${{ steps.coverage.outputs.line }}
-          MIN=${{ inputs.min-coverage }}
-          MODE="${{ inputs.coverage-mode }}"
-
-          echo "→ Minimum coverage: $MIN%"
-          echo "→ Coverage mode: $MODE"
-
-          FINAL_STATUS="passed"
-
-          if [ "$FOUND_STATUS" = "missing" ]; then
-            FINAL_STATUS="missing"
-            echo "⚠️ No tests or coverage detected"
-
-            if [ "$MODE" = "block" ]; then
-              echo "❌ Blocking PR: tests not implemented"
-              exit 1
-            fi
-          elif  (( $(echo "$LINE < $MIN" | bc -l) )); then
-            FINAL_STATUS="failed"
-            echo "❌ Coverage below threshold ($LINE < $MIN)"
-
-            if [ "$MODE" = "block" ]; then
-              exit 1
-            fi
-          fi
-
-          echo "status=$FINAL_STATUS" >> $GITHUB_OUTPUT
-
-  auto-pr:
-    needs:
-      - resolve-branch
-      - read-coverage
-    if: needs.resolve-branch.outputs.skip != 'true'
-    runs-on: ubuntu-latest
-    env:
-      REUSABLE_PATH: __reusable_actions__
-      BASH_ENV: __reusable_actions__/scripts/shared/shell-helpers.sh
-
-    steps:
-      - name: 📌 Checkout consumer repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Necessário para evitar falhas do gh CLI em repositórios grandes
-          token: ${{ secrets.GH_TOKEN }} # Necessário se o repositório for privado
-
-      - name: 📌 Checkout reusable-actions scripts
-        uses: actions/checkout@v4
-        with:
-          repository: heliomarpm/reusable-actions
-          ref: main
-          path: ${{ env.REUSABLE_PATH }}
-          token: ${{ secrets.GH_TOKEN }} # Necessário se o repositório for privado
-
-      - name: 🔐 Auth GitHub CLI
-        run: |
-          # echo "${GITHUB_TOKEN}" | gh auth login --with-token
-          gh auth setup-git
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: 🔎 Ensure Destination Branch
-        if: needs.resolve-branch.outputs.skip != 'true'
-        run: |
-          BASE="${{ needs.resolve-branch.outputs.base }}"
-
-          if ! git ls-remote --exit-code --heads origin "$BASE" > /dev/null 2>&1; then
-            {
-              echo "## ❌ Invalid destination branch"
-              echo ""
-              echo "Branch '$BASE' does not exist."
-              echo ""
-              echo "### Available branches:"
-              git ls-remote --heads origin | awk '{print $2}' | sed 's|refs/heads/||'
-            } >> "$GITHUB_STEP_SUMMARY"
-
-            echo "Expected branch: $BASE"
-            exit 1
-          fi
-
-      - name: 🏷 Ensure auto-generated label exists
-        if: needs.resolve-branch.outputs.skip != 'true'
-        run: |
-          gh label create auto-generated --description "Pull Request criada automaticamente" --color 006B75 || true
-          gh label create "coverage-failed" --description "Cobertura de testes abaixo do limite mínimo." --color "D93F0B" || true
-          gh label create "coverage-passed" --description "Cobertura de testes acima do limite mínimo." --color "0E8A16" || true
-          gh label create "coverage-missing" --description "Cobertura de testes não encontrada." --color "E99695" || true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-
-      - name: 📝 Generate PR body
-        if: needs.resolve-branch.outputs.skip != 'true'
-        run: |
-          COVERAGE_LINE="${{ needs.read-coverage.outputs.line }}"
-          COVERAGE_STATUS="${{ needs.read-coverage.outputs.status }}"
-          MIN_COVERAGE="${{ inputs.min-coverage }}"
-          MODE="${{ inputs.coverage-mode }}"
-
-          if [ -n "$COVERAGE_LINE" ]; then
-            COVERAGE_BLOCK=$(cat <<EOF
-          ### 📊 Cobertura de Testes
-
-          ```cmd
-          | Métrica | Valor |
-          |--------|-------|
-          | Linhas | **${COVERAGE_LINE}%** |
-          | Mínimo exigido | ${MIN_COVERAGE}% |
-          | Status | ${COVERAGE_STATUS} |
-          | Modo | ${MODE} |
-          ```
-
-          EOF
-          )
+          if [ -f "$FILE" ]; then
+            LINE=$(jq '.line' "$FILE")
+            echo "line=$LINE" >> $GITHUB_OUTPUT
+            echo "status=found" >> $GITHUB_OUTPUT
           else
-            COVERAGE_BLOCK=$(cat <<EOF
-          ### 📊 Cobertura de Testes
-
-          ⚠️ Cobertura não gerada para este projeto.
-          EOF
-          )
+            echo "status=missing" >> $GITHUB_OUTPUT
           fi
 
-          cat <<EOF > pr_body.md
-          ## 🤖 Pull Request Automática
+      - name: 🔍 Detect Stack
+        uses: ./__reusable_actions__/actions/detect-stack
+        id: stack
+        with:
+          stack: ${{ inputs.stack }}
+          project-path: ${{ inputs.project_path }}
 
-          Esta PR foi criada ou atualizada automaticamente.
+      - name: 🚀 Resolve Semantic Release
+        id: semantic-release
+        if: contains(needs.resolve.outputs.action, 'release') || contains(needs.resolve.outputs.action, 'on_release')
+        uses: ./__reusable_actions__/actions/semantic-release
+        with:
+          stack: ${{ steps.stack.outputs.stack }}
+          project-path: ${{ inputs.project_path }}
+          config: ${{ inputs.semantic_release_config }}
+          dry-run: 'true'
+          strict-mode: ${{ inputs.strict_conventional_commits }}
+          github-token: ${{ secrets.GH_TOKEN }}
 
-          **Origem:** \`${{ needs.resolve-branch.outputs.head }}\`  
-          **Destino:** \`${{ needs.resolve-branch.outputs.base }}\`
+      - name: 🌱 Resolve Release Branch
+        id: branch
+        run: |
+          ACTION="${{ needs.resolve.outputs.action }}"
+          BASE="${{ needs.resolve.outputs.base }}"
+          VERSION="${{ steps.semantic-release.outputs.version }}"
 
-          ---
-          ✔ CI executado com sucesso  
-          ✔ Testes validados  
-          ✔ Processo automatizado
+          if [[ "$ACTION" == "pr_to_main_on_release" || "$ACTION" == "pr_to_release" ]]; then
+            if [[ -z "$VERSION" ]]; then
+              echo "::notice::No new release detected. Skipping PR."
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
 
-          ${COVERAGE_BLOCK}          
+          if [[ "$ACTION" == "pr_to_release" ]]; then
+            BASE="${{ inputs.prefix_release_branch }}$VERSION"
+            if git ls-remote --exit-code --heads origin "$BASE" >/dev/null 2>&1; then
+              git fetch origin "$BASE":"$BASE"
+              git checkout "$BASE"
+            else
+              git checkout -b "$BASE"
+              git push -u origin "$BASE"
+            fi
+          fi
 
-          ---
-          _Gerado automaticamente pela action **auto-pr**_
-          EOF
+          echo "base=$BASE" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
 
       - name: 📜 Create or Update Pull Request
-        id: create-pr
-        run: |
-          HEAD="${{ needs.resolve-branch.outputs.head }}"
-          BASE="${{ needs.resolve-branch.outputs.base }}"
-          TITLE="🔀 PR ($(date +'%Y-%m-%d')): ${HEAD} → ${BASE}"
-          STATUS_COVERAGE="${{ needs.read-coverage.outputs.status }}"
+        if: steps.branch.outputs.skip != 'true'
+        uses: ./__reusable_actions__/actions/create-pr
+        id: pr
+        with:
+          head: ${{ needs.resolve.outputs.head }}
+          base: ${{ steps.branch.outputs.base }}
+          coverage-status: ${{ steps.coverage.outputs.status }}
+          coverage-line: ${{ steps.coverage.outputs.line }}
+          min-coverage: ${{ inputs.min-coverage }}
+          coverage-mode: ${{ inputs.coverage-mode }}
+          github-token: ${{ secrets.GH_TOKEN }}
 
-          if [ "$STATUS_COVERAGE" = "failed" ]; then
-            ADD_LABEL="coverage-failed"
-            DEL_LABEL="coverage-passed,coverage-missing"
-          elif [ "$STATUS_COVERAGE" = "passed" ]; then
-            ADD_LABEL="coverage-passed"
-            DEL_LABEL="coverage-failed,coverage-missing"
-          elif [ "$STATUS_COVERAGE" = "missing" ]; then
-            ADD_LABEL="coverage-missing"
-            DEL_LABEL="coverage-passed,coverage-failed"
-          fi
-
-          # Tenta encontrar um PR existente
-          PR_NUMBER=$(gh pr list --base "$BASE" --head "$HEAD" --json number --jq '.[0].number')
-
-          echo "$TITLE"
-
-          if [ -z "$PR_NUMBER" ]; then
-            echo "→ No existing PR found. Creating new PR..."
-            gh pr create \
-              --base "$BASE" \
-              --head "$HEAD" \
-              --title "$TITLE" \
-              --body-file pr_body.md \
-              --label "auto-generated,$ADD_LABEL" \
-              --assignee "${{ github.actor }}"
-
-            # Fetch PR URL after creation
-            PR_URL=$(gh pr view "$HEAD" --json url --jq '.url')
-            PR_ACTION="created"
-          else
-            echo "→ Existing PR #$PR_NUMBER found. Updating..."
-            gh pr edit "$PR_NUMBER" \
-              --title "$TITLE" \
-              --body-file pr_body.md \
-              --add-assignee "${{ github.actor }}" \
-              --remove-label "$DEL_LABEL" \
-              --add-label "$ADD_LABEL"
-
-            PR_URL="https://github.com/${{ github.repository }}/pull/$PR_NUMBER"
-            PR_ACTION="updated"
-          fi
-
-          echo "::notice title=Auto PR ${PR_ACTION}::${HEAD} → ${BASE}"
-          echo "::notice title=Pull Request::${PR_URL}"
-
-          echo "pr_url=${PR_URL}" >> $GITHUB_OUTPUT
-          echo "pr_action=${PR_ACTION}" >> $GITHUB_OUTPUT
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: 🧾 Job Summary
+      - name: 🧾 Job summary
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
           ## 🔀 Auto Pull Request
 
-          **Status:** ${{ steps.create-pr.outputs.pr_action || 'processed' }}
+          **Strategy:** ${{ inputs.strategy }}  
+          **Action:** ${{ needs.resolve.outputs.action }}
 
-          **From:** \`${{ needs.resolve-branch.outputs.head }}\`  
-          **To:** \`${{ needs.resolve-branch.outputs.base }}\`
-
-          **Coverage:** ${{ needs.read-coverage.outputs.status }}
-
-          🔗 **PR:** ${{ steps.create-pr.outputs.pr_url }}
-
-          ---
-          _Gerado automaticamente pela action **auto-pr**_
           EOF
+
+          if [[ "${{ steps.branch.outputs.skip }}" == "true" ]]; then
+            echo "ℹ️ **Skipped**: No new release detected by semantic-release." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**From:** \`${{ needs.resolve.outputs.head }}\`  " >> $GITHUB_STEP_SUMMARY
+            echo "**To:** \`${{ steps.branch.outputs.base }}\`  " >> $GITHUB_STEP_SUMMARY
+            echo "🔗 **PR:** ${{ steps.pr.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
+          fi

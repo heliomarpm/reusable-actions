@@ -1,0 +1,50 @@
+name: 'Setup Runtime'
+description: 'Installs the appropriate runtime and dependencies for the detected stack'
+
+inputs:
+  stack:
+    description: 'Project stack (node, php, dotnet, python, go)'
+    required: true
+  project-path:
+    description: 'Path to the project root'
+    required: false
+    default: '.'
+  node-version:
+    description: 'Node.js version (when stack=node)'
+    required: false
+    default: 'lts/*'
+  php-version:
+    description: 'PHP version (when stack=php)'
+    required: false
+    default: '8.3'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      if: inputs.stack == 'node'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        node-version-file: ${{ inputs.project-path }}/.nvmrc
+
+    - name: Setup PHP
+      if: inputs.stack == 'php'
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ inputs.php-version }}
+        tools: composer
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.project-path }}
+      env:
+        BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
+      run: |
+        SCRIPT="${{ github.action_path }}/../../scripts/plugins/${{ inputs.stack }}/install-deps.sh"
+        if [[ -f "$SCRIPT" ]]; then
+          chmod +x "$SCRIPT"
+          "$SCRIPT"
+        else
+          echo "⚠️ No install-deps.sh found for stack ${{ inputs.stack }}"
+        fi

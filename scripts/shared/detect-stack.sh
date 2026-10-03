@@ -1,38 +1,32 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
-log() {
-  echo "$1" >&2
-}
+# Carrega helpers (se não carregado via BASH_ENV)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/shell-helpers.sh"
 
 log "🔍 Detecting project stack..."
 
-if [ -f package.json ] || [ -f yarn.lock ] || [ -f pnpm-lock.yaml ]; then
-  echo "node"
-  exit 0
+SIGNALS=()
+
+# Coleta todos os sinais
+[[ -f package.json || -f yarn.lock || -f pnpm-lock.yaml ]] && SIGNALS+=("node")
+[[ -f composer.json || -f index.php ]]                     && SIGNALS+=("php")
+ls *.csproj >/dev/null 2>&1 || ls *.sln >/dev/null 2>&1    && SIGNALS+=("dotnet")
+[[ -f requirements.txt || -f pyproject.toml || -f Pipfile || -f uv.lock || -f setup.py ]] && SIGNALS+=("python")
+[[ -f go.mod ]]                                             && SIGNALS+=("go")
+
+if [[ ${#SIGNALS[@]} -eq 0 ]]; then
+  log "❌ No stack signals found"
+  log "👉 Supported: node, php, dotnet, python, go"
+  exit 1
 fi
 
-if [ -f composer.json ] || [ -f index.php ] || [ -f default.php ]; then
-  echo "php"
-  exit 0
+if [[ ${#SIGNALS[@]} -gt 1 ]]; then
+  log "⚠️ Multiple stacks detected: ${SIGNALS[*]}"
+  log "👉 Using first match: ${SIGNALS[0]}"
+  log "👉 Override with 'stack' input for monorepos"
 fi
 
-if ls *.csproj >/dev/null 2>&1 || ls *.sln >/dev/null 2>&1; then
-  echo "dotnet"
-  exit 0
-fi
-
-if [ -f requirements.txt ] || [ -f pyproject.toml ] || [ -f Pipfile ] || [ -f uv.lock ] || [ -f poetry.lock ] || [ -f setup.py ]; then
-  echo "python"
-  exit 0
-fi
-
-if [ -f go.mod ]; then
-  echo "go"
-  exit 0
-fi
-
-log "❌ Unable to detect project stack."
-log "👉 Supported stacks: node, php, dotnet, python, go"
-log "👉 You can override by setting STACK env variable."
-exit 1
+log "✅ Detected stack: ${SIGNALS[0]}"
+echo "${SIGNALS[0]}"

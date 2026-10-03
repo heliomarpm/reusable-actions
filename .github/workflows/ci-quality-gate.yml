@@ -4,27 +4,35 @@ on:
   workflow_call:
     inputs:
       stack:
-        description: 'Stack the project. (node | php | dotnet | python | go | empty for auto-detect)'
+        description: 'Stack override (empty for auto-detect)'
         required: false
         type: string
-        default: null     # node | php | dotnet | python | go | empty for auto-detect
+        default: ''
       project_path:
-        description: 'Project path source code'
+        description: 'Project path'
         required: false
         type: string
-        default: null
-
+        default: '.'
+      node-version:
+        description: 'Node.js version'
+        required: false
+        type: string
+        default: 'lts/*'
+      php-version:
+        description: 'PHP version'
+        required: false
+        type: string
+        default: '8.3'
       min-coverage:
-        description: 'Minimum coverage percentage (0-100 | default: 80)'
+        description: 'Minimum coverage (0-100)'
         type: number
         required: false
         default: 80
       coverage-mode:
-        description: 'Coverage mode (info | block | decrease-only)'
+        description: 'Coverage mode (info | block)'
         type: string
         required: false
-        default: "info" 
-
+        default: 'info'
       coverage_continue_on_failure:
         description: 'Continue pipeline even if tests fail. (default: true)'
         required: false
@@ -32,13 +40,8 @@ on:
         default: true
 
 jobs:
-  workdir: 
+  quality-gate:
     runs-on: ubuntu-latest
-    env:
-      REUSABLE_PATH: __reusable_actions__
-    outputs:
-      path: ${{ steps.path.outputs.value }}  
-    
     steps:
       - name: 📌 Checkout consumer repository
         uses: actions/checkout@v4
@@ -48,217 +51,54 @@ jobs:
         with:
           repository: heliomarpm/reusable-actions
           ref: main
-          path: ${{ env.REUSABLE_PATH }}
+          path: __reusable_actions__
 
-      - name: 👀 Files in workspace
-        run: |
-          echo "📂 Current directory:"
-          pwd
-          echo "📄 Files in root:"
-          ls -la
-
-      - name: 📐 Resolve project path
-        id: path
-        run: |
-          source "$(pwd)/${{ env.REUSABLE_PATH }}/scripts/shared/shell-helpers.sh"
-          PROJECT_PATH="$(resolve_project_path '${{ inputs.project_path }}')"
-
-          log "🔹 Using project path: $PROJECT_PATH"
-          echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
-
-  test: 
-    runs-on: ubuntu-latest
-    needs: workdir
-    env:
-      REUSABLE_PATH: ${{ github.workspace }}/__reusable_actions__
-      BASH_ENV: ${{ github.workspace }}/__reusable_actions__/scripts/shared/shell-helpers.sh
-
-    defaults:
-      run:
-        shell: bash
-        working-directory: ${{ needs.workdir.outputs.path || '.' }}
-
-    steps:
-      - name: 📌 Checkout consumer repository
-        uses: actions/checkout@v4
-
-      - name: 📌 Checkout reusable-actions scripts
-        uses: actions/checkout@v4
-        with:
-          repository: heliomarpm/reusable-actions
-          ref: main
-          path: ${{ env.REUSABLE_PATH }}
-
-      - name: 👀 Files in workspace
-        working-directory: ${{ github.workspace }}
-        run: |
-          echo "📂 Current directory:"
-          pwd
-          echo "📄 Files in root:"
-          ls -la
-
-      - name: 🔍 Resolve project stack
+      - name: 🔍 Detect Stack
+        uses: ./__reusable_actions__/actions/detect-stack
         id: stack
-        run: |
-          STACK="${{ inputs.stack }}"
-          if [[ -n "$STACK" ]]; then
-            echo "🔹 Using stack from input: $STACK"
-            echo "value=$STACK" >> $GITHUB_OUTPUT
-            echo "source=input" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-            
-          SCRIPT="$REUSABLE_PATH/scripts/shared/detect-stack.sh"
-          chmod +x "$SCRIPT"
-          STACK=$("$SCRIPT")
-          
-          if [[ -z "$STACK" ]]; then
-            echo "value=" >> $GITHUB_OUTPUT
-            echo "source=not-detected" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+        with:
+          stack: ${{ inputs.stack }}
+          project-path: ${{ inputs.project_path }}
 
-          echo "✅ Detected stack: $STACK"
-          echo "value=$STACK" >> $GITHUB_OUTPUT
-          echo "source=detected" >> $GITHUB_OUTPUT
+      - name: ⚙️ Setup Runtime
+        uses: ./__reusable_actions__/actions/setup-runtime
+        with:
+          stack: ${{ steps.stack.outputs.stack }}
+          project-path: ${{ inputs.project_path }}
+          node-version: ${{ inputs.node-version }}
+          php-version: ${{ inputs.php-version }}
 
-      - name: ❌ Fail if stack not detected
-        if: steps.stack.outputs.value == ''
-        run: |
-          fail "Stack not detected. Check project_path or repository structure."          
-
-      - name: 🧪 Evaluate test execution
+      - name: 🧪 Run Tests
+        uses: ./__reusable_actions__/actions/run-tests
         id: tests
-        run: |
-          if [[ ! -d "tests" && ! -d "__tests__" && ! -d "test" ]]; then
-            echo "skip=false" >> $GITHUB_OUTPUT
-            echo "reason=no test folders detected" >> $GITHUB_OUTPUT
-            fail "No test directories found."
-          fi
+        with:
+          stack: ${{ steps.stack.outputs.stack }}
+          project-path: ${{ inputs.project_path }}
 
-          echo "✅ Tests will run."
-          echo "reason=tests detected" >> $GITHUB_OUTPUT
-  
-      - name: ▶️ Run unit tests
-        run: |
-          STACK="${{ steps.stack.outputs.value }}"
-          SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/test.sh"
-          chmod +x "$SCRIPT"
-          "$SCRIPT"
-
-      - name: 📊 Run coverage tests
+      - name: 📊 Run Coverage
+        uses: ./__reusable_actions__/actions/run-coverage
         id: coverage
         continue-on-error: ${{ inputs.coverage_continue_on_failure }}
-        run: |
-          STACK="${{ steps.stack.outputs.value }}"
-          SCRIPT="$REUSABLE_PATH/scripts/plugins/$STACK/coverage.sh"
-          chmod +x "$SCRIPT"
-          # "$SCRIPT"
-
-          if "$SCRIPT"; then
-            STATUS="executed"
-          else
-            STATUS="failed"
-          fi
-          echo "status=$STATUS" >> $GITHUB_OUTPUT
-
-          FILE="coverage/coverage-summary.normalized.json"
-
-          if [[ -f "$FILE" ]]; then
-            LINE=$(jq '.line' "$FILE")
-            echo "line=$LINE" >> $GITHUB_OUTPUT
-
-            PCT=$(jq -r '.total.lines.pct // empty' "$FILE")
-            if [[ -n "$PCT" ]]; then
-              echo "pct=$PCT" >> $GITHUB_OUTPUT
-            fi
-
-            echo "report=found" >> $GITHUB_OUTPUT
-          else
-            echo "line=" >> $GITHUB_OUTPUT
-            echo "report=not-found" >> $GITHUB_OUTPUT
-          fi
-
-      - name: ✅ Evaluate coverage
-        id: coverage-check
-        run: |
-          REPORT_STATUS="${{ steps.coverage.outputs.report }}"
-          LINE=${{ steps.coverage.outputs.line }}
-          MIN=${{ inputs.min-coverage }}
-          MODE="${{ inputs.coverage-mode }}"
-
-          log "Minimum coverage: $MIN%"
-          log "Coverage mode: $MODE"
-
-          FINAL_STATUS="passed"
-
-          if [ "$REPORT_STATUS" = "not-found" ]; then
-            FINAL_STATUS="missing"
-            echo "⚠️ No tests or coverage detected"
-
-            if [ "$MODE" = "block" ]; then
-              fail "Blocking PR: tests not implemented"
-            fi
-          elif  (( $(echo "$LINE < $MIN" | bc -l) )); then
-            FINAL_STATUS="failed"
-            MSG="❌ Coverage below threshold ($LINE < $MIN)"
-
-            if [ "$MODE" = "block" ]; then
-              fail "$MSG"
-              exit 1
-            fi
-
-            echo "$MSG"
-          fi
-
-          echo "status=$FINAL_STATUS" >> $GITHUB_OUTPUT
+        with:
+          stack: ${{ steps.stack.outputs.stack }}
+          project-path: ${{ inputs.project_path }}
+          min-coverage: ${{ inputs.min-coverage }}
+          coverage-mode: ${{ inputs.coverage-mode }}
 
       - name: 📦 Upload coverage artifact
-        # if: hashFiles('coverage/coverage-summary.normalized.json') != ''
-        if: steps.coverage.outputs.report != 'not-found'
+        if: steps.coverage.outputs.status != 'missing'
         uses: actions/upload-artifact@v4
-        continue-on-error: true
         with:
           name: coverage-report
-          path: coverage/coverage-summary.normalized.json
+          path: ${{ inputs.project_path }}/coverage/coverage-summary.normalized.json
 
       - name: 🧾 Job Summary
         if: always()
         run: |
           {
-            echo "## 🧪 Quality Gate "
+            echo "## 🧪 Quality Gate"
             echo ""
-            echo "**📂 Project path:** \`${{ inputs.project_path }}\`"
-            echo ""
-
-            if [[ "${{ steps.stack.outputs.value }}" != "" ]]; then
-              echo "**🧱 Stack:** \`${{ steps.stack.outputs.value }}\` (_${{ steps.stack.outputs.source }}_)"
-            else
-              echo "**🧱 Stack:** ❌ not detected"
-            fi
-
-            echo ""
-            if [[ "${{ steps.tests.outputs.skip }}" != "true" ]]; then
-              echo "**🧪 Tests:** executed"
-            else
-              echo "**🧪 Tests:** skipped (_${{ steps.tests.outputs.reason }}_)"
-            fi
-
-            echo ""
-            if [[ "${{ steps.coverage.outputs.status }}" == "executed" ]]; then
-              if [[ -n "${{ steps.coverage.outputs.pct }}" ]]; then
-                echo "**📊 Coverage:** ${{ steps.coverage.outputs.pct }}%"
-              else
-                echo "**📊 Coverage:** executed (no summary produced)"
-              fi
-            elif [[ "${{ steps.coverage.outputs.status }}" == "failed" ]]; then
-              echo "**📊 Coverage:** failed"
-            else
-              echo "**📊 Coverage:** not executed"
-            fi
-
-            echo ""
-            if [[ -f coverage/coverage-summary.normalized.json ]]; then
-              echo "**📦 Artifacts:** coverage-report"
-            fi
+            echo "**Stack:** \`${{ steps.stack.outputs.stack }}\` (_${{ steps.stack.outputs.source }}_)"
+            echo "**Tests:** ${{ steps.tests.outputs.status || 'skipped' }}"
+            echo "**Coverage:** ${{ steps.coverage.outputs.line || 'N/A' }}% — Status: ${{ steps.coverage.outputs.status || 'not executed' }}"
           } >> $GITHUB_STEP_SUMMARY

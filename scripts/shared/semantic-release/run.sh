@@ -1,19 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+
+# Carrega helpers (se não carregado via BASH_ENV)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../shell-helpers.sh"
 
 echo "🚀 Semantic Release Script"
-
-# ------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------
-log() { echo "→ $1"; }
-has_file() { [[ -f "$1" ]]; }
-
-fail() {
-  echo "::error::$1"
-  exit 1
-}
-
 
 # ------------------------------------------------------------
 # Environments
@@ -31,44 +23,47 @@ STRICT_TEMPLATE="$REUSABLE_PATH/templates/strict-mode-error.md"
 bash "$REUSABLE_PATH/scripts/shared/semantic-release/install.sh"
 
 # ------------------------------------------------------------
-# Build semantic-release command
+# Build semantic-release command (Array-based, no eval)
 # ------------------------------------------------------------
 build_cmd() {
-  local CMD="npx semantic-release"
+  local CMD=(npx semantic-release)
 
   if [[ -n "$CUSTOM_CONFIG_PATH" ]]; then
     log "Running semantic-release with consumer config"
-    CMD+=" --extends $CUSTOM_CONFIG_PATH"
+    CMD+=(--extends "$CUSTOM_CONFIG_PATH")
   else
     [[ -f "$DEFAULT_CONFIG" ]] || fail "Default config not found for stack: $STACK"
 
     log "Running semantic-release with default config"
-    CMD+=" --extends $DEFAULT_CONFIG"
+    CMD+=(--extends "$DEFAULT_CONFIG")
   fi
 
   if [[ "$IS_DEBUG_MODE" == "true" ]]; then
     log "Debug mode enabled"
-    CMD+=" --debug"
+    CMD+=(--debug)
   fi
 
   log "Custom Path detected: $CUSTOM_CONFIG_PATH"
   log "Default Path detected: $DEFAULT_CONFIG"
   log "Dry run enabled: $IS_DRY_RUN"
   log "Strict Mode enabled: $STRICT_MODE"
-  log "Command: $CMD"
   
-  echo "$CMD" 
+  # Bash array trick to return arguments safely:
+  # Print them out space-separated. We will read them back into an array in `run`.
+  echo "${CMD[@]}"
 }
 
 # ------------------------------------------------------------
 # STRICT MODE — Enforce conventional commits
 # ------------------------------------------------------------
 strict_mode() {
-  local STRICT_CMD="${1:-npx semantic-release} --dry-run"
+  local STRICT_CMD=("$@")
+  STRICT_CMD+=(--dry-run)
   
   log "Strict mode enabled — validating conventional commits"
 
-  OUTPUT=$(eval "$STRICT_CMD" 2>&1 || true)
+  # Use stderr to capture output safely without eval
+  OUTPUT=$("${STRICT_CMD[@]}" 2>&1 || true)
 
   if echo "$OUTPUT" | grep -qiE "no release type found|There are no relevant changes"; then
 
@@ -103,19 +98,19 @@ strict_mode() {
 # Run release
 # ------------------------------------------------------------
 run() {
-  CMD=$(build_cmd)
+  read -r -a CMD <<< "$(build_cmd)"
 
   if [[ "$STRICT_MODE" == "true" ]]; then
-    strict_mode "$CMD"
+    strict_mode "${CMD[@]}"
   fi
 
   if [[ "$IS_DRY_RUN" == "true" || "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
     log "Dry-run enabled"
-    CMD+=" --dry-run"
+    CMD+=(--dry-run)
   fi
   
-  log "🚀 Running: $CMD"
-  eval "$CMD"  
+  log "🚀 Running: ${CMD[*]}"
+  "${CMD[@]}"
 }
 
 run

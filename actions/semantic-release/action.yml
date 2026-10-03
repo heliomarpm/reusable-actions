@@ -1,0 +1,76 @@
+name: 'Semantic Release'
+description: 'Runs semantic-release with stack-aware config'
+
+inputs:
+  stack:
+    description: 'Project stack'
+    required: true
+  project-path:
+    description: 'Path to the project root'
+    required: false
+    default: '.'
+  config:
+    description: 'Path to custom semantic-release config'
+    required: false
+    default: ''
+  dry-run:
+    description: 'Run in dry-run mode'
+    required: false
+    default: 'false'
+  strict-mode:
+    description: 'Fail if no conventional commits found'
+    required: false
+    default: 'true'
+  debug:
+    description: 'Enable debug output'
+    required: false
+    default: 'false'
+  github-token:
+    description: 'GitHub token'
+    required: true
+
+outputs:
+  version:
+    description: 'Next release version (empty if none)'
+    value: ${{ steps.release.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: release
+      shell: bash
+      working-directory: ${{ inputs.project-path }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        STACK: ${{ inputs.stack }}
+        SEMANTIC_RELEASE_CONFIG: ${{ inputs.config }}
+        SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.dry-run }}
+        STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict-mode }}
+        SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.debug }}
+        REUSABLE_PATH: ${{ github.action_path }}/../..
+        BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
+      run: |
+        SCRIPT="${{ github.action_path }}/../../scripts/shared/semantic-release/run.sh"
+        chmod +x "$SCRIPT"
+        
+        # We capture output to extract the version
+        OUTPUT=$("$SCRIPT" 2>&1 | tee /dev/stderr || true)
+        
+        # Strictly checking if it actually failed based on strict mode, 
+        # since run.sh will exit 1, tee /dev/stderr will mask it if not careful.
+        # However, run.sh uses `set -e` and trap ERR, but piped `| tee` might lose it.
+        # To avoid losing exit code:
+        # Actually run.sh already fails and exits. If it exits 1, `|| true` catches it? 
+        # We need it to fail the step if strict mode fails. Let's run it properly:
+        
+        # Re-run without tee for simplicity or use PIPESTATUS
+        set -o pipefail
+        OUTPUT=$("$SCRIPT" 2>&1 | tee /dev/stderr)
+        
+        # Robust version extraction
+        VERSION=$(echo "$OUTPUT" \
+          | grep -Eo 'next release version is ([0-9]+\.[0-9]+\.[0-9]+)' \
+          | sed -E 's/.* ([0-9]+\.[0-9]+\.[0-9]+)/\1/' \
+          | head -n1 || true)
+          
+        echo "version=$VERSION" >> $GITHUB_OUTPUT

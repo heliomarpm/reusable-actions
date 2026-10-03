@@ -1,0 +1,44 @@
+name: 'Detect Stack'
+description: 'Detects the project stack (node, php, dotnet, python, go)'
+
+inputs:
+  stack:
+    description: 'Explicit stack override. Leave empty for auto-detection.'
+    required: false
+    default: ''
+  project-path:
+    description: 'Path to the project root'
+    required: false
+    default: '.'
+
+outputs:
+  stack:
+    description: 'Detected or explicit stack'
+    value: ${{ steps.detect.outputs.stack }}
+  source:
+    description: 'How the stack was resolved: input | detected'
+    value: ${{ steps.detect.outputs.source }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: detect
+      shell: bash
+      working-directory: ${{ inputs.project-path }}
+      env:
+        BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
+      run: |
+        STACK="${{ inputs.stack }}"
+        if [[ -n "$STACK" ]]; then
+          echo "🔹 Using stack from input: $STACK"
+          echo "stack=$STACK" >> $GITHUB_OUTPUT
+          echo "source=input" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        SCRIPT="${{ github.action_path }}/../../scripts/shared/detect-stack.sh"
+        chmod +x "$SCRIPT"
+        STACK=$("$SCRIPT")
+
+        echo "stack=$STACK" >> $GITHUB_OUTPUT
+        echo "source=detected" >> $GITHUB_OUTPUT

@@ -1,0 +1,130 @@
+name: 'Create or Update PR'
+description: 'Creates or updates a pull request with coverage info and labels'
+
+inputs:
+  head:
+    description: 'Source branch'
+    required: true
+  base:
+    description: 'Target branch'
+    required: true
+  coverage-status:
+    description: 'Coverage status (passed | failed | missing)'
+    required: false
+    default: ''
+  coverage-line:
+    description: 'Line coverage percentage'
+    required: false
+    default: ''
+  min-coverage:
+    description: 'Minimum coverage percentage'
+    required: false
+    default: '80'
+  coverage-mode:
+    description: 'Coverage Mode (info/block)'
+    required: false
+    default: 'info'
+  github-token:
+    description: 'GitHub token'
+    required: true
+
+outputs:
+  pr-url:
+    description: 'URL of the created/updated PR'
+    value: ${{ steps.pr.outputs.pr_url }}
+  pr-action:
+    description: 'Whether PR was created or updated'
+    value: ${{ steps.pr.outputs.pr_action }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: labels
+      shell: bash
+      run: |
+        gh label create auto-generated --description "PR auto-generated" --color 006B75 || true
+        gh label create coverage-failed --color D93F0B || true
+        gh label create coverage-passed --color 0E8A16 || true
+        gh label create coverage-missing --color E99695 || true
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+
+    - id: pr
+      shell: bash
+      run: |
+        HEAD="${{ inputs.head }}"
+        BASE="${{ inputs.base }}"
+        TITLE="🔀 PR ($(date +'%Y-%m-%d')): ${HEAD} → ${BASE}"
+        STATUS="${{ inputs.coverage-status }}"
+
+        # Resolve labels
+        case "$STATUS" in
+          failed)  ADD="coverage-failed";  DEL="coverage-passed,coverage-missing" ;;
+          passed)  ADD="coverage-passed";  DEL="coverage-failed,coverage-missing" ;;
+          missing) ADD="coverage-missing"; DEL="coverage-passed,coverage-failed"  ;;
+          *)       ADD=""; DEL="" ;;
+        esac
+
+        COVERAGE_LINE="${{ inputs.coverage-line }}"
+        MIN_COVERAGE="${{ inputs.min-coverage }}"
+        MODE="${{ inputs.coverage-mode }}"
+
+        if [ -n "$COVERAGE_LINE" ]; then
+          COVERAGE_BLOCK=$(cat <<EOF
+        ### 📊 Cobertura de Testes
+
+        | Métrica | Valor |
+        |--------|-------|
+        | Linhas | **${COVERAGE_LINE}%** |
+        | Mínimo exigido | ${MIN_COVERAGE}% |
+        | Status | ${STATUS} |
+        | Modo | ${MODE} |
+
+        EOF
+        )
+        else
+          COVERAGE_BLOCK=$(cat <<EOF
+        ### 📊 Cobertura de Testes
+
+        ⚠️ Cobertura não gerada para este projeto.
+        EOF
+        )
+        fi
+
+        cat <<EOF > pr_body.md
+        ## 🤖 Pull Request Automática
+
+        Esta PR foi criada ou atualizada automaticamente.
+
+        **Origem:** \`${HEAD}\`  
+        **Destino:** \`${BASE}\`
+
+        ---
+        ✔ CI executado com sucesso  
+        ✔ Testes validados  
+        ✔ Processo automatizado
+
+        ${COVERAGE_BLOCK}          
+
+        ---
+        _Gerado automaticamente pela action **auto-pr**_
+        EOF
+
+        PR_NUMBER=$(gh pr list --base "$BASE" --head "$HEAD" --json number --jq '.[0].number')
+
+        if [[ -z "$PR_NUMBER" ]]; then
+          gh pr create --base "$BASE" --head "$HEAD" \
+            --title "$TITLE" --body-file pr_body.md \
+            --label "auto-generated${ADD:+,$ADD}"
+          PR_URL=$(gh pr view "$HEAD" --json url --jq '.url')
+          echo "pr_action=created" >> $GITHUB_OUTPUT
+        else
+          gh pr edit "$PR_NUMBER" --title "$TITLE" --body-file pr_body.md \
+            ${DEL:+--remove-label "$DEL"} ${ADD:+--add-label "$ADD"}
+          PR_URL="https://github.com/${{ github.repository }}/pull/$PR_NUMBER"
+          echo "pr_action=updated" >> $GITHUB_OUTPUT
+        fi
+
+        echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
