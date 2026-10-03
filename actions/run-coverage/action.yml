@@ -14,9 +14,13 @@ inputs:
     required: false
     default: 80
   coverage-mode:
-    description: 'Enable strict mode for coverage (info | block | decrease)'
+    description: 'Coverage mode (info | block | decrease)'
     required: false
     default: 'info'
+  github-token:
+    description: 'GitHub token for querying base branch coverage in decrease mode'
+    required: false
+    default: ''
 
 outputs:
   line:
@@ -57,6 +61,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.project-path }}
       env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
         BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
       run: |
         REPORT="${{ steps.coverage.outputs.report }}"
@@ -64,30 +69,101 @@ runs:
         MIN="${{ inputs.coverage-min }}"
         MODE="${{ inputs.coverage-mode }}"
         STATUS="missing"
+        BASE_LINE=""
 
+        # 1. Ausência de cobertura / testes
         if [[ "$REPORT" == "not-found" || -z "$LINE" ]]; then
           STATUS="missing"
           echo "status=missing" >> $GITHUB_OUTPUT
           echo "line=" >> $GITHUB_OUTPUT
-          if [[ "$MODE" == "block" ]]; then
-            fail "❌ Quality Gate Bloqueado: Cobertura de testes não encontrada e coverage-mode está como 'block'."
+          if [[ "$MODE" == "block" || "$MODE" == "decrease" ]]; then
+            fail "❌ Quality Gate Bloqueado: Cobertura de testes não encontrada e coverage-mode está como '$MODE'."
           fi
-        elif (( $(echo "$LINE < $MIN" | bc -l) )); then
-          STATUS="failed"
-          echo "status=failed" >> $GITHUB_OUTPUT
-          echo "line=$LINE" >> $GITHUB_OUTPUT
-          if [[ "$MODE" == "block" ]]; then
-            fail "❌ Quality Gate Bloqueado: Cobertura ($LINE%) abaixo da meta mínima ($MIN%) e coverage-mode está como 'block'."
-          fi
-        else
-          STATUS="passed"
-          echo "status=passed" >> $GITHUB_OUTPUT
-          echo "line=$LINE" >> $GITHUB_OUTPUT
+          exit 0
         fi
 
-        # Enriquece o arquivo de contrato normalizado com a decisão do Quality Gate
+        # 2. Modo DECREASE: compara com a cobertura da branch base
+        if [[ "$MODE" == "decrease" ]]; then
+          echo "🔍 Avaliando modo 'decrease' (não permitir queda de cobertura)..."
+          
+          BASE_BRANCH="${GITHUB_BASE_REF:-develop}"
+          if command -v gh >/dev/null 2>&1 && [[ -n "${GITHUB_TOKEN:-}" ]]; then
+            mkdir -p base_coverage_tmp
+            BASE_RUN_ID=$(gh run list --branch "$BASE_BRANCH" --status success --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
+            if [[ -z "$BASE_RUN_ID" && "$BASE_BRANCH" != "main" ]]; then
+              BASE_RUN_ID=$(gh run list --branch "main" --status success --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
+            fi
+
+            if [[ -n "$BASE_RUN_ID" ]]; then
+              echo "→ Baixando cobertura de referência da branch base ($BASE_BRANCH, run #$BASE_RUN_ID)..."
+              if gh run download "$BASE_RUN_ID" -n coverage-report -D base_coverage_tmp 2>/dev/null; then
+                BASE_LINE=$(jq -r '.line // empty' base_coverage_tmp/coverage-summary.normalized.json 2>/dev/null || echo "")
+              fi
+            fi
+            rm -rf base_coverage_tmp
+          fi
+
+          if [[ -n "$BASE_LINE" ]]; then
+            echo "📊 Cobertura atual: ${LINE}% | Cobertura anterior (${BASE_BRANCH}): ${BASE_LINE}%"
+            if awk -v cur="$LINE" -v base="$BASE_LINE" 'BEGIN { exit (cur < base ? 0 : 1) }'; then
+              STATUS="failed"
+              echo "status=failed" >> $GITHUB_OUTPUT
+              echo "line=$LINE" >> $GITHUB_OUTPUT
+              fail "❌ Quality Gate Bloqueado: Cobertura caiu de ${BASE_LINE}% para ${LINE}% (modo 'decrease')."
+            else
+              STATUS="passed"
+              echo "status=passed" >> $GITHUB_OUTPUT
+              echo "line=$LINE" >> $GITHUB_OUTPUT
+              echo "✅ Cobertura mantida ou aumentada (${LINE}% >= ${BASE_LINE}%)."
+            fi
+          else
+            echo "ℹ️ Cobertura anterior da branch base não encontrada. Avaliando contra a meta mínima (${MIN}%)..."
+            if awk -v cur="$LINE" -v min="$MIN" 'BEGIN { exit (cur < min ? 0 : 1) }'; then
+              STATUS="failed"
+              echo "status=failed" >> $GITHUB_OUTPUT
+              echo "line=$LINE" >> $GITHUB_OUTPUT
+              fail "❌ Quality Gate Bloqueado: Cobertura (${LINE}%) abaixo do mínimo (${MIN}%) no modo 'decrease'."
+            else
+              STATUS="passed"
+              echo "status=passed" >> $GITHUB_OUTPUT
+              echo "line=$LINE" >> $GITHUB_OUTPUT
+              echo "✅ Cobertura acima do mínimo (${LINE}% >= ${MIN}%)."
+            fi
+          fi
+
+        # 3. Modo BLOCK: compara com o limiar mínimo fixo
+        elif [[ "$MODE" == "block" ]]; then
+          if awk -v cur="$LINE" -v min="$MIN" 'BEGIN { exit (cur < min ? 0 : 1) }'; then
+            STATUS="failed"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "line=$LINE" >> $GITHUB_OUTPUT
+            fail "❌ Quality Gate Bloqueado: Cobertura (${LINE}%) abaixo da meta mínima (${MIN}%) e coverage-mode está como 'block'."
+          else
+            STATUS="passed"
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "line=$LINE" >> $GITHUB_OUTPUT
+            echo "✅ Cobertura suficiente (${LINE}% >= ${MIN}%)."
+          fi
+
+        # 4. Modo INFO: apenas registra o status sem bloquear
+        else
+          if awk -v cur="$LINE" -v min="$MIN" 'BEGIN { exit (cur < min ? 0 : 1) }'; then
+            STATUS="failed"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "line=$LINE" >> $GITHUB_OUTPUT
+            echo "⚠️ Cobertura (${LINE}%) abaixo da meta (${MIN}%), mas ignorado pelo modo 'info'."
+          else
+            STATUS="passed"
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "line=$LINE" >> $GITHUB_OUTPUT
+            echo "✅ Cobertura suficiente (${LINE}% >= ${MIN}%)."
+          fi
+        fi
+
+        # 5. Enriquece o contrato normalizado
         FILE="coverage/coverage-summary.normalized.json"
         if [[ -f "$FILE" ]]; then
-          jq --arg status "$STATUS" --arg min "$MIN" --arg mode "$MODE" \
-            '.status = $status | .min = ($min | tonumber) | .mode = $mode' "$FILE" > "${FILE}.tmp" && mv "${FILE}.tmp" "$FILE"
+          jq --arg status "$STATUS" --arg min "$MIN" --arg mode "$MODE" --arg base "$BASE_LINE" \
+            '.status = $status | .min = ($min | tonumber) | .mode = $mode | .base_line = (if $base == "" then null else ($base | tonumber) end)' \
+            "$FILE" > "${FILE}.tmp" && mv "${FILE}.tmp" "$FILE"
         fi

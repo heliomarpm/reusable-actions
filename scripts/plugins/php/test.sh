@@ -12,7 +12,7 @@ elif [[ -f vendor/bin/pest ]]; then
   vendor/bin/pest
 else
   echo "⚠️ No test runner found (PHPUnit/Pest)"
-  exit 1
+  exit 2
 fi
 
 echo "✅ PHP tests passed"

@@ -24,7 +24,7 @@ on:
         required: false
         default: 80
       coverage-mode:
-        description: 'Enable strict mode for coverage (info | block | decrease)'
+        description: 'Coverage mode (info | block | decrease)'
         type: string
         required: false
         default: 'info'
@@ -68,6 +68,7 @@ jobs:
         with:
           stack: ${{ steps.stack.outputs.stack }}
           project-path: ${{ inputs.project-path }}
+          coverage-mode: ${{ inputs.coverage-mode }}
 
       - name: 📊 Run Coverage
         uses: ./__reusable_actions__/actions/run-coverage
@@ -78,6 +79,7 @@ jobs:
           project-path: ${{ inputs.project-path }}
           coverage-min: ${{ inputs.coverage-min }}
           coverage-mode: ${{ inputs.coverage-mode }}
+          github-token: ${{ secrets.GITHUB_TOKEN || secrets.GH_TOKEN || github.token }}
 
       - name: 📦 Upload coverage artifact
         if: always() && steps.coverage.outputs.status != 'missing'

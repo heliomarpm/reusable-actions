@@ -9,6 +9,10 @@ inputs:
     description: 'Path to the project root'
     required: false
     default: '.'
+  coverage-mode:
+    description: 'Coverage mode (info | block | decrease)'
+    required: false
+    default: 'info'
 
 outputs:
   status:
@@ -25,16 +29,33 @@ runs:
         BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
       run: |
         SCRIPT="${{ github.action_path }}/../../scripts/plugins/${{ inputs.stack }}/test.sh"
+        MODE="${{ inputs.coverage-mode }}"
+
         if [[ ! -f "$SCRIPT" ]]; then
           echo "⚠️ No test.sh found for stack ${{ inputs.stack }}"
           echo "status=skipped" >> $GITHUB_OUTPUT
+          if [[ "$MODE" == "block" || "$MODE" == "decrease" ]]; then
+            fail "❌ Quality Gate Bloqueado: Script de testes não encontrado para a stack '${{ inputs.stack }}' e coverage-mode está como '$MODE'."
+          fi
           exit 0
         fi
 
         chmod +x "$SCRIPT"
-        if "$SCRIPT"; then
+        TEST_EXIT=0
+        "$SCRIPT" || TEST_EXIT=$?
+
+        if [[ "$TEST_EXIT" -eq 0 ]]; then
           echo "status=passed" >> $GITHUB_OUTPUT
+          echo "✅ Testes unitários executados com sucesso."
+          exit 0
+        elif [[ "$TEST_EXIT" -eq 2 ]]; then
+          echo "status=skipped" >> $GITHUB_OUTPUT
+          echo "⚠️ Nenhum runner ou script de testes configurado para este projeto."
+          if [[ "$MODE" == "block" || "$MODE" == "decrease" ]]; then
+            fail "❌ Quality Gate Bloqueado: Nenhum teste configurado e coverage-mode está como '$MODE'."
+          fi
+          exit 0
         else
           echo "status=failed" >> $GITHUB_OUTPUT
-          exit 1
+          fail "❌ Falha na execução dos testes unitários (código de saída $TEST_EXIT)."
         fi
