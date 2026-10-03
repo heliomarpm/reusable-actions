@@ -51,11 +51,15 @@ runs:
 
     - id: pr
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
       run: |
         HEAD="${{ inputs.head }}"
         BASE="${{ inputs.base }}"
         TITLE="🔀 PR ($(date +'%Y-%m-%d')): ${HEAD} → ${BASE}"
         STATUS="${{ inputs.coverage-status }}"
+        TEMPLATES_DIR="${{ github.action_path }}/../../templates"
 
         # Resolve labels baseadas no status de cobertura
         case "$STATUS" in
@@ -69,46 +73,32 @@ runs:
         MIN_COVERAGE="${{ inputs.min-coverage }}"
         MODE="${{ inputs.coverage-mode }}"
 
+        # 1. Renderiza o bloco de cobertura
         if [ -n "$COVERAGE_LINE" ]; then
-          COVERAGE_BLOCK=$(cat <<EOF
-### 📊 Cobertura de Testes
-
-| Métrica | Valor |
-|--------|-------|
-| Linhas | **${COVERAGE_LINE}%** |
-| Mínimo exigido | ${MIN_COVERAGE}% |
-| Status | ${STATUS} |
-| Modo | ${MODE} |
-
-EOF
-)
+          render_template "$TEMPLATES_DIR/pr-quality-gate-table.md" quality_block.tmp \
+            COVERAGE_LINE "$COVERAGE_LINE" \
+            MIN_COVERAGE "$MIN_COVERAGE" \
+            STATUS "$STATUS" \
+            MODE "$MODE"
         else
-          COVERAGE_BLOCK=$(cat <<EOF
-### 📊 Cobertura de Testes
+          render_template "$TEMPLATES_DIR/pr-quality-gate-missing.md" quality_block.tmp
+        fi
+        QUALITY_GATE_RESULT=$(cat quality_block.tmp)
+        rm -f quality_block.tmp
 
-⚠️ Cobertura não gerada para este projeto.
-EOF
-)
+        # 2. Permite override de template pelo repositório consumidor
+        PR_TEMPLATE="$TEMPLATES_DIR/pr-body.md"
+        if [[ -f ".github/pull_request_template.md" ]]; then
+          PR_TEMPLATE=".github/pull_request_template.md"
+        elif [[ -f ".github/pr_template.md" ]]; then
+          PR_TEMPLATE=".github/pr_template.md"
         fi
 
-        cat <<EOF > pr_body.md
-## 🤖 Pull Request Automática
-
-Esta PR foi criada ou atualizada automaticamente.
-
-**Origem:** \`${HEAD}\`  
-**Destino:** \`${BASE}\`
-
----
-✔ CI executado com sucesso  
-✔ Testes validados  
-✔ Processo automatizado
-
-${COVERAGE_BLOCK}          
-
----
-_Gerado automaticamente pela action **auto-pr**_
-EOF
+        # 3. Renderiza o corpo final da PR
+        render_template "$PR_TEMPLATE" pr_body.md \
+          HEAD_BRANCH "$HEAD" \
+          BASE_BRANCH "$BASE" \
+          QUALITY_GATE_RESULT "$QUALITY_GATE_RESULT"
 
         PR_NUMBER=$(gh pr list --base "$BASE" --head "$HEAD" --json number --jq '.[0].number')
 
@@ -154,5 +144,3 @@ EOF
         fi
 
         echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
-      env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}

@@ -94,11 +94,12 @@ jobs:
 
       - name: 🧾 Job Summary
         if: always()
+        env:
+          BASH_ENV: ./__reusable_actions__/scripts/shared/shell-helpers.sh
         run: |
-          {
-            echo "## 🧪 Quality Gate"
-            echo ""
-            echo "**Stack:** \`${{ steps.stack.outputs.stack }}\` (_${{ steps.stack.outputs.source }}_)"
-            echo "**Tests:** ${{ steps.tests.outputs.status || 'skipped' }}"
-            echo "**Coverage:** ${{ steps.coverage.outputs.line || 'N/A' }}% — Status: ${{ steps.coverage.outputs.status || 'not executed' }}"
-          } >> $GITHUB_STEP_SUMMARY
+          append_template_to_summary ./__reusable_actions__/templates/summary-quality-gate.md \
+            STACK "${{ steps.stack.outputs.stack }}" \
+            SOURCE "${{ steps.stack.outputs.source }}" \
+            TESTS_STATUS "${{ steps.tests.outputs.status || 'skipped' }}" \
+            COVERAGE_LINE "${{ steps.coverage.outputs.line || 'N/A' }}" \
+            COVERAGE_STATUS "${{ steps.coverage.outputs.status || 'not executed' }}"

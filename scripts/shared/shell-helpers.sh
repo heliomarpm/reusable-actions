@@ -70,6 +70,39 @@ summary_success() { summary_section "✅ Success"; summary_line "$1"; }
 summary_failure() { summary_section "❌ Failure"; summary_line "$1"; }
 
 # ────────────────────────────────────────
+# Template Rendering helpers
+# ────────────────────────────────────────
+render_template() {
+  local template_file="${1:-}"
+  local output_file="${2:-}"
+  shift 2 || true
+
+  [[ -f "$template_file" ]] || fail "Template file not found: $template_file"
+
+  local content
+  content="$(cat "$template_file")"
+
+  while [[ $# -ge 2 ]]; do
+    local key="$1"
+    local val="${2:-}"
+    shift 2
+    content="${content//\{\{${key}\}\}/$val}"
+  done
+
+  echo "$content" > "$output_file"
+}
+
+append_template_to_summary() {
+  local template_file="$1"
+  shift
+  local temp_rendered
+  temp_rendered="$(mktemp)"
+  render_template "$template_file" "$temp_rendered" "$@"
+  cat "$temp_rendered" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+  rm -f "$temp_rendered"
+}
+
+# ────────────────────────────────────────
 # Error trap
 # ────────────────────────────────────────
 on_error() {

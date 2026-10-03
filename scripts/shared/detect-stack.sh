@@ -38,30 +38,11 @@ EOF
 )
   fi
 
-  # Renderiza um Job Summary rico e amigável no GitHub Actions
-  {
-    echo "# 🔍 Falha na Detecção de Stack"
-    echo ""
-    echo "Não foi possível identificar a linguagem/tecnologia do projeto no diretório:"
-    echo "> \`$CURRENT_DIR\`"
-    echo ""
-    if [[ -n "$HINT_BLOCK" ]]; then
-      echo "$HINT_BLOCK"
-      echo ""
-    fi
-    echo "### 💡 Como resolver:"
-    echo "1. **Projeto em subpasta:** Se o código não estiver na raiz, adicione \`with: project_path: <pasta>\` no workflow."
-    echo "2. **Definição explícita:** Você também pode forçar a stack sem autodetecção via \`with: stack: <linguagem>\`."
-    echo ""
-    echo "### 📋 Arquivos reconhecidos por stack:"
-    echo "| Stack | Arquivos Reconhecidos |"
-    echo "| :--- | :--- |"
-    echo "| **Node.js** | \`package.json\`, \`yarn.lock\`, \`pnpm-lock.yaml\` |"
-    echo "| **PHP** | \`composer.json\`, \`index.php\` |"
-    echo "| **.NET** | \`*.csproj\`, \`*.sln\` |"
-    echo "| **Python** | \`requirements.txt\`, \`pyproject.toml\`, \`Pipfile\`, \`uv.lock\`, \`setup.py\` |"
-    echo "| **Go** | \`go.mod\` |"
-  } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+  # Renderiza o Job Summary usando template
+  TEMPLATES_DIR="$SCRIPT_DIR/../../templates"
+  append_template_to_summary "$TEMPLATES_DIR/summary-detect-stack-error.md" \
+    CURRENT_DIR "$CURRENT_DIR" \
+    HINT_BLOCK "$HINT_BLOCK"
 
   exit 1
 fi

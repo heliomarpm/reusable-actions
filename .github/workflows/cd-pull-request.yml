@@ -240,19 +240,18 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN }}
 
       - name: 🧾 Job summary
+        if: always()
+        env:
+          BASH_ENV: ./__reusable_actions__/scripts/shared/shell-helpers.sh
         run: |
-          cat <<EOF >> $GITHUB_STEP_SUMMARY
-          ## 🔀 Auto Pull Request
-
-          **Strategy:** ${{ inputs.strategy }}  
-          **Action:** ${{ needs.resolve.outputs.action }}
-
-          EOF
-
           if [[ "${{ steps.branch.outputs.skip }}" == "true" ]]; then
-            echo "ℹ️ **Ignorado**: Nenhuma nova versão foi detectada pelo semantic-release." >> $GITHUB_STEP_SUMMARY
+            append_template_to_summary ./__reusable_actions__/templates/summary-promotion-skipped-release.md \
+              HEAD_BRANCH "${{ needs.resolve.outputs.head }}"
           else
-            echo "**From:** \`${{ needs.resolve.outputs.head }}\`  " >> $GITHUB_STEP_SUMMARY
-            echo "**To:** \`${{ steps.branch.outputs.base }}\`  " >> $GITHUB_STEP_SUMMARY
-            echo "🔗 **PR:** ${{ steps.pr.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
+            append_template_to_summary ./__reusable_actions__/templates/summary-promotion.md \
+              STRATEGY "${{ inputs.strategy }}" \
+              ACTION "${{ needs.resolve.outputs.action }}" \
+              HEAD_BRANCH "${{ needs.resolve.outputs.head }}" \
+              BASE_BRANCH "${{ steps.branch.outputs.base }}" \
+              PR_URL "${{ steps.pr.outputs.pr_url }}"
           fi
