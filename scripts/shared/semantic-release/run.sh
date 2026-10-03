@@ -17,7 +17,17 @@ IS_DEBUG_MODE="${SEMANTIC_RELEASE_DEBUG_MODE:-false}"
 STRICT_MODE="${STRICT_CONVENTIONAL_COMMITS:-false}"
 
 CUSTOM_CONFIG_PATH=$(bash "$REUSABLE_PATH/scripts/shared/semantic-release/resolve-custom-releaserc.sh" "${SEMANTIC_RELEASE_CONFIG:-}")
-DEFAULT_CONFIG="./$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.json"
+GENERIC_CONFIG="$REUSABLE_PATH/scripts/shared/semantic-release/default-releaserc.json"
+PLUGIN_CONFIG_JS="./$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.js"
+PLUGIN_CONFIG_JSON="./$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.json"
+
+if [[ -n "$STACK" && -f "$PLUGIN_CONFIG_JS" ]]; then
+  DEFAULT_CONFIG="$PLUGIN_CONFIG_JS"
+elif [[ -n "$STACK" && -f "$PLUGIN_CONFIG_JSON" ]]; then
+  DEFAULT_CONFIG="$PLUGIN_CONFIG_JSON"
+else
+  DEFAULT_CONFIG="$GENERIC_CONFIG"
+fi
 STRICT_TEMPLATE="$REUSABLE_PATH/templates/strict-mode-error.md"
 
 bash "$REUSABLE_PATH/scripts/shared/semantic-release/install.sh"

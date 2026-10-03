@@ -26,8 +26,7 @@ install_toolchain() {
 }
 
 run() {  
-  echo "📦 Installing dependencies..."  
-
+  # 1. Instala dependências do projeto se houver lockfile
   if has_file "pnpm-lock.yaml"; then
     corepack enable
     pnpm install --frozen-lockfile
@@ -38,36 +37,10 @@ run() {
     npm ci
   elif has_file "package.json"; then
     npm install
-  else
-    install_toolchain
   fi
+
+  # 2. Garante que os pacotes do semantic-release estão sempre disponíveis
+  install_toolchain
 }
 
 run
-
-# main() {
-#   local CUSTOM_CONFIG_PATH=$(detect_config "${1}")
-#   local USE_CUSTOM_CONFIG=$(has_file "$CUSTOM_CONFIG_PATH")
-  
-#   install_dependencies "$USE_CUSTOM_CONFIG" 
-  
-#   if [[ "$USE_CUSTOM_CONFIG" == "true" ]]; then
-#     echo "$CUSTOM_CONFIG_PATH"
-#   else
-#     echo ""
-#   fi
-# }
-
-# REUSABLE_PATH="${1}"
-
-# # Run main if script is executed directly
-# if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-#   if [[ $# -lt 1 ]]; then
-#     echo "Usage: $0 <reusable_path> [custom_config_path]"
-#     echo "  reusable_path: path to reusable directory"
-#     echo "  custom_config_path(optional): path to custom config file"
-#     exit 1
-#   fi
-  
-#   main "${2:-}"
-# fi

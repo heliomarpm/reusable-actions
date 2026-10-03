@@ -42,10 +42,10 @@ runs:
     - id: labels
       shell: bash
       run: |
-        gh label create auto-generated --description "PR auto-generated" --color 006B75 || true
-        gh label create coverage-failed --color D93F0B || true
-        gh label create coverage-passed --color 0E8A16 || true
-        gh label create coverage-missing --color E99695 || true
+        gh label create auto-generated --description "PR auto-generated" --color 006B75 --force || true
+        gh label create coverage-failed --color D93F0B --force || true
+        gh label create coverage-passed --color 0E8A16 --force || true
+        gh label create coverage-missing --color E99695 --force || true
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
 
@@ -57,7 +57,7 @@ runs:
         TITLE="🔀 PR ($(date +'%Y-%m-%d')): ${HEAD} → ${BASE}"
         STATUS="${{ inputs.coverage-status }}"
 
-        # Resolve labels
+        # Resolve labels baseadas no status de cobertura
         case "$STATUS" in
           failed)  ADD="coverage-failed";  DEL="coverage-passed,coverage-missing" ;;
           passed)  ADD="coverage-passed";  DEL="coverage-failed,coverage-missing" ;;
@@ -71,54 +71,82 @@ runs:
 
         if [ -n "$COVERAGE_LINE" ]; then
           COVERAGE_BLOCK=$(cat <<EOF
-        ### 📊 Cobertura de Testes
+### 📊 Cobertura de Testes
 
-        | Métrica | Valor |
-        |--------|-------|
-        | Linhas | **${COVERAGE_LINE}%** |
-        | Mínimo exigido | ${MIN_COVERAGE}% |
-        | Status | ${STATUS} |
-        | Modo | ${MODE} |
+| Métrica | Valor |
+|--------|-------|
+| Linhas | **${COVERAGE_LINE}%** |
+| Mínimo exigido | ${MIN_COVERAGE}% |
+| Status | ${STATUS} |
+| Modo | ${MODE} |
 
-        EOF
-        )
+EOF
+)
         else
           COVERAGE_BLOCK=$(cat <<EOF
-        ### 📊 Cobertura de Testes
+### 📊 Cobertura de Testes
 
-        ⚠️ Cobertura não gerada para este projeto.
-        EOF
-        )
+⚠️ Cobertura não gerada para este projeto.
+EOF
+)
         fi
 
         cat <<EOF > pr_body.md
-        ## 🤖 Pull Request Automática
+## 🤖 Pull Request Automática
 
-        Esta PR foi criada ou atualizada automaticamente.
+Esta PR foi criada ou atualizada automaticamente.
 
-        **Origem:** \`${HEAD}\`  
-        **Destino:** \`${BASE}\`
+**Origem:** \`${HEAD}\`  
+**Destino:** \`${BASE}\`
 
-        ---
-        ✔ CI executado com sucesso  
-        ✔ Testes validados  
-        ✔ Processo automatizado
+---
+✔ CI executado com sucesso  
+✔ Testes validados  
+✔ Processo automatizado
 
-        ${COVERAGE_BLOCK}          
+${COVERAGE_BLOCK}          
 
-        ---
-        _Gerado automaticamente pela action **auto-pr**_
-        EOF
+---
+_Gerado automaticamente pela action **auto-pr**_
+EOF
 
         PR_NUMBER=$(gh pr list --base "$BASE" --head "$HEAD" --json number --jq '.[0].number')
 
         if [[ -z "$PR_NUMBER" ]]; then
-          gh pr create --base "$BASE" --head "$HEAD" \
+          echo "→ Criando novo Pull Request..."
+          PR_OUTPUT=$(gh pr create --base "$BASE" --head "$HEAD" \
             --title "$TITLE" --body-file pr_body.md \
-            --label "auto-generated${ADD:+,$ADD}"
-          PR_URL=$(gh pr view "$HEAD" --json url --jq '.url')
+            --label "auto-generated${ADD:+,$ADD}" 2>&1) || PR_EXIT=$?
+
+          if [[ ${PR_EXIT:-0} -ne 0 ]]; then
+            # Se a falha for por ausência de commits novos
+            if echo "$PR_OUTPUT" | grep -qiE "no commits between"; then
+              echo "::notice::Não há commits de diferença entre '$BASE' e '$HEAD'. Pull Request dispensada."
+              {
+                echo "## 🔀 Auto PR (Dispensado)"
+                echo ""
+                echo "ℹ️ Não há commits de diferença entre as branches \`$HEAD\` e \`$BASE\`."
+                echo "Nenhum Pull Request precisa ser criado no momento."
+              } >> "$GITHUB_STEP_SUMMARY"
+              echo "pr_action=skipped" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            echo "::error::$PR_OUTPUT"
+            {
+              echo "## ❌ Falha ao criar Pull Request"
+              echo ""
+              echo "\`\`\`"
+              echo "$PR_OUTPUT"
+              echo "\`\`\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit "$PR_EXIT"
+          fi
+
+          PR_URL=$(gh pr view "$HEAD" --json url --jq '.url' 2>/dev/null || echo "")
           echo "pr_action=created" >> $GITHUB_OUTPUT
         else
+          echo "→ Atualizando Pull Request existente #$PR_NUMBER..."
           gh pr edit "$PR_NUMBER" --title "$TITLE" --body-file pr_body.md \
             ${DEL:+--remove-label "$DEL"} ${ADD:+--add-label "$ADD"}
           PR_URL="https://github.com/${{ github.repository }}/pull/$PR_NUMBER"

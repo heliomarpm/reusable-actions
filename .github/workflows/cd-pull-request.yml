@@ -42,16 +42,6 @@ on:
         type: boolean
         required: false
         default: true
-      stack:
-        description: 'Stack to use (used only when coverage artifact is available. Options: php | nodejs)'
-        type: string
-        required: false
-        default: ''
-      project_path:
-        description: 'Path to the project root (default: .)'
-        type: string
-        required: false
-        default: '.'
     secrets:
       GH_TOKEN:
         required: true
@@ -180,31 +170,23 @@ jobs:
             echo "status=missing" >> $GITHUB_OUTPUT
           fi
 
-      - name: 🔍 Detect Stack
-        if: contains(needs.resolve.outputs.action, 'release') || contains(needs.resolve.outputs.action, 'on_release')
-        uses: ./__reusable_actions__/actions/detect-stack
-        id: stack
-        with:
-          stack: ${{ inputs.stack }}
-          project-path: ${{ inputs.project_path }}
-
       - name: 🚀 Resolve Semantic Release
         id: semantic-release
         if: contains(needs.resolve.outputs.action, 'release') || contains(needs.resolve.outputs.action, 'on_release')
         uses: ./__reusable_actions__/actions/semantic-release
         with:
-          stack: ${{ steps.stack.outputs.stack }}
-          project-path: ${{ inputs.project_path }}
           config: ${{ inputs.semantic_release_config }}
           dry-run: 'true'
           strict-mode: ${{ inputs.strict_conventional_commits }}
           github-token: ${{ secrets.GH_TOKEN }}
 
-      - name: 🌱 Resolve Release Branch
+      - name: 🌱 Resolve and Ensure Target Branch
         id: branch
         run: |
           ACTION="${{ needs.resolve.outputs.action }}"
           BASE="${{ needs.resolve.outputs.base }}"
+          MAIN="${{ inputs.main_branch }}"
+          DEV="${{ inputs.develop_branch }}"
           VERSION="${{ steps.semantic-release.outputs.version }}"
 
           if [[ "$ACTION" == "pr_to_main_on_release" || "$ACTION" == "pr_to_release" ]]; then
@@ -217,12 +199,27 @@ jobs:
 
           if [[ "$ACTION" == "pr_to_release" ]]; then
             BASE="${{ inputs.prefix_release_branch }}$VERSION"
-            if git ls-remote --exit-code --heads origin "$BASE" >/dev/null 2>&1; then
-              git fetch origin "$BASE":"$BASE"
-              git checkout "$BASE"
-            else
+          fi
+
+          # Garante que a branch de destino existe no remoto
+          if ! git ls-remote --exit-code --heads origin "$BASE" >/dev/null 2>&1; then
+            if [[ "$BASE" == "$DEV" ]]; then
+              echo "::notice::A branch '$BASE' não existe no remoto. Criando automaticamente a partir de '$MAIN'..."
+              git fetch origin "$MAIN"
+              git push origin "origin/$MAIN:refs/heads/$BASE"
+            elif [[ "$ACTION" == "pr_to_release" ]]; then
+              echo "::notice::Criando branch de release '$BASE' a partir de '$DEV'..."
               git checkout -b "$BASE"
               git push -u origin "$BASE"
+            else
+              echo "::error::A branch de destino '$BASE' não existe no repositório remoto."
+              {
+                echo "## ❌ Erro ao criar Pull Request"
+                echo ""
+                echo "A branch de destino **\`$BASE\`** não existe no repositório remoto."
+                echo "👉 Crie a branch \`$BASE\` antes de abrir um PR para ela."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
             fi
           fi
 

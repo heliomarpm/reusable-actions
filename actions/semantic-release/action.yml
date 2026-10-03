@@ -4,7 +4,8 @@ description: 'Runs semantic-release with stack-aware config'
 inputs:
   stack:
     description: 'Project stack'
-    required: true
+    required: false
+    default: ''
   project-path:
     description: 'Path to the project root'
     required: false

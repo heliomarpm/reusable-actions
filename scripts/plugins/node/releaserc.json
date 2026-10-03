@@ -1,8 +1,8 @@
 {
   "branches": [
     "main",
-    { "name": "release", "prerelease": true },
-    { "name": "develop", "prerelease": true }
+    { "name": "release-*", "prerelease": true },
+    { "name": "develop", "prerelease": "dev" }
   ],
   "plugins": [
     [
@@ -10,25 +10,54 @@
       {
         "releaseRules": [
           { "breaking": true, "release": "major" },
+          { "type": "refactor!", "release": "major" },
+          { "type": "feat!", "release": "major" },
           { "type": "feat", "release": "minor" },
           { "type": "fix", "release": "patch" },
           { "type": "revert", "release": "patch" },
+          { "type": "perf", "release": "patch" },
           { "scope": "no-release", "release": false }
         ],
         "parserOpts": {
-          "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES"]
+          "mergePattern": "^Merge pull request #(\\d+) from .+\\n(.+)",
+          "mergeCorrespondence": ["id", "message"],
+          "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES", "BREAKING-CHANGE", "BREAKING-CHANGES"]
         }
       }
     ],
     "@semantic-release/release-notes-generator",
-    ["@semantic-release/changelog", { "changelogFile": "CHANGELOG.md" }],
-    ["@semantic-release/npm", { "npmPublish": false, "failComment": true }],
-    ["@semantic-release/github", { "successComment": false }],
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md",
+        "changelogTitle": "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file."
+      }
+    ],
+    [
+      "@semantic-release/npm",
+      {
+        "npmPublish": false,
+        "pkgRoot": "."
+      }
+    ],
     [
       "@semantic-release/git",
       {
-        "assets": ["CHANGELOG.md", "package.json"],
+        "assets": [
+          "CHANGELOG.md",
+          "package.json",
+          "package-lock.json",
+          "yarn.lock",
+          "pnpm-lock.yaml"
+        ],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "successComment": "🎉 Release `${nextRelease.version}` publicada com sucesso!",
+        "failComment": "⚠️ Falha ao publicar release, verifique os logs."
       }
     ]
   ]
