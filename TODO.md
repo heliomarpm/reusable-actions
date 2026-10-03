@@ -7,8 +7,9 @@
 ## Próximos Passos Imediatos (Backlog)
 
 ### 1. Versionamento do Framework
+- [x] **Action de Changelog Nativa (`actions/changelog`)**: Implementada com zero dependências externas, ciclo de vida `[Unreleased]` atômico, promoção para versão na main (por data `YYYY-MM-DD` ou SemVer) e suporte a Git Tag / GitHub Release.
+- [x] **Workflow de Dogfooding (`.github/workflows/changelog.yml`)**: Implementado para executar `actions/changelog` no próprio repositório a cada merge ou commit na main/develop.
 - [ ] Aplicar release v1 no próprio repositório `reusable-actions`.
-- [ ] O repo não tem um workflow nativo chamando seu próprio código (Dogfooding). Precisamos criar o `.github/workflows/release-self.yml`.
 
 ### 2. Multi-Stack (Próximas Stacks)
 - [ ] **.NET**: Adicionar `scripts/plugins/dotnet/install-deps.sh`, `test.sh`, `coverage.sh` (cobertura via coverlet) e `releaserc.json`.

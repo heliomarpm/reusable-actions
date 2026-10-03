@@ -1,0 +1,87 @@
+name: 'Changelog Engine'
+description: 'Zero-dependency Conventional Commits changelog generator with [Unreleased] lifecycle and release support'
+
+inputs:
+  changelog-file:
+    description: 'Path to the changelog file'
+    required: false
+    default: 'CHANGELOG.md'
+  project-path:
+    description: 'Path to the project root containing the git repository'
+    required: false
+    default: '.'
+  branch:
+    description: 'Current branch name (auto-detected from environment/git if empty)'
+    required: false
+    default: ''
+  release-branches:
+    description: 'Comma-separated list of release branches (e.g. main,master)'
+    required: false
+    default: 'main,master'
+  develop-branches:
+    description: 'Comma-separated list of development branches (e.g. develop,dev)'
+    required: false
+    default: 'develop,dev'
+  create-release:
+    description: 'Whether to create a git tag and GitHub Release (requires gh CLI and github-token)'
+    required: false
+    default: 'false'
+  version:
+    description: 'Explicit version override. If empty, formatted according to version-format'
+    required: false
+    default: ''
+  version-format:
+    description: 'Format template for version (e.g. "v%major.%minor.%patch", "%YYYY-%mm-%dd"). Defaults to "v%major.%minor.%patch" if create-release is true, or "%YYYY-%mm-%dd" otherwise.'
+    required: false
+    default: ''
+  commit-changelog:
+    description: 'Whether to automatically commit and push the updated CHANGELOG.md'
+    required: false
+    default: 'true'
+  commit-message:
+    description: 'Custom commit message when commit-changelog is true'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token for pushing commits/tags and creating GitHub Releases'
+    required: false
+    default: ''
+
+outputs:
+  version:
+    description: 'Version applied (e.g. 1.0.0, 2026-10-03, or Unreleased)'
+    value: ${{ steps.changelog.outputs.version }}
+  tag:
+    description: 'Tag created (if create-release is true, e.g. v1.0.0 or 2026-10-03)'
+    value: ${{ steps.changelog.outputs.tag }}
+  has-changes:
+    description: 'Whether changes were detected and written (true/false)'
+    value: ${{ steps.changelog.outputs.has_changes }}
+  release-notes:
+    description: 'Generated markdown notes for this cycle'
+    value: ${{ steps.changelog.outputs.release_notes }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: changelog
+      shell: bash
+      working-directory: ${{ inputs.project-path }}
+      env:
+        CHANGELOG_FILE: ${{ inputs.changelog-file }}
+        PROJECT_PATH: ${{ inputs.project-path }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        RELEASE_BRANCHES: ${{ inputs.release-branches }}
+        DEVELOP_BRANCHES: ${{ inputs.develop-branches }}
+        CREATE_RELEASE: ${{ inputs.create-release }}
+        INPUT_VERSION: ${{ inputs.version }}
+        VERSION_FORMAT: ${{ inputs.version-format }}
+        COMMIT_CHANGELOG: ${{ inputs.commit-changelog }}
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        REUSABLE_PATH: ${{ github.action_path }}/../..
+        BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
+      run: |
+        SCRIPT="${{ github.action_path }}/../../scripts/shared/changelog/run.sh"
+        chmod +x "$SCRIPT"
+        "$SCRIPT"

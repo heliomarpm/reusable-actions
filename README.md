@@ -148,6 +148,7 @@ Se você preferir construir seu próprio fluxo, este repositório exporta as aç
 - `heliomarpm/reusable-actions/actions/run-tests@main`
 - `heliomarpm/reusable-actions/actions/run-coverage@main`
 - `heliomarpm/reusable-actions/actions/semantic-release@main`
+- `heliomarpm/reusable-actions/actions/changelog@main`
 - `heliomarpm/reusable-actions/actions/create-pr@main`
 
 **Exemplo Prático (Custom Pipeline):**
@@ -167,6 +168,32 @@ jobs:
           stack: ${{ steps.stack.outputs.stack }}
           coverage-min: 85
           coverage-mode: block
+```
+
+### 📝 Action de Changelog Nativa (`actions/changelog`)
+
+A action `actions/changelog` é uma engine leve e **zero-dependency** (100% Bash nativo + `git log`), ideal para repositórios que não requerem build ou publicação de pacotes (como documentação, infra/Terraform ou o próprio repositório de actions):
+
+* **Ciclo de vida `[Unreleased]`:** Em branches como `develop`, agrupa os Conventional Commits sob `## [Unreleased]`. A seção é sempre única e atualizada atomicamente a cada push.
+* **Promoção para Versão:** Ao integrar na `main`/`master`, `[Unreleased]` passa a ser uma versão definitiva.
+* **Template de Versão Flexível (`version-format`):** Suporta qualquer combinação de tokens SemVer (`%major`, `%minor`, `%patch`) e data (`%YYYY`, `%YY`, `%mm`, `%m`, `%dd`, `%d`). Ex: `"v%major.%minor.%patch"`, `"%YYYY-%mm-%dd"` ou `"%YYYY.%mm.%patch"`.
+* **GitHub Release Unificada (`create-release`):** Cria a Git Tag e a GitHub Release em uma única flag (default: `false`).
+* **Persistência Automática (`commit-changelog`):** Faz commit e push das alterações no `CHANGELOG.md` por padrão (`true`).
+
+```yaml
+# Exemplo 1: Registro simples por data (sem tag/release)
+- name: 📝 Update Changelog
+  uses: heliomarpm/reusable-actions/actions/changelog@main
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+
+# Exemplo 2: Release completa (SemVer + Git Tag + GitHub Release)
+- name: 🚀 Release with Changelog
+  uses: heliomarpm/reusable-actions/actions/changelog@main
+  with:
+    create-release: true
+    version-format: 'v%major.%minor.%patch'
+    github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
