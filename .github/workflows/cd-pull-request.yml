@@ -235,9 +235,9 @@ jobs:
           head: ${{ needs.resolve.outputs.head }}
           base: ${{ steps.branch.outputs.base }}
           coverage-status: ${{ steps.coverage.outputs.status }}
-          coverage-line: ${{ steps.coverage.outputs.line }}
-          coverage-min: ${{ steps.coverage.outputs.min }}
-          coverage-mode: ${{ steps.coverage.outputs.mode }}
+          coverage-line: ${{ steps.coverage.outputs.line || ''}}
+          coverage-min: ${{ steps.coverage.outputs.min || ''}}
+          coverage-mode: ${{ steps.coverage.outputs.mode || ''}}
           github-token: ${{ secrets.GH_TOKEN }}
 
       - name: 🧾 Job summary

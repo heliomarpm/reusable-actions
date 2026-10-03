@@ -21,7 +21,7 @@ inputs:
     required: false
     default: ''
   coverage-mode:
-    description: 'Coverage Mode (info/block) evaluated by Quality Gate'
+    description: 'Coverage Mode (info/block/decrease) evaluated by Quality Gate'
     required: false
     default: 'info'
   github-token:
