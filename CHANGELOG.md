@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-03.2]
+
+### 📝 Documentation
+- **changelog**: 📝 atualizar exemplo de workflow no README ([f760b37](https://github.com/heliomarpm/reusable-actions/commit/f760b377a82cb7806e4fb259d61fc2b7e707c521))
+
 ## [2026-10-03.1]
 
 ### 🔧 CI & Build System
