@@ -182,18 +182,41 @@ A action `actions/changelog` é uma engine leve e **zero-dependency** (100% Bash
 
 ```yaml
 # Exemplo 1: Registro simples por data (sem tag/release)
-- name: 📝 Update Changelog
-  uses: heliomarpm/reusable-actions/actions/changelog@main
-  with:
-    github-token: ${{ secrets.GITHUB_TOKEN }}
+name: "Changelog & Release"
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - 'CHANGELOG.md'
+  workflow_dispatch:
+    inputs:
+      create-release:
+        description: 'Forçar criação de Git Tag e GitHub Release'
+        type: boolean
+        default: false
+jobs:
+  changelog:
+    name: 📝 Update Changelog & Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 📝 Update Changelog
+        uses: heliomarpm/reusable-actions/actions/changelog@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
 # Exemplo 2: Release completa (SemVer + Git Tag + GitHub Release)
-- name: 🚀 Release with Changelog
-  uses: heliomarpm/reusable-actions/actions/changelog@main
-  with:
-    create-release: true
-    version-format: 'v%major.%minor.%patch'
-    github-token: ${{ secrets.GITHUB_TOKEN }}
+  ...
+    steps
+      - name: 🚀 Release with Changelog
+        uses: heliomarpm/reusable-actions/actions/changelog@main
+        with:
+          create-release: true
+          version-format: 'v%major.%minor.%patch'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
