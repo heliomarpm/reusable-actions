@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-03.3]
+
+### 🚀 Features
+- **coverage**: ✨ adicionar modo 'decrease' para bloquear queda de cobertura ([50a5b79](https://github.com/heliomarpm/reusable-actions/commit/50a5b790a6d1dc51bd0a3e835a81ab108308c318))
+
 ## [2026-10-03.2]
 
 ### 📝 Documentation
