@@ -8,8 +8,8 @@ Esta PR promove as mudanças da ***origem:*** `{{HEAD_BRANCH}}` para ***destino:
 ### 📋 Checklist da Entrega
 
 **Desenvolvedor:**
-- [ ] Confirmo que os testes passaram.
-- [ ] Confirmo que a documentação foi atualizada.
+- [{{CHECK_TESTS}}] Confirmo que os testes passaram.
+- [{{CHECK_DOCS}}] Confirmo que a documentação foi atualizada.
   
 **Revisor:**
 - [ ] O código segue os padrões do projeto.
@@ -18,9 +18,9 @@ Esta PR promove as mudanças da ***origem:*** `{{HEAD_BRANCH}}` para ***destino:
 ### ✅ Tipo de Mudanças
 
 **Marque as opções que se aplicam:**
-- [ ] 🐛 Correção de bug
-- [ ] 🚀 Novo recurso
-- [ ] ⚠️ Mudanças significativas
-- [ ] 🧹 Melhoria ou refatoração de código
-- [ ] 📝 Atualização da documentação
-- [ ] 🔧 Outros (por favor, comente abaixo)
+- [{{CHECK_FIX}}] 🐛 Correção de bug
+- [{{CHECK_FEAT}}] 🚀 Novo recurso
+- [{{CHECK_BREAKING}}] ⚠️ Mudanças significativas
+- [{{CHECK_REFACTOR}}] 🧹 Melhoria ou refatoração de código
+- [{{CHECK_DOCS_TYPE}}] 📝 Atualização da documentação
+- [{{CHECK_OTHER}}] 🔧 Outros (por favor, comente abaixo)

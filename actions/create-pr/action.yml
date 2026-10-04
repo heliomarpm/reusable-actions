@@ -159,7 +159,71 @@ runs:
           fi
         fi
 
-        # 4. Renderiza o corpo final da PR
+        # 4. Avalia itens do checklist automaticamente via Git history e status do Quality Gate
+        BASE_REF="origin/$BASE"
+        if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
+          BASE_REF="$BASE"
+        fi
+
+        HEAD_REF="$HEAD"
+        if ! git rev-parse --verify "$HEAD_REF" >/dev/null 2>&1; then
+          HEAD_REF="origin/$HEAD"
+        fi
+
+        COMMITS=$(git log "${BASE_REF}..${HEAD_REF}" --format="%s" 2>/dev/null || echo "")
+        CHANGED_FILES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" 2>/dev/null || echo "")
+
+        # 4.1. Checklist da Entrega
+        CHECK_TESTS=" "
+        if [[ "$STATUS" == "passed" ]]; then
+          CHECK_TESTS="x"
+        fi
+
+        CHECK_DOCS=" "
+        if echo "$CHANGED_FILES" | grep -qiE "(\.md$|^docs/|^wiki/|README)"; then
+          CHECK_DOCS="x"
+        elif echo "$COMMITS" | grep -qiE "^docs(\(.*\))?!?: "; then
+          CHECK_DOCS="x"
+        fi
+
+        # 4.2. Tipo de Mudanças (via Conventional Commits)
+        CHECK_FIX=" "
+        CHECK_FEAT=" "
+        CHECK_BREAKING=" "
+        CHECK_REFACTOR=" "
+        CHECK_DOCS_TYPE=" "
+        CHECK_OTHER=" "
+
+        if echo "$COMMITS" | grep -qiE "^fix(\(.*\))?!?: "; then
+          CHECK_FIX="x"
+        fi
+
+        if echo "$COMMITS" | grep -qiE "^feat(\(.*\))?!?: "; then
+          CHECK_FEAT="x"
+        fi
+
+        if echo "$COMMITS" | grep -qiE "(BREAKING CHANGE|!: )"; then
+          CHECK_BREAKING="x"
+        fi
+
+        if echo "$COMMITS" | grep -qiE "^(refactor|perf)(\(.*\))?!?: "; then
+          CHECK_REFACTOR="x"
+        fi
+
+        if echo "$COMMITS" | grep -qiE "^docs(\(.*\))?!?: "; then
+          CHECK_DOCS_TYPE="x"
+        fi
+
+        if echo "$COMMITS" | grep -qiE "^(chore|ci|build|test|style)(\(.*\))?!?: "; then
+          CHECK_OTHER="x"
+        fi
+
+        # Se nenhum tipo foi identificado, marca "Outros" por padrão
+        if [[ "$CHECK_FIX" == " " && "$CHECK_FEAT" == " " && "$CHECK_BREAKING" == " " && "$CHECK_REFACTOR" == " " && "$CHECK_DOCS_TYPE" == " " ]]; then
+          CHECK_OTHER="x"
+        fi
+
+        # 5. Renderiza o corpo final da PR
         render_template "$PR_TEMPLATE" pr_body.md \
           HEAD_BRANCH "$HEAD" \
           BASE_BRANCH "$BASE" \
@@ -167,7 +231,15 @@ runs:
           BASE "$BASE" \
           DATE "$DATE" \
           yyyy-MM-dd "$DATE" \
-          QUALITY_GATE_RESULT "$QUALITY_GATE_RESULT"
+          QUALITY_GATE_RESULT "$QUALITY_GATE_RESULT" \
+          CHECK_TESTS "$CHECK_TESTS" \
+          CHECK_DOCS "$CHECK_DOCS" \
+          CHECK_FIX "$CHECK_FIX" \
+          CHECK_FEAT "$CHECK_FEAT" \
+          CHECK_BREAKING "$CHECK_BREAKING" \
+          CHECK_REFACTOR "$CHECK_REFACTOR" \
+          CHECK_DOCS_TYPE "$CHECK_DOCS_TYPE" \
+          CHECK_OTHER "$CHECK_OTHER"
 
         [[ -n "$TEMP_INLINE_FILE" ]] && rm -f "$TEMP_INLINE_FILE"
 
