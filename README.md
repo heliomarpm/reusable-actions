@@ -84,6 +84,10 @@ jobs:
     uses: heliomarpm/reusable-actions/.github/workflows/cd-pull-request.yml@main
     with:
       strategy: develop # trunk | develop | gitflow
+      # Opcional: Customização do título e corpo do PR
+      # pr-title: "🔀 PR ({{yyyy-MM-dd}}): {{HEAD_BRANCH}} → {{BASE_BRANCH}}"
+      # pr-body-path: ".github/custom-pr-template.md"
+      # pr-body: "Texto inline com {{QUALITY_GATE_RESULT}}"
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```

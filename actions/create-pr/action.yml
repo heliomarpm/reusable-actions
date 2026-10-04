@@ -8,6 +8,22 @@ inputs:
   base:
     description: 'Target branch'
     required: true
+  pr-title:
+    description: 'Title template for the Pull Request'
+    required: false
+    default: '🔀 PR ({{yyyy-MM-dd}}): {{HEAD_BRANCH}} → {{BASE_BRANCH}}'
+  pr_title:
+    description: 'Title template for the Pull Request (alias)'
+    required: false
+    default: ''
+  pr-body:
+    description: 'Inline markdown body for the Pull Request'
+    required: false
+    default: ''
+  pr-body-path:
+    description: 'Path for the Pull Request body file. Takes priority over pr-body'
+    required: false
+    default: ''
   coverage-status:
     description: 'Coverage status (passed | failed | missing)'
     required: false
@@ -60,12 +76,27 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
+        INPUT_PR_TITLE: ${{ inputs.pr-title }}
+        INPUT_PR_BODY: ${{ inputs.pr-body }}
+        INPUT_PR_BODY_PATH: ${{ inputs.pr-body-path }}
       run: |
         HEAD="${{ inputs.head }}"
         BASE="${{ inputs.base }}"
-        TITLE="🔀 PR ($(date +'%Y-%m-%d')): ${HEAD} → ${BASE}"
         STATUS="${{ inputs.coverage-status }}"
         TEMPLATES_DIR="${{ github.action_path }}/../../templates"
+        DATE="$(date +'%Y-%m-%d')"
+
+        # 1. Resolve o título do Pull Request com interpolação de placeholders
+        DEFAULT_TITLE="🔀 PR ({{yyyy-MM-dd}}): {{HEAD_BRANCH}} → {{BASE_BRANCH}}"
+        RAW_TITLE="${INPUT_PR_TITLE:-$DEFAULT_TITLE}"
+        TITLE="$RAW_TITLE"
+        TITLE="${TITLE//\{\{yyyy-MM-dd\}\}/$DATE}"
+        TITLE="${TITLE//\{\{YYYY-MM-DD\}\}/$DATE}"
+        TITLE="${TITLE//\{\{DATE\}\}/$DATE}"
+        TITLE="${TITLE//\{\{HEAD_BRANCH\}\}/$HEAD}"
+        TITLE="${TITLE//\{\{HEAD\}\}/$HEAD}"
+        TITLE="${TITLE//\{\{BASE_BRANCH\}\}/$BASE}"
+        TITLE="${TITLE//\{\{BASE\}\}/$BASE}"
 
         # Resolve labels baseadas no status de cobertura
         case "$STATUS" in
@@ -79,7 +110,7 @@ runs:
         MIN_COVERAGE="${{ inputs.coverage-min }}"
         MODE="${{ inputs.coverage-mode }}"
 
-        # 1. Renderiza o bloco de cobertura
+        # 2. Renderiza o bloco de cobertura
         if [ -n "$COVERAGE_LINE" ]; then
           render_template "$TEMPLATES_DIR/pr-quality-gate-table.md" quality_block.tmp \
             COVERAGE_LINE "$COVERAGE_LINE" \
@@ -92,19 +123,53 @@ runs:
         QUALITY_GATE_RESULT=$(cat quality_block.tmp)
         rm -f quality_block.tmp
 
-        # 2. Permite override de template pelo repositório consumidor
+        # 3. Resolução do template do corpo do PR seguindo a ordem de precedência:
+        # 1º: pr-body-path (se informado e existente)
+        # 2º: pr-body (se informado inline)
+        # 3º: .github/pull_request_template.md ou .github/pr_template.md
+        # 4º: Template padrão da reusable action
         PR_TEMPLATE="$TEMPLATES_DIR/pr-body.md"
-        if [[ -f ".github/pull_request_template.md" ]]; then
-          PR_TEMPLATE=".github/pull_request_template.md"
-        elif [[ -f ".github/pr_template.md" ]]; then
-          PR_TEMPLATE=".github/pr_template.md"
+        TEMP_INLINE_FILE=""
+
+        if [[ -n "$INPUT_PR_BODY_PATH" ]]; then
+          if [[ -f "$INPUT_PR_BODY_PATH" ]]; then
+            echo "→ Usando template customizado de pr-body-path: $INPUT_PR_BODY_PATH"
+            PR_TEMPLATE="$INPUT_PR_BODY_PATH"
+          else
+            echo "::warning::Arquivo informado em pr-body-path não encontrado: '$INPUT_PR_BODY_PATH'. Tentando próximos fallbacks."
+          fi
         fi
 
-        # 3. Renderiza o corpo final da PR
+        if [[ "$PR_TEMPLATE" == "$TEMPLATES_DIR/pr-body.md" && -n "$INPUT_PR_BODY" ]]; then
+          echo "→ Usando template inline fornecido em pr-body"
+          TEMP_INLINE_FILE="custom_inline_template.tmp"
+          printf '%s\n' "$INPUT_PR_BODY" > "$TEMP_INLINE_FILE"
+          PR_TEMPLATE="$TEMP_INLINE_FILE"
+        fi
+
+        if [[ "$PR_TEMPLATE" == "$TEMPLATES_DIR/pr-body.md" ]]; then
+          if [[ -f ".github/pull_request_template.md" ]]; then
+            echo "→ Usando template nativo: .github/pull_request_template.md"
+            PR_TEMPLATE=".github/pull_request_template.md"
+          elif [[ -f ".github/pr_template.md" ]]; then
+            echo "→ Usando template nativo: .github/pr_template.md"
+            PR_TEMPLATE=".github/pr_template.md"
+          else
+            echo "→ Usando template padrão da reusable action: $PR_TEMPLATE"
+          fi
+        fi
+
+        # 4. Renderiza o corpo final da PR
         render_template "$PR_TEMPLATE" pr_body.md \
           HEAD_BRANCH "$HEAD" \
           BASE_BRANCH "$BASE" \
+          HEAD "$HEAD" \
+          BASE "$BASE" \
+          DATE "$DATE" \
+          yyyy-MM-dd "$DATE" \
           QUALITY_GATE_RESULT "$QUALITY_GATE_RESULT"
+
+        [[ -n "$TEMP_INLINE_FILE" ]] && rm -f "$TEMP_INLINE_FILE"
 
         PR_NUMBER=$(gh pr list --base "$BASE" --head "$HEAD" --json number --jq '.[0].number')
 

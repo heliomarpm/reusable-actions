@@ -37,13 +37,29 @@ on:
         type: boolean
         required: false
         default: true
+      pr-title:
+        description: 'Title template for the Pull Request'
+        required: false
+        type: string
+        default: '🔀 PR ({{yyyy-MM-dd}}): {{HEAD_BRANCH}} → {{BASE_BRANCH}}'
+      pr-body:
+        description: 'Inline markdown body for the Pull Request'
+        required: false
+        type: string
+        default: ''
+      pr-body-path:
+        description: 'Path for the Pull Request body file. Takes priority over pr-body'
+        required: false
+        type: string
+        default: ''
     secrets:
       GH_TOKEN:
         required: true
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: write       # → permite criar e atualizar tags, commits e pushes no repositório.
+  pull-requests: write  # → se precisar criar ou atualizar pull requests
+  checks: read          # → (opcional) se precisar ler check runs
 
 jobs:
   resolve:
@@ -288,6 +304,9 @@ jobs:
         with:
           head: ${{ needs.resolve.outputs.head }}
           base: ${{ steps.branch.outputs.base }}
+          pr-title: ${{ inputs.pr-title }}
+          pr-body: ${{ inputs.pr-body }}
+          pr-body-path: ${{ inputs.pr-body-path }}
           coverage-status: ${{ steps.coverage.outputs.status }}
           coverage-line: ${{ steps.coverage.outputs.line || ''}}
           coverage-min: ${{ steps.coverage.outputs.min || ''}}
