@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-04.3]
+
+### 🔄 Other Changes
+- ﻿fix(create-pr): add output aliases and support skipped PRs in summary ([c9cb500](https://github.com/heliomarpm/reusable-actions/commit/c9cb5001d69582cb32e530450e6cd0fa1d4a3ceb))
+
 ## [2026-10-04.2]
 
 ### 🔄 Other Changes
