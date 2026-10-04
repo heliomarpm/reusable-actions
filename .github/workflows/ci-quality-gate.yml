@@ -90,10 +90,15 @@ jobs:
 
       - name: 🧾 Job Summary
         if: always()
+        working-directory: ${{ github.workspace }}
         env:
-          BASH_ENV: ./__reusable_actions__/scripts/shared/shell-helpers.sh
+          BASH_ENV: ${{ github.workspace }}/__reusable_actions__/scripts/shared/shell-helpers.sh
         run: |
-          append_template_to_summary ./__reusable_actions__/templates/summary-quality-gate.md \
+          HELPERS="${{ github.workspace }}/__reusable_actions__/scripts/shared/shell-helpers.sh"
+          if [[ -f "$HELPERS" ]]; then
+            source "$HELPERS"
+          fi
+          append_template_to_summary "${{ github.workspace }}/__reusable_actions__/templates/summary-quality-gate.md" \
             STACK "${{ steps.stack.outputs.stack }}" \
             SOURCE "${{ steps.stack.outputs.source }}" \
             TESTS_STATUS "${{ steps.tests.outputs.status || 'skipped' }}" \

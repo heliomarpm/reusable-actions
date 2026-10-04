@@ -315,17 +315,39 @@ jobs:
 
       - name: 🧾 Job summary
         if: always()
+        working-directory: ${{ github.workspace }}
         env:
-          BASH_ENV: ./__reusable_actions__/scripts/shared/shell-helpers.sh
+          BASH_ENV: ${{ github.workspace }}/__reusable_actions__/scripts/shared/shell-helpers.sh
         run: |
+          # Carrega explicitamente os helpers usando o caminho absoluto do workspace
+          HELPERS="${{ github.workspace }}/__reusable_actions__/scripts/shared/shell-helpers.sh"
+          if [[ -f "$HELPERS" ]]; then
+            source "$HELPERS"
+          fi
+
+          TEMPLATES_DIR="${{ github.workspace }}/__reusable_actions__/templates"
           IS_SKIPPED="${{ steps.branch.outputs.skip }}"
           PR_ACTION="${{ steps.pr.outputs.pr-action || steps.pr.outputs.pr_action }}"
           PR_URL="${{ steps.pr.outputs.pr-url || steps.pr.outputs.pr_url }}"
           BASE_BRANCH="${{ steps.branch.outputs.base }}"
 
+          # # Fallback seguro caso append_template_to_summary não esteja disponível
+          # if ! command -v append_template_to_summary &>/dev/null; then
+          #   {
+          #     echo "## 🔀 Auto Pull Request"
+          #     echo ""
+          #     echo "- **Estratégia:** \`${{ inputs.strategy }}\`"
+          #     echo "- **Ação:** \`${{ needs.resolve.outputs.action }}\`"
+          #     echo "- **Origem:** \`${{ needs.resolve.outputs.head }}\`"
+          #     echo "- **Destino:** \`$BASE_BRANCH\`"
+          #     echo "- **Pull Request:** $PR_URL"
+          #   } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          #   exit 0
+          # fi
+
           # 1. Ignorado pelo Semantic Release (nenhuma versão nova para release branch)
           if [[ "$IS_SKIPPED" == "true" ]]; then
-            append_template_to_summary ./__reusable_actions__/templates/summary-promotion-skipped-release.md \
+            append_template_to_summary "$TEMPLATES_DIR/summary-promotion-skipped-release.md" \
               HEAD_BRANCH "${{ needs.resolve.outputs.head }}"
 
           # 2. Ignorado pelo create-pr (branches idênticas / sem novos commits)
@@ -334,7 +356,7 @@ jobs:
 
           # 3. Pull Request criado ou atualizado com sucesso
           elif [[ -n "$PR_URL" && -n "$BASE_BRANCH" ]]; then
-            append_template_to_summary ./__reusable_actions__/templates/summary-promotion.md \
+            append_template_to_summary "$TEMPLATES_DIR/summary-promotion.md" \
               STRATEGY "${{ inputs.strategy }}" \
               ACTION "${{ needs.resolve.outputs.action }}" \
               HEAD_BRANCH "${{ needs.resolve.outputs.head }}" \
@@ -343,7 +365,7 @@ jobs:
 
           # 4. Falha real durante a execução
           else
-            append_template_to_summary ./__reusable_actions__/templates/summary-promotion-failed.md \
+            append_template_to_summary "$TEMPLATES_DIR/summary-promotion-failed.md" \
               STRATEGY "${{ inputs.strategy }}" \
               ACTION "${{ needs.resolve.outputs.action }}" \
               HEAD_BRANCH "${{ needs.resolve.outputs.head }}"
