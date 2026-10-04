@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-04.5]
+
+### 🔧 CI & Build System
+- 👷 ajustar caminhos de shell-helpers e templates ([5141b51](https://github.com/heliomarpm/reusable-actions/commit/5141b51bbdb7736d563c825907558d02c920d453))
+
 ## [2026-10-04.4]
 
 ### 🚀 Features
