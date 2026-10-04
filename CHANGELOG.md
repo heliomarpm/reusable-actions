@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-04.6]
+
+### 🚀 Features
+- **create-pr**: ✨ automatizar checklist de PR ([20408f9](https://github.com/heliomarpm/reusable-actions/commit/20408f9cc045fb500d110c21765f848fa1597992))
+
 ## [2026-10-04.5]
 
 ### 🔧 CI & Build System
