@@ -245,7 +245,7 @@ jobs:
         if: contains(needs.resolve.outputs.action, 'release') || contains(needs.resolve.outputs.action, 'on_release')
         uses: ./__reusable_actions__/actions/semantic-release
         with:
-          project-path: ${{ inputs.project-path || '.' }}
+          project-path: ${{ needs.workdir.outputs.path || inputs.project-path || '.' }}
           config: ${{ inputs.semantic-release-config }}
           dry-run: 'true'
           strict-mode: ${{ inputs.strict-conventional-commits }}

@@ -1,29 +1,33 @@
 const path = require('path');
-// const fs = require('fs');
+const fs = require('fs');
 const base = require(path.resolve(__dirname, '../../shared/semantic-release/default-releaserc.json'));
 
 // Descobre dinamicamente a localização do package.json (pkgRoot)
-let pkgRoot = (process.env.PROJECT_PATH || '.').replace(/^\.\//, '').replace(/\/$/, '') || '.';
+let rawPath = process.env.PROJECT_PATH || '.';
+if (path.isAbsolute(rawPath) && rawPath.startsWith(process.cwd())) {
+  rawPath = path.relative(process.cwd(), rawPath) || '.';
+}
+let pkgRoot = rawPath.replace(/^\.\//, '').replace(/\/$/, '') || '.';
 
-// if (!fs.existsSync(path.resolve(process.cwd(), pkgRoot, 'package.json'))) {
-//   if (fs.existsSync(path.resolve(process.cwd(), 'package.json'))) {
-//     pkgRoot = '.';
-//   } else if (fs.existsSync(path.resolve(process.cwd(), 'app', 'package.json'))) {
-//     pkgRoot = 'app';
-//   } else {
-//     try {
-//       const entries = fs.readdirSync(process.cwd(), { withFileTypes: true });
-//       for (const entry of entries) {
-//         if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules' && entry.name !== '__reusable_actions__') {
-//           if (fs.existsSync(path.resolve(process.cwd(), entry.name, 'package.json'))) {
-//             pkgRoot = entry.name;
-//             break;
-//           }
-//         }
-//       }
-//     } catch (_) {}
-//   }
-// }
+if (!fs.existsSync(path.resolve(process.cwd(), pkgRoot, 'package.json'))) {
+  if (fs.existsSync(path.resolve(process.cwd(), 'package.json'))) {
+    pkgRoot = '.';
+  } else if (fs.existsSync(path.resolve(process.cwd(), 'app', 'package.json'))) {
+    pkgRoot = 'app';
+  } else {
+    try {
+      const entries = fs.readdirSync(process.cwd(), { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules' && entry.name !== '__reusable_actions__' && entry.name !== 'vendor') {
+          if (fs.existsSync(path.resolve(process.cwd(), entry.name, 'package.json'))) {
+            pkgRoot = entry.name;
+            break;
+          }
+        }
+      }
+    } catch (_) {}
+  }
+}
 
 // Assets a serem incluídos no commit de release
 const gitAssets = ['CHANGELOG.md'];
