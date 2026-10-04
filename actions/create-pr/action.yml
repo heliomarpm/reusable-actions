@@ -32,8 +32,14 @@ outputs:
   pr-url:
     description: 'URL of the created/updated PR'
     value: ${{ steps.pr.outputs.pr_url }}
+  pr_url:
+    description: 'URL of the created/updated PR (alias)'
+    value: ${{ steps.pr.outputs.pr_url }}
   pr-action:
     description: 'Whether PR was created or updated'
+    value: ${{ steps.pr.outputs.pr_action }}
+  pr_action:
+    description: 'Whether PR was created or updated (alias)'
     value: ${{ steps.pr.outputs.pr_action }}
 
 runs:
@@ -134,6 +140,9 @@ runs:
           fi
 
           PR_URL=$(gh pr view "$HEAD" --json url --jq '.url' 2>/dev/null || echo "")
+          if [[ -z "$PR_URL" ]]; then
+            PR_URL=$(echo "$PR_OUTPUT" | grep -Eo 'https://github\.com/[^/]+/[^/]+/pull/[0-9]+' | head -n1 || true)
+          fi
           echo "pr_action=created" >> $GITHUB_OUTPUT
         else
           echo "→ Atualizando Pull Request existente #$PR_NUMBER..."

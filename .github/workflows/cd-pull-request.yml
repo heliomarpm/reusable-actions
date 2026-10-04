@@ -300,12 +300,20 @@ jobs:
           BASH_ENV: ./__reusable_actions__/scripts/shared/shell-helpers.sh
         run: |
           IS_SKIPPED="${{ steps.branch.outputs.skip }}"
-          PR_URL="${{ steps.pr.outputs.pr_url }}"
+          PR_ACTION="${{ steps.pr.outputs.pr-action || steps.pr.outputs.pr_action }}"
+          PR_URL="${{ steps.pr.outputs.pr-url || steps.pr.outputs.pr_url }}"
           BASE_BRANCH="${{ steps.branch.outputs.base }}"
 
+          # 1. Ignorado pelo Semantic Release (nenhuma versão nova para release branch)
           if [[ "$IS_SKIPPED" == "true" ]]; then
             append_template_to_summary ./__reusable_actions__/templates/summary-promotion-skipped-release.md \
               HEAD_BRANCH "${{ needs.resolve.outputs.head }}"
+
+          # 2. Ignorado pelo create-pr (branches idênticas / sem novos commits)
+          elif [[ "$PR_ACTION" == "skipped" ]]; then
+            exit 0
+
+          # 3. Pull Request criado ou atualizado com sucesso
           elif [[ -n "$PR_URL" && -n "$BASE_BRANCH" ]]; then
             append_template_to_summary ./__reusable_actions__/templates/summary-promotion.md \
               STRATEGY "${{ inputs.strategy }}" \
@@ -313,6 +321,8 @@ jobs:
               HEAD_BRANCH "${{ needs.resolve.outputs.head }}" \
               BASE_BRANCH "$BASE_BRANCH" \
               PR_URL "$PR_URL"
+
+          # 4. Falha real durante a execução
           else
             append_template_to_summary ./__reusable_actions__/templates/summary-promotion-failed.md \
               STRATEGY "${{ inputs.strategy }}" \
