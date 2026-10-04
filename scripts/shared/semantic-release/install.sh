@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-log() { echo "→ $1"; }
-has_file() { [[ -f "$1" ]]; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../shell-helpers.sh"
 
 
 install_toolchain() {  

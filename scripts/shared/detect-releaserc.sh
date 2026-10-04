@@ -13,14 +13,14 @@ CONFIG_FILES=(
 )
 
 # 1️⃣ Arquivo explícito
-if [[ -n "$SEMANTIC_RELEASE_CONFIG" && -f "$SEMANTIC_RELEASE_CONFIG" ]]; then
+if [[ -n "${SEMANTIC_RELEASE_CONFIG:-}" && -f "$SEMANTIC_RELEASE_CONFIG" ]]; then
   echo "$SEMANTIC_RELEASE_CONFIG"
   exit 0
 fi
 
 # 2️⃣ package.json com release
 if [[ -f "package.json" ]]; then
-  if jq -e '.release' package.json > /dev/null 2>&1; then
+  if command -v jq >/dev/null 2>&1 && jq -e '.release' package.json > /dev/null 2>&1; then
     echo "package.json"
     exit 0
   fi
@@ -35,5 +35,4 @@ for file in "${CONFIG_FILES[@]}"; do
 done
 
 # 4️⃣ Nenhum config encontrado
-echo ""
 exit 0

@@ -54,24 +54,20 @@ runs:
         SCRIPT="${{ github.action_path }}/../../scripts/shared/semantic-release/run.sh"
         chmod +x "$SCRIPT"
         
-        # We capture output to extract the version
-        OUTPUT=$("$SCRIPT" 2>&1 | tee /dev/stderr || true)
-        
-        # Strictly checking if it actually failed based on strict mode, 
-        # since run.sh will exit 1, tee /dev/stderr will mask it if not careful.
-        # However, run.sh uses `set -e` and trap ERR, but piped `| tee` might lose it.
-        # To avoid losing exit code:
-        # Actually run.sh already fails and exits. If it exits 1, `|| true` catches it? 
-        # We need it to fail the step if strict mode fails. Let's run it properly:
-        
-        # Re-run without tee for simplicity or use PIPESTATUS
         set -o pipefail
-        OUTPUT=$("$SCRIPT" 2>&1 | tee /dev/stderr)
+        TEMP_LOG=$(mktemp)
+        "$SCRIPT" 2>&1 | tee "$TEMP_LOG" >&2
+        EXIT_CODE="${PIPESTATUS[0]}"
+        
+        if [[ "$EXIT_CODE" -ne 0 ]]; then
+          rm -f "$TEMP_LOG"
+          exit "$EXIT_CODE"
+        fi
         
         # Robust version extraction
-        VERSION=$(echo "$OUTPUT" \
-          | grep -Eo 'next release version is ([0-9]+\.[0-9]+\.[0-9]+)' \
+        VERSION=$(grep -Eo 'next release version is ([0-9]+\.[0-9]+\.[0-9]+)' "$TEMP_LOG" \
           | sed -E 's/.* ([0-9]+\.[0-9]+\.[0-9]+)/\1/' \
           | head -n1 || true)
+        rm -f "$TEMP_LOG"
           
         echo "version=$VERSION" >> $GITHUB_OUTPUT

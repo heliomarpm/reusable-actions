@@ -1,42 +1,39 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
-log() { echo "→ $1"; }
-has_file() { [[ -f "$1" ]]; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../shell-helpers.sh"
 
-fail() {
-  echo "::error::$1"
-  exit 1
-}
+log "🔎 Detecting custom semantic-release config"
 
-detect_config() {
-  echo "🔎 Detecting custom semantic-release config"
-  
-  local CUSTOM_CONFIG_PATH="${1:-}"
+CUSTOM_CONFIG="${1:-${SEMANTIC_RELEASE_CONFIG:-}}"
 
-  if [[ -n "$CUSTOM_CONFIG_PATH" ]]; then
-    if [[ -f "$CUSTOM_CONFIG_PATH" ]]; then
-      log "Using consumer config: $CUSTOM_CONFIG_PATH"
-    else
-      fail "SEMANTIC_RELEASE_CONFIG was provided but not found: $CUSTOM_CONFIG_PATH"
+if [[ -n "$CUSTOM_CONFIG" ]]; then
+  if [[ -f "$CUSTOM_CONFIG" ]]; then
+    log "Using consumer config: $CUSTOM_CONFIG"
+    if [[ "$CUSTOM_CONFIG" != /* && "$CUSTOM_CONFIG" != ./* ]]; then
+      CUSTOM_CONFIG="./$CUSTOM_CONFIG"
     fi
+    echo "$CUSTOM_CONFIG"
+    exit 0
   else
-    CUSTOM_CONFIG_PATH=$(bash "$REUSABLE_PATH/scripts/shared/detect-releaserc.sh" || true)
+    fail "SEMANTIC_RELEASE_CONFIG was provided but not found: $CUSTOM_CONFIG"
+  fi
+fi
 
-    if [[ -n "$CUSTOM_CONFIG_PATH" ]]; then
-      log "Detected consumer config: $CUSTOM_CONFIG_PATH"
+DETECT_SCRIPT="$SCRIPT_DIR/../detect-releaserc.sh"
+if [[ -f "$DETECT_SCRIPT" ]]; then
+  DETECTED=$(bash "$DETECT_SCRIPT" || true)
+  DETECTED="$(echo "$DETECTED" | tr -d '[:space:]')"
+  if [[ -n "$DETECTED" && -f "$DETECTED" ]]; then
+    log "Detected consumer config: $DETECTED"
+    if [[ "$DETECTED" != /* && "$DETECTED" != ./* ]]; then
+      DETECTED="./$DETECTED"
     fi
+    echo "$DETECTED"
+    exit 0
   fi
+fi
 
-  if [[ -n "$CUSTOM_CONFIG_PATH" ]]; then 
-    # Normaliza para sempre começar com "./" 
-    CUSTOM_CONFIG_PATH="${CUSTOM_CONFIG_PATH#./}" 
-    CUSTOM_CONFIG_PATH="./$CUSTOM_CONFIG_PATH" 
-
-    echo "$CUSTOM_CONFIG_PATH"
-  else
-    echo ""
-  fi
-}
-
-echo $(detect_config "$1")
+# Nenhum config customizado encontrado
+exit 0
