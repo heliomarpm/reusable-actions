@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       strategy:
-        description: 'Promotion strategy (trunk | develop | gitflow)'
+        description: 'Promotion strategy (trunk | develop | gitflow | hotfix)'
         required: false
         type: string
         default: 'develop'
