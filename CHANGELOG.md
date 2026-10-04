@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-04.4]
+
+### 🚀 Features
+- **pr**: ✨ adicionar opções de título e corpo customizados para PRs ([38c95f0](https://github.com/heliomarpm/reusable-actions/commit/38c95f09a71f2f85147574385619f00fb5c98078))
+- **ci**: ✨ adicionar autodeteção de caminho de projeto ([1e07b6a](https://github.com/heliomarpm/reusable-actions/commit/1e07b6ab8ed101bd038d78c90fdf9f1d2febc092))
+
 ## [2026-10-04.3]
 
 ### 🔄 Other Changes
