@@ -49,6 +49,7 @@ runs:
         STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict-mode }}
         SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.debug }}
         REUSABLE_PATH: ${{ github.action_path }}/../..
+        PROJECT_PATH: ${{ inputs.project-path }}
       run: |
         SCRIPT="${{ github.action_path }}/../../scripts/shared/semantic-release/run.sh"
         chmod +x "$SCRIPT"

@@ -12,6 +12,8 @@ log "🚀 Semantic Release Script"
 # ------------------------------------------------------------
 REUSABLE_PATH="${REUSABLE_PATH:-.}"
 STACK="${STACK:-}"
+PROJECT_PATH="${PROJECT_PATH:-.}"
+export PROJECT_PATH
 
 # Auto-detect stack if not provided
 if [[ -z "$STACK" ]]; then

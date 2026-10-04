@@ -24,12 +24,38 @@ dotnet_files=(*.csproj *.sln)
 if [[ ${#SIGNALS[@]} -eq 0 ]]; then
   log "❌ No stack signals found in $CURRENT_DIR"
 
-  # Verifica se há manifestos em subpastas para dar dica precisa
-  sub_signals=(*/package.json */composer.json */*.csproj */requirements.txt */go.mod)
+  # Verifica se há manifestos em subpastas para auto-detecção ou dica precisa
+  sub_signals=()
+  for f in */package.json */composer.json */*.csproj */requirements.txt */go.mod; do
+    if [[ -f "$f" ]]; then
+      local_dir="${f%/*}"
+      if [[ "$local_dir" != "node_modules" && "$local_dir" != "__reusable_actions__" && "$local_dir" != ".github" && "$local_dir" != "vendor" ]]; then
+        sub_signals+=("$f")
+      fi
+    fi
+  done
+
   HINT_BLOCK=""
   if [[ ${#sub_signals[@]} -gt 0 ]]; then
-    hint_dir="${sub_signals[0]%/*}"
-    log "💡 Detected project files in subfolder: '${hint_dir}'"
+    sub_dirs=()
+    for s in "${sub_signals[@]}"; do
+      sub_dirs+=("${s%/*}")
+    done
+    unique_sub_dirs=($(echo "${sub_dirs[@]}" | tr ' ' '\n' | sort -u))
+
+    if [[ ${#unique_sub_dirs[@]} -eq 1 ]]; then
+      hint_dir="${unique_sub_dirs[0]}"
+      log "💡 Auto-detected project stack in subfolder: '${hint_dir}'"
+      case "${sub_signals[0]}" in
+        */package.json) echo "node"; exit 0 ;;
+        */composer.json) echo "php"; exit 0 ;;
+        */*.csproj) echo "dotnet"; exit 0 ;;
+        */requirements.txt) echo "python"; exit 0 ;;
+        */go.mod) echo "go"; exit 0 ;;
+      esac
+    fi
+
+    hint_dir="${unique_sub_dirs[0]}"
     HINT_BLOCK=$(cat <<EOF
 > [!WARNING]
 > **Encontramos arquivos de projeto na subpasta:** \`${hint_dir}\`  
@@ -38,7 +64,7 @@ EOF
 )
   fi
 
-  # Renderiza o Job Summary usando template
+  # Renderiza o Job Summary usando template se não conseguir resolver
   TEMPLATES_DIR="$SCRIPT_DIR/../../templates"
   append_template_to_summary "$TEMPLATES_DIR/summary-detect-stack-error.md" \
     CURRENT_DIR "$CURRENT_DIR" \

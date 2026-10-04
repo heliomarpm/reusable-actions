@@ -47,7 +47,42 @@ resolve_project_path() {
 
   local resolved
   if [[ -z "$raw" || "$raw" == "." ]]; then
-    resolved="$workspace"
+    local root_manifest=false
+    for f in "$workspace/package.json" "$workspace/composer.json" "$workspace/requirements.txt" "$workspace/go.mod"; do
+      if [[ -f "$f" ]]; then
+        root_manifest=true
+        break
+      fi
+    done
+    if [[ "$root_manifest" == "false" ]]; then
+      local dotnet_files=("$workspace"/*.csproj "$workspace"/*.sln)
+      if [[ -f "${dotnet_files[0]:-}" ]]; then
+        root_manifest=true
+      fi
+    fi
+
+    if [[ "$root_manifest" == "false" ]]; then
+      local sub_manifests=()
+      for f in "$workspace"/*/package.json "$workspace"/*/composer.json "$workspace"/*/requirements.txt "$workspace"/*/go.mod "$workspace"/*/*.csproj; do
+        if [[ -f "$f" ]]; then
+          local dir="${f%/*}"
+          local base_dir="${dir##*/}"
+          if [[ "$base_dir" != "node_modules" && "$base_dir" != "__reusable_actions__" && "$base_dir" != ".github" && "$base_dir" != "vendor" ]]; then
+            sub_manifests+=("$dir")
+          fi
+        fi
+      done
+
+      local unique_dirs=($(echo "${sub_manifests[@]:-}" | tr ' ' '\n' | sort -u))
+      if [[ ${#unique_dirs[@]} -eq 1 && -n "${unique_dirs[0]:-}" ]]; then
+        resolved="${unique_dirs[0]}"
+        log "💡 Auto-detected project directory: ${resolved#$workspace/}"
+      else
+        resolved="$workspace"
+      fi
+    else
+      resolved="$workspace"
+    fi
   else
     resolved="$workspace/$raw"
   fi

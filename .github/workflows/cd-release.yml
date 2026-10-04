@@ -12,7 +12,7 @@ on:
         description: 'Project path source code'
         required: false
         type: string
-        default: null
+        default: '.'
 
       semantic-release-config:
         description: 'Path to semantic-release config file.'
@@ -158,6 +158,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           STACK: ${{ steps.stack.outputs.value }}
           REUSABLE_PATH: ${{ env.REUSABLE_PATH }}
+          PROJECT_PATH: ${{ needs.workdir.outputs.path || inputs.project-path || '.' }}
           SEMANTIC_RELEASE_CONFIG: ${{ inputs.semantic-release-config }}
           SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.semantic-release-dry-run }}
           SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.semantic-release-debug-mode }}
