@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-04.1]
+
+### 🔄 Other Changes
+- ﻿fix(cd-pr): forward project-path to semantic-release and improve error summaries ([cfc255d](https://github.com/heliomarpm/reusable-actions/commit/cfc255d7f6f0263e744f76707a0accaa02ac2bec))
+
 ## [2026-10-04]
 
 ### 🔄 Other Changes
