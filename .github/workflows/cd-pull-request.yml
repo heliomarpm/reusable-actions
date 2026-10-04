@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: 'develop'
+      project-path:
+        description: 'Project path source code in consumer repository (Used for gitflow, develop strategy)'
+        required: false
+        type: string
+        default: '.'        
       prefix-release-branch:
         description: 'Release branch prefix (Used for gitflow strategy. ex. release-)'
         required: false
@@ -117,10 +122,57 @@ jobs:
           echo "head=$HEAD" >> $GITHUB_OUTPUT
           echo "skip=false" >> $GITHUB_OUTPUT
 
-  promote:
+  workdir: 
     needs: resolve
     if: needs.resolve.outputs.skip != 'true'
     runs-on: ubuntu-latest
+    env:
+      REUSABLE_PATH: __reusable_actions__
+    outputs:
+      path: ${{ steps.path.outputs.value }}  
+    
+    steps:
+      - name: 📌 Checkout consumer repository
+        uses: actions/checkout@v7
+
+      - name: 📌 Checkout reusable-actions scripts
+        uses: actions/checkout@v7
+        with:
+          repository: heliomarpm/reusable-actions
+          ref: main
+          path: ${{ env.REUSABLE_PATH }}
+
+      - name: 👀 Files in workspace
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
+
+      - name: 📐 Resolve project path
+        id: path
+        run: |
+          source "$(pwd)/${{ env.REUSABLE_PATH }}/scripts/shared/shell-helpers.sh"
+          PROJECT_PATH="$(resolve_project_path '${{ inputs.project-path }}')"
+
+          log "🔹 Using project path: $PROJECT_PATH"
+          echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
+
+  promote:    
+    needs: workdir
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ needs.workdir.outputs.path || '.' }}
+
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+      pull-requests: write
+
     steps:
       - name: 📌 Checkout consumer repository
         uses: actions/checkout@v7
@@ -176,6 +228,7 @@ jobs:
         if: contains(needs.resolve.outputs.action, 'release') || contains(needs.resolve.outputs.action, 'on_release')
         uses: ./__reusable_actions__/actions/semantic-release
         with:
+          project-path: ${{ inputs.project-path || '.' }}
           config: ${{ inputs.semantic-release-config }}
           dry-run: 'true'
           strict-mode: ${{ inputs.strict-conventional-commits }}
@@ -245,14 +298,23 @@ jobs:
         env:
           BASH_ENV: ./__reusable_actions__/scripts/shared/shell-helpers.sh
         run: |
-          if [[ "${{ steps.branch.outputs.skip }}" == "true" ]]; then
+          IS_SKIPPED="${{ steps.branch.outputs.skip }}"
+          PR_URL="${{ steps.pr.outputs.pr_url }}"
+          BASE_BRANCH="${{ steps.branch.outputs.base }}"
+
+          if [[ "$IS_SKIPPED" == "true" ]]; then
             append_template_to_summary ./__reusable_actions__/templates/summary-promotion-skipped-release.md \
               HEAD_BRANCH "${{ needs.resolve.outputs.head }}"
-          else
+          elif [[ -n "$PR_URL" && -n "$BASE_BRANCH" ]]; then
             append_template_to_summary ./__reusable_actions__/templates/summary-promotion.md \
               STRATEGY "${{ inputs.strategy }}" \
               ACTION "${{ needs.resolve.outputs.action }}" \
               HEAD_BRANCH "${{ needs.resolve.outputs.head }}" \
-              BASE_BRANCH "${{ steps.branch.outputs.base }}" \
-              PR_URL "${{ steps.pr.outputs.pr_url }}"
+              BASE_BRANCH "$BASE_BRANCH" \
+              PR_URL "$PR_URL"
+          else
+            append_template_to_summary ./__reusable_actions__/templates/summary-promotion-failed.md \
+              STRATEGY "${{ inputs.strategy }}" \
+              ACTION "${{ needs.resolve.outputs.action }}" \
+              HEAD_BRANCH "${{ needs.resolve.outputs.head }}"
           fi

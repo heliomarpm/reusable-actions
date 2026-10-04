@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -euo pipefail
 
 # Guard contra execução dupla
 [[ -n "${__SHELL_HELPERS_LOADED:-}" ]] && return 0
@@ -108,14 +108,34 @@ append_template_to_summary() {
 on_error() {
   local EXIT_CODE=$?
   local CMD="${BASH_COMMAND:-unknown}"
-  echo "::error title=Shell script failed::Command failed with exit code ${EXIT_CODE}"
-  {
-    echo "## ❌ Shell Script Failure"
-    echo ""
-    echo "**Command:** \`$CMD\`"
-    echo "**Exit code:** \`$EXIT_CODE\`"
-    echo "**Script:** \`${0##*/}\`"
-  } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+  local SCRIPT_NAME="${0##*/}"
+  local MARKER_FILE="${RUNNER_TEMP:-/tmp}/.shell_error_reported_${GITHUB_RUN_ID:-local}"
+
+  # Emite anotação nativa do GitHub Actions
+  echo "::error title=Shell script failed ($SCRIPT_NAME)::Command '$CMD' failed with exit code ${EXIT_CODE}"
+
+  # Deduplicação: se a falha já foi reportada neste job, não duplica no GITHUB_STEP_SUMMARY
+  if [[ -f "$MARKER_FILE" ]]; then
+    exit "$EXIT_CODE"
+  fi
+  touch "$MARKER_FILE" 2>/dev/null || true
+
+  # Se for um script temporário inline do runner (ex: UUID.sh), substitui pelo nome amigável
+  if [[ "$SCRIPT_NAME" =~ ^[0-9a-fA-F-]{32,}\.sh$ ]]; then
+    SCRIPT_NAME="Workflow step"
+  fi
+
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    {
+      echo "### ❌ Shell Script Failure"
+      echo ""
+      echo "- **Script:** \`$SCRIPT_NAME\`"
+      echo "- **Command:** \`$CMD\`"
+      echo "- **Exit code:** \`$EXIT_CODE\`"
+      echo ""
+    } >> "$GITHUB_STEP_SUMMARY"
+  fi
+
   exit "$EXIT_CODE"
 }
 trap on_error ERR
