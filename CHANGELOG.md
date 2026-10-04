@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-04]
+
+### 🔄 Other Changes
+- ﻿fix(semantic-release): prevent stdout pollution in config resolution and fix plugin paths ([c952641](https://github.com/heliomarpm/reusable-actions/commit/c952641fac6d7662d4349f941ba134a44cd25253))
+
 ## [2026-10-03.6]
 
 ### 🔄 Other Changes
