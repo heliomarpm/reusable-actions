@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-04.2]
+
+### 🔄 Other Changes
+- ﻿fix(cd-pr): include resolve job in promote needs to restore outputs ([1ee2fd9](https://github.com/heliomarpm/reusable-actions/commit/1ee2fd9ac8f7221ca75a163777feb3c965f8fa68))
+
 ## [2026-10-04.1]
 
 ### 🔄 Other Changes
