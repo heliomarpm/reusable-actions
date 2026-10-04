@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-10-04.7]
+
+### 🚀 Features
+- add pull request CD workflow and node release configuration plugin ([6c854c7](https://github.com/heliomarpm/reusable-actions/commit/6c854c7e779ff1474028fdeaf5f8c994a8ef8094))
+
 ## [2026-10-04.6]
 
 ### 🚀 Features
