@@ -1,0 +1,182 @@
+name: CD - Semantic Release
+
+on:
+  workflow_call:
+    inputs:
+      stack:
+        description: 'Stack the project. (node | php | dotnet | python | go | empty for auto-detect)'
+        required: false
+        type: string
+        default: null
+      project-path:
+        description: 'Project path source code'
+        required: false
+        type: string
+        default: '.'
+
+      semantic-release-config:
+        description: 'Path to semantic-release config file.'
+        required: false
+        type: string
+      semantic-release-dry-run:
+        description: 'Dry run mode for semantic-release. (default: false -> true for PRs)'
+        required: false
+        type: boolean
+        default: false
+      semantic-release-debug-mode:
+        description: 'Debug mode for semantic-release.'
+        required: false
+        type: boolean
+        default: false
+      strict-conventional-commits:
+        description: 'Fail pipeline if no conventional commits are found'
+        required: false
+        type: boolean
+        default: true
+
+    secrets:
+      GH_TOKEN:
+        required: true
+
+permissions:
+  actions: read         
+  contents: write       # → permite criar e atualizar tags, commits e pushes no repositório.
+  issues: write         # (opcional) → se você quiser que o release crie comentários em issues.
+  pull-requests: write  # (opcional) → se quiser que o release comente em PRs.
+  checks: read          # (opcional) → se precisar ler check runs
+  
+jobs:
+  workdir: 
+    runs-on: ubuntu-latest
+    env:
+      REUSABLE_PATH: __reusable_actions__
+    outputs:
+      path: ${{ steps.path.outputs.value }}  
+    
+    steps:
+      - name: 📌 Checkout consumer repository
+        uses: actions/checkout@v7
+
+      - name: 📌 Checkout reusable-actions scripts
+        uses: actions/checkout@v7
+        with:
+          repository: heliomarpm/reusable-actions
+          ref: main
+          path: ${{ env.REUSABLE_PATH }}
+
+      - name: 👀 Files in workspace
+        run: |
+          echo "📂 Current directory:"
+          pwd
+          echo "📄 Files in root:"
+          ls -la
+
+      - name: 📐 Resolve project path
+        id: path
+        run: |
+          source "$(pwd)/${{ env.REUSABLE_PATH }}/scripts/shared/shell-helpers.sh"
+          PROJECT_PATH="$(resolve_project_path '${{ inputs.project-path }}')"
+
+          log "🔹 Using project path: $PROJECT_PATH"
+          echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
+
+  semantic-release:
+    runs-on: ubuntu-latest
+    needs: workdir
+    env:
+      REUSABLE_PATH: ${{ github.workspace }}/__reusable_actions__
+      BASH_ENV: ${{ github.workspace }}/__reusable_actions__/scripts/shared/shell-helpers.sh
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ needs.workdir.outputs.path || '.' }}
+
+    steps:
+      - name: 📌 Checkout consumer repository
+        uses: actions/checkout@v7
+        with: 
+          fetch-depth: 0 	  # Necessário para o semantic-release inspecionar histórico
+          fetch-tags: true 	# Necessário para o semantic-release inspecionar tags
+          persist-credentials: true  # → permite push com GITHUB_TOKEN
+          token: ${{ secrets.GH_TOKEN }} # Necessário para autenticar PUSH
+
+      - name: 📌 Checkout reusable-actions scripts
+        uses: actions/checkout@v7
+        with:
+          repository: heliomarpm/reusable-actions
+          ref: main
+          path: ${{ env.REUSABLE_PATH }}
+          token: ${{ secrets.GH_TOKEN }} # Necessário se o repositório for privado
+
+      - name: 👀 Files in workspace
+        run: |
+          ls_files
+
+      - name: 🔍 Resolve project stack
+        id: stack
+        run: |
+          STACK="${{ inputs.stack }}"
+          if [[ -n "$STACK" ]]; then
+            echo "🔹 Using stack from input: $STACK"
+            echo "value=$STACK" >> $GITHUB_OUTPUT
+            echo "source=input" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          SCRIPT="$REUSABLE_PATH/scripts/shared/detect-stack.sh"
+          chmod +x "$SCRIPT"
+          STACK=$("$SCRIPT")
+
+          if [[ -z "$STACK" ]]; then
+            echo "value=" >> $GITHUB_OUTPUT
+            echo "source=not-detected" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "✅ Detected stack: $STACK"
+          echo "value=$STACK" >> $GITHUB_OUTPUT
+          echo "source=detected" >> $GITHUB_OUTPUT
+          
+      - name: ❌ Fail if stack not detected
+        if: steps.stack.outputs.value == ''
+        run: |
+          fail "Stack not detected. Check project-path or repository structure."          
+
+      - name: ⚙️ Configurar Usuário Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 🚀 Run Release
+        if: steps.stack.outputs.value != ''
+        run: |
+          SCRIPT="$REUSABLE_PATH/scripts/shared/semantic-release/run.sh"
+          chmod +x "$SCRIPT"
+          "$SCRIPT"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          STACK: ${{ steps.stack.outputs.value }}
+          REUSABLE_PATH: ${{ env.REUSABLE_PATH }}
+          PROJECT_PATH: ${{ needs.workdir.outputs.path || inputs.project-path || '.' }}
+          SEMANTIC_RELEASE_CONFIG: ${{ inputs.semantic-release-config }}
+          SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.semantic-release-dry-run }}
+          SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.semantic-release-debug-mode }}
+          STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict-conventional-commits }}
+
+      - name: 🧾 Job Summary
+        if: always()
+        run: |
+          {
+            echo "## 📌 Semantic Release"
+            echo ""
+            echo "**📂 Project path:** \`${{ inputs.project-path }}\`"
+            echo ""
+
+            if [[ "${{ steps.stack.outputs.value }}" != "" ]]; then
+              echo "**🧱 Stack:** \`${{ steps.stack.outputs.value }}\` (_${{ steps.stack.outputs.source }}_)"
+            else
+              echo "**🧱 Stack:** ❌ not detected"
+            fi
+
+          } >> $GITHUB_STEP_SUMMARY

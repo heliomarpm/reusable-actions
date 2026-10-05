@@ -137,11 +137,52 @@ O controle de qualidade segue o princípio de **separação de responsabilidades
 
 ---
 
-### 3️⃣ CD — Semantic Release
+### 3️⃣ CD — Release (Nativo / Zero-Dependency)
 
-Workflow unificado de execução final do Release baseado nas mensagens de commit convencionais ao mergir na `main`.
+Workflow universal, leve e rápido (< 2s) para criação de Git Tag, GitHub Release e atualização do `CHANGELOG.md` sem necessidade de Node.js, `npm install` ou arquivos de manifesto:
+
+```yaml
+name: "3. Release"
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'CHANGELOG.md'
+
+jobs:
+  release:
+    uses: heliomarpm/reusable-actions/.github/workflows/cd-release.yml@main
+    with:
+      create-release: true
+      version-format: "v%major.%minor.%patch" # Opcional: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd"
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
 
 ---
+
+### 4️⃣ CD — Semantic Release (Stack-Aware & Package Registry)
+
+Para projetos que necessitam do ecossistema completo de plugins do `semantic-release` (publicação de pacotes em registries como npm, Maven, etc., ou suporte multi-linguagem):
+
+```yaml
+name: "3. Semantic Release"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    uses: heliomarpm/reusable-actions/.github/workflows/cd-semantic-release.yml@main
+    with:
+      project-path: '.' # Opcional: subpasta onde está o código
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
 
 ## 🔧 Composite Actions (Modo Custom)
 
