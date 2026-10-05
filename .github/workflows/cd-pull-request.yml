@@ -36,7 +36,7 @@ on:
         description: 'Enable strict mode for semantic-release (used only when strategy is gitflow or develop)'
         type: boolean
         required: false
-        default: true
+        default: false
       pr-title:
         description: 'Title template for the Pull Request'
         required: false
@@ -150,6 +150,8 @@ jobs:
     steps:
       - name: 📌 Checkout consumer repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.head }}
 
       - name: 📌 Checkout reusable-actions scripts
         uses: actions/checkout@v7
@@ -195,6 +197,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ needs.resolve.outputs.head }}
           token: ${{ secrets.GH_TOKEN }}
 
       - name: 📌 Checkout reusable-actions scripts
@@ -246,6 +249,7 @@ jobs:
         uses: ./__reusable_actions__/actions/semantic-release
         with:
           project-path: ${{ needs.workdir.outputs.path || inputs.project-path || '.' }}
+          branch: ${{ needs.resolve.outputs.head }}
           config: ${{ inputs.semantic-release-config }}
           dry-run: 'true'
           strict-mode: ${{ inputs.strict-conventional-commits }}

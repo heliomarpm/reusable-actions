@@ -27,6 +27,14 @@ STACK="${STACK:-node}"
 IS_DRY_RUN="${SEMANTIC_RELEASE_DRY_RUN:-false}"
 IS_DEBUG_MODE="${SEMANTIC_RELEASE_DEBUG_MODE:-false}"
 STRICT_MODE="${STRICT_CONVENTIONAL_COMMITS:-false}"
+BRANCH="${BRANCH:-}"
+
+if [[ -n "$BRANCH" ]]; then
+  export GITHUB_REF="refs/heads/$BRANCH"
+  export GITHUB_REF_NAME="$BRANCH"
+  git checkout "$BRANCH" 2>/dev/null || true
+  log "🌿 Semantic Release target branch set to: $BRANCH"
+fi
 
 CUSTOM_CONFIG_PATH=$(bash "$REUSABLE_PATH/scripts/shared/semantic-release/resolve-custom-releaserc.sh" "${SEMANTIC_RELEASE_CONFIG:-}")
 if [[ -n "$CUSTOM_CONFIG_PATH" && ! -f "$CUSTOM_CONFIG_PATH" ]]; then

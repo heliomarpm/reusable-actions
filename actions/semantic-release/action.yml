@@ -29,6 +29,10 @@ inputs:
   github-token:
     description: 'GitHub token'
     required: true
+  branch:
+    description: 'Target branch to evaluate (overrides GITHUB_REF for workflow_run)'
+    required: false
+    default: ''
 
 outputs:
   version:
@@ -44,6 +48,9 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         STACK: ${{ inputs.stack }}
+        BRANCH: ${{ inputs.branch }}
+        GITHUB_REF: ${{ inputs.branch != '' && format('refs/heads/{0}', inputs.branch) || env.GITHUB_REF }}
+        GITHUB_REF_NAME: ${{ inputs.branch || env.GITHUB_REF_NAME }}
         SEMANTIC_RELEASE_CONFIG: ${{ inputs.config }}
         SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.dry-run }}
         STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict-mode }}

@@ -21,17 +21,19 @@ Crie **pelo menos um commit** seguindo o formato de Commits Convencionais e envi
 
 ### Tipos aceitos
 
-| Tipo      | Impacto no lançamento |
-|:---|:---|
-| feat!     | _major_ |
-| refactor! | _major_ |
-| feat      | _minor_ |
-| fix       | _patch_ |
-| revert    | _patch_ |
-| perf      | _patch_ |
-| chore     | -- |
-| docs      | -- |
-| test      | -- |
+| Tipo de Commit | Dispara Release? | Impacto no lançamento |
+| :--- | --- | :--- |
+| feat!:       | ✅ Sim     | major (ex: 2.0.0)  |
+| refactor!:   | ✅ Sim	   | major (ex: 2.0.0)  |
+| feat:        | ✅ Sim	   | minor (ex: 1.1.0)  |
+| fix:         | ✅ Sim	   | patch (ex: 1.0.1)  |
+| perf:        | ✅ Sim	   | patch (ex: 1.0.1)  |
+| revert:      | ✅ Sim	   | patch (ex: 1.0.1)  |
+| chore:       | ❌ Não	   | (Nenhuma)          |
+| docs:        | ❌ Não	   | (Nenhuma)          |
+| ci:          | ❌ Não	   | (Nenhuma)          |
+| test:        | ❌ Não	   | (Nenhuma)          |
+| refactor:    | ❌ Não	   | (Nenhuma)          | 
 
 ---
 
