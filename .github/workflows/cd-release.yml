@@ -1,36 +1,28 @@
 name: "CD - Release"
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-    paths-ignore:
-      - 'CHANGELOG.md'
+  # push:
+  #   branches:
+  #     - main
+  #     - develop
+  #   paths-ignore:
+  #     - 'CHANGELOG.md'
 
-  workflow_dispatch:
-    inputs:
-      create-release:
-        description: 'Forçar criação de Git Tag e GitHub Release'
-        type: boolean
-        default: false
-      version-format:
-        description: 'Formato da versão (ex: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd")'
-        type: string
-        default: ''
+  # workflow_dispatch:
+  #   inputs:
+  #     enable-changelog:
+  #       description: 'Gerar e atualizar o arquivo CHANGELOG.md'
+  #       type: boolean
+  #       default: true
+
 
   workflow_call:
     inputs:
-      create-release:
-        description: 'Criar Git Tag e GitHub Release (default: true no main)'
+      enable-changelog:
+        description: 'Gerar e atualizar o arquivo CHANGELOG.md (opcional)'
         type: boolean
         required: false
         default: true
-      version-format:
-        description: 'Formato da versão (ex: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd")'
-        type: string
-        required: false
-        default: ''
       changelog-file:
         description: 'Caminho do arquivo de changelog'
         type: string
@@ -46,6 +38,11 @@ on:
         type: boolean
         required: false
         default: true
+      version-format:
+        description: 'Formato da versão (ex: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd")'
+        type: string
+        required: false
+        default: ''
     secrets:
       GH_TOKEN:
         required: false
@@ -56,7 +53,7 @@ on:
         description: 'Versão aplicada (ex: 1.0.0, 2026-10-04, etc)'
         value: ${{ jobs.release.outputs.version }}
       tag:
-        description: 'Git Tag criada (se create-release for true)'
+        description: 'Git Tag criada (se houver release)'
         value: ${{ jobs.release.outputs.tag }}
       has-changes:
         description: 'Se houveram commits processados'
@@ -70,9 +67,9 @@ jobs:
     name: 🚀 Release & Changelog
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.changelog.outputs.version }}
-      tag: ${{ steps.changelog.outputs.tag }}
-      has-changes: ${{ steps.changelog.outputs.has-changes }}
+      version: ${{ steps.release.outputs.version || steps.changelog.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+      has-changes: ${{ steps.release.outputs.has-changes || steps.changelog.outputs.has-changes }}
 
     steps:
       - name: 📌 Checkout repository
@@ -81,7 +78,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: 🚀 Run Changelog & Release
+      - name: 📝 Update Changelog
+        if: ${{ inputs.enable-changelog != false }}
         id: changelog
         uses: heliomarpm/reusable-actions/actions/changelog@main
         with:
@@ -89,7 +87,16 @@ jobs:
           changelog-file: ${{ inputs.changelog-file || 'CHANGELOG.md' }}
           version-format: ${{ inputs.version-format || '' }}
           commit-changelog: ${{ inputs.commit-changelog != false }}
-          create-release: ${{ (github.event_name == 'workflow_call' && (inputs.create-release != false)) || (github.event_name == 'workflow_dispatch' && inputs.create-release) || (github.event_name == 'push' && github.ref_name == 'main') }}
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: 🚀 Create Git Tag & Release
+        id: release
+        uses: heliomarpm/reusable-actions/actions/release@main
+        with:
+          project-path: ${{ inputs.project-path || '.' }}
+          version: ${{ steps.changelog.outputs.version }}
+          version-format: ${{ inputs.version-format || '' }}
+          release-notes: ${{ steps.changelog.outputs.release-notes }}
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: 🧾 Job Summary
@@ -99,8 +106,8 @@ jobs:
             echo "## 🚀 Release & Changelog"
             echo ""
             echo "- **Branch:** \`${{ github.ref_name }}\`"
-            echo "- **Versão:** \`${{ steps.changelog.outputs.version || 'N/A' }}\`"
-            echo "- **Tag:** \`${{ steps.changelog.outputs.tag || 'N/A' }}\`"
-            echo "- **Release Criada:** \`${{ steps.changelog.outputs.tag != '' && 'Sim' || 'Não' }}\`"
+            echo "- **Versão:** \`${{ steps.release.outputs.version || steps.changelog.outputs.version || 'N/A' }}\`"
+            echo "- **Tag:** \`${{ steps.release.outputs.tag || 'N/A' }}\`"
+            echo "- **Release Criada:** \`${{ steps.release.outputs.tag != '' && 'Sim' || 'Não' }}\`"
             echo "- **Changelog Atualizado:** \`${{ steps.changelog.outputs.has-changes == 'true' && 'Sim' || 'Não' }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,72 @@
+name: 'Release Engine'
+description: 'Zero-dependency Git Tag and GitHub Release creator based on Conventional Commits'
+
+inputs:
+  project-path:
+    description: 'Path to the project root containing the git repository'
+    required: false
+    default: '.'
+  branch:
+    description: 'Current branch name (auto-detected from environment/git if empty)'
+    required: false
+    default: ''
+  release-branches:
+    description: 'Comma-separated list of release branches (e.g. main,master)'
+    required: false
+    default: 'main,master'
+  develop-branches:
+    description: 'Comma-separated list of development branches (e.g. develop,dev)'
+    required: false
+    default: 'develop,dev'
+  version:
+    description: 'Explicit version override or version passed from changelog step'
+    required: false
+    default: ''
+  version-format:
+    description: 'Format template for version (e.g. "v%major.%minor.%patch", "%YYYY-%mm-%dd")'
+    required: false
+    default: ''
+  release-notes:
+    description: 'Pre-generated release notes (e.g. from changelog step). If empty, generates notes from commits'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token for pushing tags and creating GitHub Releases'
+    required: false
+    default: ''
+
+outputs:
+  version:
+    description: 'Version applied'
+    value: ${{ steps.release.outputs.version }}
+  tag:
+    description: 'Git Tag created'
+    value: ${{ steps.release.outputs.tag }}
+  has-changes:
+    description: 'Whether changes/commits were detected for release'
+    value: ${{ steps.release.outputs.has_changes }}
+  release-notes:
+    description: 'Markdown notes for this release'
+    value: ${{ steps.release.outputs.release_notes }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: release
+      shell: bash
+      working-directory: ${{ inputs.project-path }}
+      env:
+        PROJECT_PATH: ${{ inputs.project-path }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        RELEASE_BRANCHES: ${{ inputs.release-branches }}
+        DEVELOP_BRANCHES: ${{ inputs.develop-branches }}
+        INPUT_VERSION: ${{ inputs.version }}
+        VERSION_FORMAT: ${{ inputs.version-format }}
+        INPUT_RELEASE_NOTES: ${{ inputs.release-notes }}
+        GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
+        REUSABLE_PATH: ${{ github.action_path }}/../..
+        BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
+      run: |
+        SCRIPT="${{ github.action_path }}/../../scripts/shared/release/run.sh"
+        chmod +x "$SCRIPT"
+        "$SCRIPT"

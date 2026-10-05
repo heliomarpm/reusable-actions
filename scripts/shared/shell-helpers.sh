@@ -95,6 +95,20 @@ resolve_project_path() {
 }
 
 # ────────────────────────────────────────
+# Validação do repositório Git
+# ────────────────────────────────────────
+validate_git_repository() {
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    fail "❌ O diretório '$(pwd)' não é um repositório Git. Certifique-se de incluir o step 'actions/checkout@v4' com 'fetch-depth: 0' no seu workflow antes de executar esta action!"
+  fi
+
+  # Alerta se o repositório for shallow clone
+  if [[ "$(git rev-parse --is-shallow-repository 2>/dev/null || true)" == "true" ]]; then
+    log "⚠️ Repositório clonado como shallow (incompleto). Recomendamos configurar 'fetch-depth: 0' no step 'actions/checkout@v4' para permitir leitura total do histórico e tags."
+  fi
+}
+
+# ────────────────────────────────────────
 # Summary helpers
 # ────────────────────────────────────────
 summary_section() { { echo "## $1"; echo ""; } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"; }

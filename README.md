@@ -155,7 +155,7 @@ jobs:
   release:
     uses: heliomarpm/reusable-actions/.github/workflows/cd-release.yml@main
     with:
-      create-release: true
+      enable-changelog: true                  # Opcional (default: true): atualiza o CHANGELOG.md
       version-format: "v%major.%minor.%patch" # Opcional: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd"
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -225,6 +225,7 @@ Se você preferir construir seu próprio fluxo, este repositório exporta as aç
 - `heliomarpm/reusable-actions/actions/run-coverage@main`
 - `heliomarpm/reusable-actions/actions/semantic-release@main`
 - `heliomarpm/reusable-actions/actions/changelog@main`
+- `heliomarpm/reusable-actions/actions/release@main`
 - `heliomarpm/reusable-actions/actions/create-pr@main`
 - `heliomarpm/reusable-actions/actions/publish@main`
 
@@ -249,59 +250,36 @@ jobs:
 
 ### 📝 Action de Changelog Nativa (`actions/changelog`)
 
-A action `actions/changelog` é uma engine leve e **zero-dependency** (100% Bash nativo + `git log`), ideal para repositórios que não requerem build ou publicação de pacotes (como documentação, infra/Terraform ou o próprio repositório de actions):
+A action `actions/changelog` é uma engine leve e **zero-dependency** (100% Bash nativo + `git log`), focada **exclusivamente na geração e manutenção do arquivo de changelog**:
 
 * **Ciclo de vida `[Unreleased]`:** Em branches como `develop`, agrupa os Conventional Commits sob `## [Unreleased]`. A seção é sempre única e atualizada atomicamente a cada push.
 * **Promoção para Versão:** Ao integrar na `main`/`master`, `[Unreleased]` passa a ser uma versão definitiva.
 * **Template de Versão Flexível (`version-format`):** Suporta qualquer combinação de tokens SemVer (`%major`, `%minor`, `%patch`) e data (`%YYYY`, `%YY`, `%mm`, `%m`, `%dd`, `%d`). Ex: `"v%major.%minor.%patch"`, `"%YYYY-%mm-%dd"` ou `"%YYYY.%mm.%patch"`.
-* **GitHub Release Unificada (`create-release`):** Cria a Git Tag e a GitHub Release em uma única flag (default: `false`).
 * **Persistência Automática (`commit-changelog`):** Faz commit e push das alterações no `CHANGELOG.md` por padrão (`true`).
 
 ```yaml
-# Exemplo 1: Registro simples por data (sem tag/release)
-name: "Changelog & Release"
-on:
-  push:
-    branches:
-      - main
-      - develop
-    paths-ignore:
-      - 'CHANGELOG.md'
-  workflow_dispatch:
-    inputs:
-      create-release:
-        description: 'Forçar criação de Git Tag e GitHub Release'
-        type: boolean
-        default: false
-jobs:
-  changelog:
-    name: 📝 Update Changelog & Release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+- name: 📝 Update Changelog
+  uses: heliomarpm/reusable-actions/actions/changelog@main
+  with:
+    changelog-file: 'CHANGELOG.md'
+    commit-changelog: true
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
 
-    steps:
-      # OBRIGATÓRIO: Clona o repositório com histórico completo para leitura de commits e tags
-      - name: 📌 Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-              
-      - name: 📝 Update Changelog
-        uses: heliomarpm/reusable-actions/actions/changelog@main
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+### 🚀 Action de Release Nativa (`actions/release`)
 
-# Exemplo 2: Release completa (SemVer + Git Tag + GitHub Release)
-  ...
-    steps
-      - name: 🚀 Release with Changelog
-        uses: heliomarpm/reusable-actions/actions/changelog@main
-        with:
-          create-release: true
-          version-format: 'v%major.%minor.%patch'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+A action `actions/release` é responsável **exclusivamente pela criação da Git Tag e da GitHub Release**:
+
+* **Detecção Automática:** Identifica se há alterações relevantes desde a última release/tag.
+* **Cálculo SemVer Automático ou Explícito:** Determina a versão com base nos Conventional Commits (`feat`, `fix`, breaking changes) ou utiliza a versão repassada pelo changelog.
+* **GitHub Release com Notas:** Publica a release via GitHub CLI com as notas categorizadas.
+
+```yaml
+- name: 🚀 Create Git Tag & GitHub Release
+  uses: heliomarpm/reusable-actions/actions/release@main
+  with:
+    version-format: 'v%major.%minor.%patch'
+    github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---

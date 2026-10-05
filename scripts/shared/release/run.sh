@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # ─────────────────────────────────────────────────────────────
-# Actions Changelog - Native Zero-Dependency Changelog Engine
+# Actions Release - Zero-Dependency Git Tag & Release Engine
 # ─────────────────────────────────────────────────────────────
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -101,20 +101,18 @@ convert_emojis() {
   fi
 }
 
-log "🚀 Changelog Action - Initializing"
+log "🚀 Release Engine - Initializing"
 
 # ─────────────────────────────────────────────────────────────
 # Inputs & Configuration
 # ─────────────────────────────────────────────────────────────
-CHANGELOG_FILE="${CHANGELOG_FILE:-CHANGELOG.md}"
 PROJECT_PATH="${PROJECT_PATH:-.}"
 INPUT_BRANCH="${INPUT_BRANCH:-}"
 RELEASE_BRANCHES="${RELEASE_BRANCHES:-main,master}"
 DEVELOP_BRANCHES="${DEVELOP_BRANCHES:-develop,dev}"
 INPUT_VERSION="${INPUT_VERSION:-}"
 VERSION_FORMAT="${VERSION_FORMAT:-}"
-COMMIT_CHANGELOG="${COMMIT_CHANGELOG:-true}"
-COMMIT_MESSAGE="${COMMIT_MESSAGE:-}"
+INPUT_RELEASE_NOTES="${INPUT_RELEASE_NOTES:-}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 
 cd "$PROJECT_PATH"
@@ -136,7 +134,7 @@ else
 fi
 log "📌 Current branch: $CURRENT_BRANCH"
 
-# Determina o modo de operação (release, develop ou preview)
+# Determina o modo de operação
 is_in_csv() {
   local item="$1"
   local csv="$2"
@@ -158,6 +156,18 @@ elif is_in_csv "$CURRENT_BRANCH" "$DEVELOP_BRANCHES"; then
 fi
 log "🎯 Operating mode: $MODE"
 
+# Se não estiver em branch de release e nenhuma versão explícita foi fornecida, não cria release
+if [[ "$MODE" != "release" && -z "$INPUT_VERSION" ]]; then
+  log "ℹ️ Branch '$CURRENT_BRANCH' is not a release branch ($RELEASE_BRANCHES). Skipping release creation."
+  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+    echo "version=" >> "$GITHUB_OUTPUT"
+    echo "tag=" >> "$GITHUB_OUTPUT"
+    echo "has_changes=false" >> "$GITHUB_OUTPUT"
+    echo "release_notes=" >> "$GITHUB_OUTPUT"
+  fi
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────
 # Determina o range de commits a inspecionar
 # ─────────────────────────────────────────────────────────────
@@ -169,30 +179,10 @@ if [[ -n "$LAST_TAG" ]]; then
   RANGE="${LAST_TAG}..HEAD"
   SINCE_LABEL="tag '$LAST_TAG'"
 else
-  # Se não houver tag, busca o commit do último release registrado
-  LAST_RELEASE_COMMIT="$(git log -n 1 --grep="^chore(release)" --grep="^chore(changelog)" --format="%H" 2>/dev/null || true)"
+  LAST_RELEASE_COMMIT="$(git log -n 1 --grep="^chore(release)" --format="%H" 2>/dev/null || true)"
   if [[ -n "$LAST_RELEASE_COMMIT" && "$LAST_RELEASE_COMMIT" != "$(git rev-parse HEAD 2>/dev/null || true)" ]]; then
     RANGE="${LAST_RELEASE_COMMIT}..HEAD"
     SINCE_LABEL="commit de release '${LAST_RELEASE_COMMIT:0:7}'"
-  elif [[ "$MODE" == "develop" ]]; then
-    RELEASE_BASE=""
-    if git rev-parse --verify origin/main >/dev/null 2>&1; then
-      RELEASE_BASE="origin/main"
-    elif git rev-parse --verify main >/dev/null 2>&1; then
-      RELEASE_BASE="main"
-    elif git rev-parse --verify origin/master >/dev/null 2>&1; then
-      RELEASE_BASE="origin/master"
-    elif git rev-parse --verify master >/dev/null 2>&1; then
-      RELEASE_BASE="master"
-    fi
-
-    if [[ -n "$RELEASE_BASE" ]]; then
-      MERGE_BASE="$(git merge-base "$RELEASE_BASE" HEAD 2>/dev/null || true)"
-      if [[ -n "$MERGE_BASE" && "$MERGE_BASE" != "$(git rev-parse HEAD 2>/dev/null || true)" ]]; then
-        RANGE="${MERGE_BASE}..HEAD"
-        SINCE_LABEL="base branch $RELEASE_BASE ('${MERGE_BASE:0:7}')"
-      fi
-    fi
   fi
 fi
 
@@ -209,7 +199,6 @@ REPO_URL=""
 if [[ -n "${GITHUB_SERVER_URL:-}" && -n "${GITHUB_REPOSITORY:-}" ]]; then
   REPO_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
 else
-  # Tenta inferir da URL remota do git
   REMOTE_ORIGIN="$(git config --get remote.origin.url 2>/dev/null || true)"
   if [[ "$REMOTE_ORIGIN" =~ github\.com[:/]([^/]+/[^/.]+)(\.git)? ]]; then
     REPO_URL="https://github.com/${BASH_REMATCH[1]}"
@@ -239,7 +228,6 @@ HAS_FEAT=false
 HAS_FIX=false
 TOTAL_COMMITS=0
 
-# Coleta commits usando separadores seguros ASCII 0x1f (Unit Separator) e 0x1e (Record Separator)
 COMMITS_RAW="$(git log "$RANGE" --no-merges --pretty=format:"%H%x1f%h%x1f%s%x1f%b%x1e" -- . 2>/dev/null || true)"
 
 if [[ -n "$COMMITS_RAW" ]]; then
@@ -262,14 +250,12 @@ if [[ -n "$COMMITS_RAW" ]]; then
 
     TOTAL_COMMITS=$((TOTAL_COMMITS + 1))
 
-    # Formata link do commit
     if [[ -n "$REPO_URL" ]]; then
       COMMIT_LINK="([${SHORT_HASH}](${REPO_URL}/commit/${FULL_HASH}))"
     else
       COMMIT_LINK="(${SHORT_HASH})"
     fi
 
-    # Detecta se é breaking change no subject ou no body
     IS_BREAKING_COMMIT=false
     if echo "$SUBJECT" | grep -qE "^[a-zA-Z]+(\([^\)]+\))?!:"; then
       IS_BREAKING_COMMIT=true
@@ -277,14 +263,12 @@ if [[ -n "$COMMITS_RAW" ]]; then
       IS_BREAKING_COMMIT=true
     fi
 
-    # Analisa Conventional Commit: tipo(escopo opcional)!?: descrição
     REGEX_CONVENTIONAL='^([a-zA-Z]+)(\(([^)]+)\))?!?:[[:space:]]*(.+)$'
     if [[ "$SUBJECT" =~ $REGEX_CONVENTIONAL ]]; then
-      TYPE="${BASH_REMATCH[1],,}" # lowercase
+      TYPE="${BASH_REMATCH[1],,}"
       SCOPE="${BASH_REMATCH[3]:-}"
       DESC="$(convert_emojis "${BASH_REMATCH[4]}")"
 
-      # Monta linha formatada
       if [[ -n "$SCOPE" ]]; then
         ENTRY="- **${SCOPE}**: ${DESC} ${COMMIT_LINK}"
       else
@@ -307,7 +291,7 @@ if [[ -n "$COMMITS_RAW" ]]; then
           ;;
         perf)
           echo "$ENTRY" >> "$PERF_FILE"
-          HAS_FIX=true # perf também conta como bump patch se não houver fix
+          HAS_FIX=true
           ;;
         refactor)
           echo "$ENTRY" >> "$REFACTOR_FILE"
@@ -333,7 +317,6 @@ if [[ -n "$COMMITS_RAW" ]]; then
           ;;
       esac
     else
-      # Commit não convencional
       CLEAN_SUBJECT="$(convert_emojis "$SUBJECT")"
       ENTRY="- ${CLEAN_SUBJECT} ${COMMIT_LINK}"
       if [[ "$IS_BREAKING_COMMIT" == "true" ]]; then
@@ -348,77 +331,52 @@ fi
 log "📊 Analyzed $TOTAL_COMMITS relevant commits (Breaking: $HAS_BREAKING, Feat: $HAS_FEAT, Fix: $HAS_FIX)"
 
 # ─────────────────────────────────────────────────────────────
-# Geração das Notas em Markdown
+# Geração / Obtenção das Notas de Release
 # ─────────────────────────────────────────────────────────────
 NOTES_FILE="$TEMP_DIR/release_notes.md"
 touch "$NOTES_FILE"
 
-append_section() {
-  local title="$1"
-  local file="$2"
-  if [[ -s "$file" ]]; then
-    echo "### $title" >> "$NOTES_FILE"
-    convert_emojis < "$file" >> "$NOTES_FILE"
-    echo "" >> "$NOTES_FILE"
+if [[ -n "$INPUT_RELEASE_NOTES" ]]; then
+  echo "$INPUT_RELEASE_NOTES" > "$NOTES_FILE"
+  HAS_CHANGES=true
+else
+  append_section() {
+    local title="$1"
+    local file="$2"
+    if [[ -s "$file" ]]; then
+      echo "### $title" >> "$NOTES_FILE"
+      convert_emojis < "$file" >> "$NOTES_FILE"
+      echo "" >> "$NOTES_FILE"
+    fi
+  }
+
+  append_section "⚠️ Breaking Changes" "$BREAKING_FILE"
+  append_section "🚀 Features" "$FEAT_FILE"
+  append_section "🐛 Bug Fixes" "$FIX_FILE"
+  append_section "⚡ Performance Improvements" "$PERF_FILE"
+  append_section "♻️ Code Refactoring" "$REFACTOR_FILE"
+  append_section "📝 Documentation" "$DOCS_FILE"
+  append_section "🧪 Tests" "$TEST_FILE"
+  append_section "🔧 CI & Build System" "$CI_FILE"
+  append_section "📦 Miscellaneous" "$CHORE_FILE"
+  append_section "⏪ Reverts" "$REVERT_FILE"
+  append_section "🔄 Other Changes" "$OTHER_FILE"
+
+  HAS_CHANGES=false
+  if [[ -s "$NOTES_FILE" ]]; then
+    HAS_CHANGES=true
   fi
-}
-
-append_section "⚠️ Breaking Changes" "$BREAKING_FILE"
-append_section "🚀 Features" "$FEAT_FILE"
-append_section "🐛 Bug Fixes" "$FIX_FILE"
-append_section "⚡ Performance Improvements" "$PERF_FILE"
-append_section "♻️ Code Refactoring" "$REFACTOR_FILE"
-append_section "📝 Documentation" "$DOCS_FILE"
-append_section "🧪 Tests" "$TEST_FILE"
-append_section "🔧 CI & Build System" "$CI_FILE"
-append_section "📦 Miscellaneous" "$CHORE_FILE"
-append_section "⏪ Reverts" "$REVERT_FILE"
-append_section "🔄 Other Changes" "$OTHER_FILE"
-
-# Verifica se o arquivo CHANGELOG.md existe
-if [[ ! -f "$CHANGELOG_FILE" ]]; then
-  log "📝 Initializing $CHANGELOG_FILE"
-  cat <<'EOF' > "$CHANGELOG_FILE"
-# 📦 Changelog
-
-All notable changes to this project will be documented in this file.
-
-EOF
 fi
 
-# Checa se o CHANGELOG.md já possui seção [Unreleased] pré-existente
-HAS_EXISTING_UNRELEASED=false
-if grep -qiE "^## \[Unreleased\]" "$CHANGELOG_FILE"; then
-  HAS_EXISTING_UNRELEASED=true
-fi
-
-# Se não há notas geradas neste range, mas já havia [Unreleased] no changelog:
-# No modo release, usaremos o conteúdo pré-existente de [Unreleased] para promover a versão!
-EXISTING_UNRELEASED_CONTENT="$TEMP_DIR/existing_unreleased.txt"
-if [[ "$HAS_EXISTING_UNRELEASED" == "true" ]]; then
-  awk '
-    BEGIN { capture=0 }
-    /^## \[Unreleased\]/ { capture=1; next }
-    /^## \[/ { if (capture) exit }
-    capture { print }
-  ' "$CHANGELOG_FILE" | convert_emojis > "$EXISTING_UNRELEASED_CONTENT"
-fi
-
-HAS_CHANGES=false
-if [[ -s "$NOTES_FILE" ]]; then
-  HAS_CHANGES=true
-elif [[ "$MODE" == "release" && -s "$EXISTING_UNRELEASED_CONTENT" ]]; then
-  HAS_CHANGES=true
-  # Usa o conteúdo existente de unreleased como release notes
-  cat "$EXISTING_UNRELEASED_CONTENT" > "$NOTES_FILE"
-fi
-
-if [[ "$HAS_CHANGES" == "false" && "$MODE" != "develop" ]]; then
-  log "ℹ️ No changes detected. Changelog is up to date."
-  echo "version=" >> "${GITHUB_OUTPUT:-/dev/null}"
-  echo "tag=" >> "${GITHUB_OUTPUT:-/dev/null}"
-  echo "has_changes=false" >> "${GITHUB_OUTPUT:-/dev/null}"
-  echo "release_notes=" >> "${GITHUB_OUTPUT:-/dev/null}"
+# Se não há mudanças identificadas e nenhuma versão explícita foi dada
+if [[ "$HAS_CHANGES" == "false" && -z "$INPUT_VERSION" ]]; then
+  log "ℹ️ No changes detected since last release ($LAST_TAG). No new release needed."
+  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+    echo "version=" >> "$GITHUB_OUTPUT"
+    echo "tag=" >> "$GITHUB_OUTPUT"
+    echo "has_changes=false" >> "$GITHUB_OUTPUT"
+    echo "release_notes=" >> "$GITHUB_OUTPUT"
+  fi
   exit 0
 fi
 
@@ -427,196 +385,99 @@ fi
 # ─────────────────────────────────────────────────────────────
 RESOLVED_VERSION=""
 RESOLVED_TAG=""
-TODAY="$(date +"%Y-%m-%d")"
 
-if [[ "$MODE" == "develop" || "$MODE" == "preview" ]]; then
-  RESOLVED_VERSION="Unreleased"
-  SECTION_HEADER="## [Unreleased]"
+if [[ -n "$INPUT_VERSION" && "$INPUT_VERSION" != "Unreleased" ]]; then
+  RESOLVED_VERSION="$INPUT_VERSION"
+  RESOLVED_TAG="$RESOLVED_VERSION"
 else
-  # Modo release
-  if [[ -n "$INPUT_VERSION" ]]; then
-    RESOLVED_VERSION="$INPUT_VERSION"
-    RESOLVED_TAG="$RESOLVED_VERSION"
-  else
-    # 1. Determina o template de formato (se não fornecido explicitamente)
-    FORMAT="$VERSION_FORMAT"
-    if [[ -z "$FORMAT" ]]; then
-      if [[ "$MODE" == "release" || -n "$LAST_TAG" ]]; then
-        FORMAT="v%major.%minor.%patch"
-      else
-        FORMAT="%YYYY-%mm-%dd"
-      fi
-    fi
+  FORMAT="${VERSION_FORMAT:-v%major.%minor.%patch}"
 
-    # 2. Calcula SemVer (Major, Minor, Patch)
-    BASE_SEMVER="0.0.0"
-    if [[ -n "$LAST_TAG" ]]; then
-      BASE_SEMVER="${LAST_TAG#v}"
-    fi
-
-    IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE_SEMVER%%-*}"
-    MAJOR="${MAJOR:-0}"
-    MINOR="${MINOR:-0}"
-    PATCH="${PATCH:-0}"
-
-    if [[ "$HAS_BREAKING" == "true" ]]; then
-      MAJOR=$((MAJOR + 1))
-      MINOR=0
-      PATCH=0
-    elif [[ "$HAS_FEAT" == "true" ]]; then
-      MINOR=$((MINOR + 1))
-      PATCH=0
-    else
-      PATCH=$((PATCH + 1))
-    fi
-
-    # 3. Extrai partes de data
-    YEAR_4="$(date +"%Y")"
-    YEAR_2="$(date +"%y")"
-    MONTH_2="$(date +"%m")"
-    MONTH_1="$(date +"%-m" 2>/dev/null || echo "$((10#$MONTH_2))")"
-    DAY_2="$(date +"%d")"
-    DAY_1="$(date +"%-d" 2>/dev/null || echo "$((10#$DAY_2))")"
-
-    # 4. Substituição de Tokens no template
-    # IMPORTANTE: SemVer tokens primeiro para evitar que %m colida com %major ou %minor
-    RESOLVED_VERSION="$FORMAT"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%MAJOR/$MAJOR}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%major/$MAJOR}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%MINOR/$MINOR}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%minor/$MINOR}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%PATCH/$PATCH}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%patch/$PATCH}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%path/$PATCH}" # Tolerância a typo
-
-    # Tokens de data (maiores primeiro)
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%YYYY/$YEAR_4}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%YY/$YEAR_2}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%mm/$MONTH_2}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%dd/$DAY_2}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%m/$MONTH_1}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%d/$DAY_1}"
-
-    # 5. Evita duplicação caso seja versão puramente por data
-    if [[ -f "$CHANGELOG_FILE" ]] && grep -qE "^## \[${RESOLVED_VERSION}\]" "$CHANGELOG_FILE" 2>/dev/null; then
-      COUNT=1
-      while grep -qE "^## \[${RESOLVED_VERSION}\.${COUNT}\]" "$CHANGELOG_FILE" 2>/dev/null; do
-        COUNT=$((COUNT + 1))
-      done
-      RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
-    fi
-
-    RESOLVED_TAG="$RESOLVED_VERSION"
+  # Calcula SemVer (Major, Minor, Patch)
+  BASE_SEMVER="0.0.0"
+  if [[ -n "$LAST_TAG" ]]; then
+    BASE_SEMVER="${LAST_TAG#v}"
   fi
 
-  # Monta o cabeçalho no CHANGELOG.md
-  # Se a versão já contiver a data (ex: 2026-10-03 ou v2026.10.03), não duplica a data no cabeçalho
-  if [[ "$RESOLVED_VERSION" =~ [0-9]{4}[.-][0-9]{2} ]]; then
-    SECTION_HEADER="## [${RESOLVED_VERSION}]"
+  IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE_SEMVER%%-*}"
+  MAJOR="${MAJOR:-0}"
+  MINOR="${MINOR:-0}"
+  PATCH="${PATCH:-0}"
+
+  if [[ "$HAS_BREAKING" == "true" ]]; then
+    MAJOR=$((MAJOR + 1))
+    MINOR=0
+    PATCH=0
+  elif [[ "$HAS_FEAT" == "true" ]]; then
+    MINOR=$((MINOR + 1))
+    PATCH=0
   else
-    SECTION_HEADER="## [${RESOLVED_VERSION}] - ${TODAY}"
+    PATCH=$((PATCH + 1))
   fi
+
+  YEAR_4="$(date +"%Y")"
+  YEAR_2="$(date +"%y")"
+  MONTH_2="$(date +"%m")"
+  MONTH_1="$(date +"%-m" 2>/dev/null || echo "$((10#$MONTH_2))")"
+  DAY_2="$(date +"%d")"
+  DAY_1="$(date +"%-d" 2>/dev/null || echo "$((10#$DAY_2))")"
+
+  RESOLVED_VERSION="$FORMAT"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%MAJOR/$MAJOR}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%major/$MAJOR}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%MINOR/$MINOR}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%minor/$MINOR}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%PATCH/$PATCH}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%patch/$PATCH}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%path/$PATCH}"
+
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%YYYY/$YEAR_4}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%YY/$YEAR_2}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%mm/$MONTH_2}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%dd/$DAY_2}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%m/$MONTH_1}"
+  RESOLVED_VERSION="${RESOLVED_VERSION//\%d/$DAY_1}"
+
+  # Evita duplicar tag existente se for formato por data
+  if git rev-parse "$RESOLVED_VERSION" >/dev/null 2>&1; then
+    COUNT=1
+    while git rev-parse "${RESOLVED_VERSION}.${COUNT}" >/dev/null 2>&1; do
+      COUNT=$((COUNT + 1))
+    done
+    RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
+  fi
+
+  RESOLVED_TAG="$RESOLVED_VERSION"
 fi
 
-log "🏷️ Target Version: $RESOLVED_VERSION (Header: $SECTION_HEADER)"
+log "🏷️ Release Target: $RESOLVED_VERSION (Tag: $RESOLVED_TAG)"
 
 # ─────────────────────────────────────────────────────────────
-# Atualização Atômica do CHANGELOG.md
-# Substitui [Unreleased] existente ou insere no topo
+# Criação da Git Tag e GitHub Release
 # ─────────────────────────────────────────────────────────────
-NEW_SECTION_FILE="$TEMP_DIR/new_section.md"
-{
-  echo "$SECTION_HEADER"
-  echo ""
-  if [[ -s "$NOTES_FILE" ]]; then
-    cat "$NOTES_FILE"
-  fi
-} > "$NEW_SECTION_FILE"
+if git rev-parse "$RESOLVED_TAG" >/dev/null 2>&1; then
+  log "⚠️ Tag '$RESOLVED_TAG' already exists in local git. Overwriting tag on current commit..."
+  git tag -d "$RESOLVED_TAG" || true
+fi
 
-UPDATED_CHANGELOG="$TEMP_DIR/CHANGELOG.updated.md"
+log "🏷️ Creating git tag: $RESOLVED_TAG"
+git config user.name "${GIT_USER_NAME:-github-actions[bot]}"
+git config user.email "${GIT_USER_EMAIL:-github-actions[bot]@users.noreply.github.com}"
+git tag -a "$RESOLVED_TAG" -m "Release $RESOLVED_TAG"
 
-awk -v new_sec_file="$NEW_SECTION_FILE" '
-  BEGIN {
-    inserted = 0
-    skipping_unreleased = 0
-  }
+if git remote get-url origin >/dev/null 2>&1; then
+  log "📤 Pushing tag '$RESOLVED_TAG' to origin"
+  git push origin "$RESOLVED_TAG" || log "⚠️ Failed to push tag (check permissions)"
+else
+  log "ℹ️ Skipping git push tag (no 'origin' remote configured)"
+fi
 
-  /^## \[Unreleased\]/ {
-    # Substitui a seção unreleased existente
-    while ((getline line < new_sec_file) > 0) {
-      print line
-    }
-    close(new_sec_file)
-    inserted = 1
-    skipping_unreleased = 1
-    next
-  }
-
-  /^## \[/ {
-    # Se estávamos ignorando o unreleased antigo, agora paramos ao encontrar a próxima versão
-    if (skipping_unreleased) {
-      skipping_unreleased = 0
-    }
-    # Se ainda não havíamos inserido (não tinha [Unreleased] prévio), inserimos logo antes da primeira versão
-    if (!inserted) {
-      while ((getline line < new_sec_file) > 0) {
-        print line
-      }
-      close(new_sec_file)
-      inserted = 1
-    }
-    print $0
-    next
-  }
-
-  {
-    if (!skipping_unreleased) {
-      print $0
-    }
-  }
-
-  END {
-    # Se o arquivo não continha nenhuma versão (apenas cabeçalho)
-    if (!inserted) {
-      print ""
-      while ((getline line < new_sec_file) > 0) {
-        print line
-      }
-      close(new_sec_file)
-    }
-  }
-' "$CHANGELOG_FILE" > "$UPDATED_CHANGELOG"
-
-cp "$UPDATED_CHANGELOG" "$CHANGELOG_FILE"
-log "✅ $CHANGELOG_FILE updated successfully"
-
-# ─────────────────────────────────────────────────────────────
-# Commit & Push do CHANGELOG.md (se configurado)
-# ─────────────────────────────────────────────────────────────
-if [[ "$COMMIT_CHANGELOG" == "true" ]]; then
-  git config user.name "${GIT_USER_NAME:-github-actions[bot]}"
-  git config user.email "${GIT_USER_EMAIL:-github-actions[bot]@users.noreply.github.com}"
-
-  if [[ -n "$COMMIT_MESSAGE" ]]; then
-    MSG="$COMMIT_MESSAGE"
-  elif [[ "$MODE" == "release" ]]; then
-    MSG="chore(release): ${RESOLVED_VERSION} [skip ci]"
-  else
-    MSG="chore(changelog): update [Unreleased] in CHANGELOG.md [skip ci]"
-  fi
-
-  git add "$CHANGELOG_FILE"
-  if ! git diff --cached --quiet; then
-    log "💾 Committing $CHANGELOG_FILE with message: '$MSG'"
-    git commit -m "$MSG"
-    if git remote get-url origin >/dev/null 2>&1; then
-      git push origin "$CURRENT_BRANCH" || log "⚠️ Failed to push changelog commit"
-    else
-      log "ℹ️ Skipping git push commit (no 'origin' remote configured)"
-    fi
-  else
-    log "ℹ️ No git changes to commit"
-  fi
+if command -v gh >/dev/null 2>&1 && [[ -n "$GITHUB_TOKEN" ]]; then
+  log "🚀 Creating GitHub Release: $RESOLVED_TAG"
+  GH_TOKEN="$GITHUB_TOKEN" gh release create "$RESOLVED_TAG" \
+    --title "$RESOLVED_TAG" \
+    --notes-file "$NOTES_FILE" || log "⚠️ Failed to create GitHub Release via gh CLI"
+else
+  log "ℹ️ Skipping GitHub Release creation (gh CLI not installed or GITHUB_TOKEN empty)"
 fi
 
 # ─────────────────────────────────────────────────────────────
@@ -624,6 +485,7 @@ fi
 # ─────────────────────────────────────────────────────────────
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   echo "version=$RESOLVED_VERSION" >> "$GITHUB_OUTPUT"
+  echo "tag=$RESOLVED_TAG" >> "$GITHUB_OUTPUT"
   echo "has_changes=$HAS_CHANGES" >> "$GITHUB_OUTPUT"
   {
     echo "release_notes<<EOF"
@@ -637,16 +499,15 @@ fi
 # ─────────────────────────────────────────────────────────────
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   {
-    echo "## 📦 Changelog Engine"
+    echo "## 🚀 Release Engine"
     echo ""
-    echo "- **Modo:** \`$MODE\`"
     echo "- **Branch:** \`$CURRENT_BRANCH\`"
     echo "- **Versão:** \`$RESOLVED_VERSION\`"
-    echo "- **Arquivo:** \`$CHANGELOG_FILE\`"
+    echo "- **Tag:** \`$RESOLVED_TAG\`"
     echo "- **Commits analisados:** $TOTAL_COMMITS"
     echo ""
     if [[ -s "$NOTES_FILE" ]]; then
-      echo "<details><summary>📋 <strong>Visualizar Alterações Registradas</strong></summary>"
+      echo "<details><summary>📋 <strong>Notas da Release</strong></summary>"
       echo ""
       cat "$NOTES_FILE"
       echo ""
@@ -655,4 +516,4 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   } >> "$GITHUB_STEP_SUMMARY"
 fi
 
-log "🎉 Changelog Action completed successfully!"
+log "🎉 Release Engine completed successfully!"
