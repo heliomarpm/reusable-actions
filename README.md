@@ -184,6 +184,37 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+---
+
+### 5️⃣ CD — Publish (Multi-Registry & Agnóstico)
+
+Publicação automatizada de pacotes de código para um ou **múltiplos registries simultâneos** (ex: `npm` e `github` ao mesmo tempo), com suporte a Node.js, PHP, comandos customizados e modo de simulação (`dry-run`).
+
+O repositório consumidor decide livremente o gatilho (ao publicar uma GitHub Release, encadeado após o workflow de release, ou manual):
+
+```yaml
+name: "4. Publish"
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: heliomarpm/reusable-actions/.github/workflows/cd-publish.yml@main
+    with:
+      # Suporta múltiplos registries separados por vírgula!
+      registries: 'npm, github'
+      # dry-run: false
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+```
+
+---
+
 ## 🔧 Composite Actions (Modo Custom)
 
 Se você preferir construir seu próprio fluxo, este repositório exporta as ações unitárias (localizadas na pasta `/actions/`):
@@ -195,6 +226,7 @@ Se você preferir construir seu próprio fluxo, este repositório exporta as aç
 - `heliomarpm/reusable-actions/actions/semantic-release@main`
 - `heliomarpm/reusable-actions/actions/changelog@main`
 - `heliomarpm/reusable-actions/actions/create-pr@main`
+- `heliomarpm/reusable-actions/actions/publish@main`
 
 **Exemplo Prático (Custom Pipeline):**
 ```yaml

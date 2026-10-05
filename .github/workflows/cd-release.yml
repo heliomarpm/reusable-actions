@@ -50,7 +50,7 @@ on:
       GH_TOKEN:
         required: false
         description: 'GitHub token para autenticação e criação de releases (usa GITHUB_TOKEN se omitido)'
-        
+
     outputs:
       version:
         description: 'Versão aplicada (ex: 1.0.0, 2026-10-04, etc)'

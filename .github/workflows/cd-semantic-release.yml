@@ -9,7 +9,7 @@ on:
         type: string
         default: null
       project-path:
-        description: 'Project path source code'
+        description: 'Project path source code in consumer repository '
         required: false
         type: string
         default: '.'

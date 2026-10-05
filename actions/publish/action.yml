@@ -1,0 +1,88 @@
+name: 'Publish Engine'
+description: 'Agnostic package and artifact publisher supporting single and multi-registry targets'
+
+inputs:
+  stack:
+    description: 'Project stack (node, php, dotnet, python, go, ...)'
+    required: false
+    default: ''
+  project-path:
+    description: 'Path to the project root'
+    required: false
+    default: '.'
+  registries:
+    description: 'Comma-separated list of registries to publish to (e.g. "npm, github", "github", "pypi")'
+    required: false
+    default: 'github'
+  registry:
+    description: 'Alias for registries (single or comma-separated)'
+    required: false
+    default: ''
+  publish-command:
+    description: 'Custom command to execute for publishing (overrides default stack behavior)'
+    required: false
+    default: ''
+  dry-run:
+    description: 'Simulate publishing without uploading packages'
+    required: false
+    default: 'false'
+  version:
+    description: 'Explicit version to publish'
+    required: false
+    default: ''
+  token:
+    description: 'Generic authentication token for publishing'
+    required: false
+    default: ''
+  npm-token:
+    description: 'Specific authentication token for npm registry'
+    required: false
+    default: ''
+  github-token:
+    description: 'Specific authentication token for GitHub Packages'
+    required: false
+    default: ''
+  pypi-token:
+    description: 'Specific authentication token for PyPI'
+    required: false
+    default: ''
+  nuget-token:
+    description: 'Specific authentication token for NuGet'
+    required: false
+    default: ''
+
+outputs:
+  published:
+    description: 'Whether all target registries published successfully'
+    value: ${{ steps.publish.outputs.published }}
+  total-success:
+    description: 'Total number of successfully published registries'
+    value: ${{ steps.publish.outputs.total_success }}
+  total-failed:
+    description: 'Total number of failed registries'
+    value: ${{ steps.publish.outputs.total_failed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: publish
+      shell: bash
+      working-directory: ${{ inputs.project-path }}
+      env:
+        STACK: ${{ inputs.stack }}
+        PROJECT_PATH: ${{ inputs.project-path }}
+        REGISTRIES: ${{ inputs.registries || inputs.registry || 'github' }}
+        PUBLISH_COMMAND: ${{ inputs.publish-command }}
+        DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_VERSION: ${{ inputs.version }}
+        TOKEN: ${{ inputs.token }}
+        NPM_TOKEN: ${{ inputs.npm-token }}
+        GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
+        PYPI_TOKEN: ${{ inputs.pypi-token }}
+        NUGET_TOKEN: ${{ inputs.nuget-token }}
+        REUSABLE_PATH: ${{ github.action_path }}/../..
+        BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
+      run: |
+        SCRIPT="${{ github.action_path }}/../../scripts/shared/publish/run.sh"
+        chmod +x "$SCRIPT"
+        "$SCRIPT"

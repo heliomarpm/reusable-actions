@@ -1,0 +1,178 @@
+name: "CD - Publish"
+
+on:
+  # workflow_dispatch:
+  #   inputs:
+  #     registries:
+  #       description: 'Registries para publicar (ex: "npm, github", "github")'
+  #       type: string
+  #       default: 'github'
+  #     stack:
+  #       description: 'Stack do projeto (vazio para autodetectar)'
+  #       type: string
+  #       default: ''
+  #     project-path:
+  #       description: 'Caminho do código fonte no repositório consumidor'
+  #       type: string
+  #       default: '.'
+  #     dry-run:
+  #       description: 'Simular publicação sem enviar pacotes'
+  #       type: boolean
+  #       default: false
+
+  workflow_call:
+    inputs:
+      registries:
+        description: 'Registries para publicar separados por vírgula (ex: "npm, github", "github")'
+        type: string
+        required: false
+        default: 'github'
+      registry:
+        description: 'Alias para registries (ex: "npm" ou "npm, github")'
+        type: string
+        required: false
+        default: ''
+      stack:
+        description: 'Stack do projeto (node | php | dotnet | python | go | vazio para auto-detect)'
+        type: string
+        required: false
+        default: ''
+      stack-version:
+        description: 'Versão do runtime da stack'
+        type: string
+        required: false
+        default: ''
+      project-path:
+        description: 'Caminho do código fonte no repositório consumidor'
+        type: string
+        required: false
+        default: '.'
+      publish-command:
+        description: 'Comando customizado para publicação (sobrescreve o padrão da stack)'
+        type: string
+        required: false
+        default: ''
+      version:
+        description: 'Versão explícita para publicar'
+        type: string
+        required: false
+        default: ''
+      dry-run:
+        description: 'Executar em modo simulação (dry run) sem publicar de fato'
+        type: boolean
+        required: false
+        default: false
+
+    secrets:
+      PUBLISH_TOKEN:
+        description: 'Token genérico para autenticação nos registries'
+        required: false
+      NPM_TOKEN:
+        description: 'Token de autenticação do npmjs.org'
+        required: false
+      GH_TOKEN:
+        description: 'Token de autenticação do GitHub Packages'
+        required: false
+      PYPI_TOKEN:
+        description: 'Token de autenticação do PyPI'
+        required: false
+      NUGET_TOKEN:
+        description: 'Token de autenticação do NuGet'
+        required: false
+
+    outputs:
+      published:
+        description: 'Status final de publicação (true/false)'
+        value: ${{ jobs.publish.outputs.published }}
+      total-success:
+        description: 'Quantidade de registries publicados com sucesso'
+        value: ${{ jobs.publish.outputs.total-success }}
+      total-failed:
+        description: 'Quantidade de registries que falharam'
+        value: ${{ jobs.publish.outputs.total-failed }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  workdir:
+    runs-on: ubuntu-latest
+    env:
+      REUSABLE_PATH: __reusable_actions__
+    outputs:
+      path: ${{ steps.path.outputs.value }}
+    steps:
+      - name: 📌 Checkout consumer repository
+        uses: actions/checkout@v7
+
+      - name: 📌 Checkout reusable-actions scripts
+        uses: actions/checkout@v7
+        with:
+          repository: heliomarpm/reusable-actions
+          ref: main
+          path: ${{ env.REUSABLE_PATH }}
+
+      - name: 📐 Resolve project path
+        id: path
+        run: |
+          source "$(pwd)/${{ env.REUSABLE_PATH }}/scripts/shared/shell-helpers.sh"
+          PROJECT_PATH="$(resolve_project_path '${{ inputs.project-path }}')"
+          log "🔹 Using project path: $PROJECT_PATH"
+          echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: 📦 Publish Packages
+    runs-on: ubuntu-latest
+    needs: workdir
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ needs.workdir.outputs.path || '.' }}
+    outputs:
+      published: ${{ steps.pub.outputs.published }}
+      total-success: ${{ steps.pub.outputs.total-success }}
+      total-failed: ${{ steps.pub.outputs.total-failed }}
+
+    steps:
+      - name: 📌 Checkout consumer repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: 📌 Checkout reusable-actions scripts
+        uses: actions/checkout@v7
+        with:
+          repository: heliomarpm/reusable-actions
+          ref: main
+          path: __reusable_actions__
+
+      - name: 🔍 Detect Stack
+        id: stack
+        uses: ./__reusable_actions__/actions/detect-stack
+        with:
+          stack: ${{ inputs.stack }}
+          project-path: ${{ needs.workdir.outputs.path || inputs.project-path || '.' }}
+
+      - name: ⚙️ Setup Runtime
+        uses: ./__reusable_actions__/actions/setup-runtime
+        with:
+          stack: ${{ steps.stack.outputs.stack }}
+          stack-version: ${{ inputs.stack-version }}
+          project-path: ${{ needs.workdir.outputs.path || inputs.project-path || '.' }}
+
+      - name: 🚀 Publish Packages
+        id: pub
+        uses: ./__reusable_actions__/actions/publish
+        with:
+          stack: ${{ steps.stack.outputs.stack }}
+          project-path: ${{ needs.workdir.outputs.path || inputs.project-path || '.' }}
+          registries: ${{ inputs.registries || inputs.registry || 'github' }}
+          publish-command: ${{ inputs.publish-command }}
+          dry-run: ${{ inputs.dry-run }}
+          version: ${{ inputs.version }}
+          token: ${{ secrets.PUBLISH_TOKEN }}
+          npm-token: ${{ secrets.NPM_TOKEN }}
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN || github.token }}
+          pypi-token: ${{ secrets.PYPI_TOKEN }}
+          nuget-token: ${{ secrets.NUGET_TOKEN }}
