@@ -1,47 +1,89 @@
-# 🚀 Reusable Actions — CI, Auto PR & Semantic Release
+<div id="top" align="center">
+  <h1>🚀 Reusable Actions — CI/CD Sem Boilerplate no GitHub Actions <a href="https://navto.me/heliomarpm" target="_blank"><img src="https://navto.me/assets/navigatetome-brand.png" width="32"/></a></h1>
 
-Conjunto de GitHub Actions (Reusable Workflows e Composite Actions) para padronizar CI, cobertura, promoção de código e releases automatizados, com suporte a múltiplas stacks e foco em escalabilidade.
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF.svg?logo=githubactions&logoColor=white)](https://github.com/features/actions)
+  [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
+  [![Node.js](https://img.shields.io/badge/Node.js-18%20|%2020%20|%2022-brightgreen.svg?logo=node.js)](https://nodejs.org)
+  [![PHP](https://img.shields.io/badge/PHP-8.1%20|%208.2%20|%208.3-8892BF.svg?logo=php&logoColor=white)](https://php.net)
+
+
+  <div class="badges">
+
+  [![GitHub Sponsors][url-github-sponsors-badge]][url-github-sponsors]
+  [![PayPal][url-paypal-badge]][url-paypal]
+  [![Ko-fi][url-kofi-badge]][url-kofi]
+  [![Liberapay][url-liberapay-badge]][url-liberapay]
+    
+  </div>
+</div>
+
+**Reusable Actions** é um conjunto opinativo de **Reusable Workflows** e **Composite Actions** projetado para padronizar e acelerar esteiras de integração contínua (CI), controle de qualidade, promoção automática de branches e releases no GitHub Actions.
+
+Com apenas algumas linhas de YAML, qualquer repositório herda:
+- 🧪 **Quality Gate determinístico**: execução de testes e validação rigorosa de cobertura mínima.
+- 🔀 **Promoção Automática de Branches (Auto PR)**: suporte nativo a estratégias **Trunk-Based**, **Develop** e **GitFlow** (com suporte a hotfixes emergenciais).
+- 🏷️ **Releases e Changelog Automatizados**: versionamento semântico determinístico com zero dependências externas.
+- 📦 **Publicação Multi-Registry**: publicação simultânea de pacotes para múltiplos registries (ex: `npm` e `GitHub Packages` no mesmo ciclo).
 
 ## 🧠 Filosofia
 
 > "Automação sem disciplina cria caos. \
 > Disciplina sem automação não escala."
 
-Este projeto foi reestruturado (ADR-002) para oferecer dois níveis de uso:
-- **Nível Quick**: Reusable Workflows prontos que orquestram o pipeline inteiro.
-- **Nível Custom**: Composite Actions granulares (blocos atômicos) para montar seu próprio pipeline.
+---
 
-## 🎯 Objetivos
+## 📣 Por que isso existe
 
-- Reduzir boilerplate em pipelines
-- Padronizar versionamento com `semantic-release`
-- Garantir qualidade mínima com **STRICT MODE** e **Quality Gate**
-- Permitir evolução por stack sem acoplamento (PHP, Node.js implementados)
-- Estratégias de promoção de branch claras (`trunk`, `develop`, `gitflow`)
+A maioria dos repositórios começa simples e gradualmente acumula complexidade operacional:
+
+- Pipelines de CI inconsistentes
+- Releases manuais
+- Versionamento não confiável
+- Regras de promoção de branches pouco claras
+- Verificações de qualidade aplicadas tardiamente
+
+Grandes empresas resolvem isso com equipes de engenharia de plataforma.
+
+Equipes pequenas e desenvolvedores individuais geralmente não conseguem.
+
+Este projeto codifica um modelo mínimo de engenharia de plataforma em fluxos de trabalho reutilizáveis para que cada repositório possa começar com práticas de engenharia previsíveis desde o primeiro dia.
+
+### O que este projeto é
+
+Uma plataforma de fluxo de trabalho reutilizável que fornece:
+
+- Releases determinísticos
+- Controles de qualidade rigorosos
+- Estratégia de promoção consistente
+- Governança de commits convencional
+- Execução agnóstica à stack de tecnologias
+
+Você adiciona fluxos de trabalho.
+
+Você herda a disciplina de engenharia.
 
 ---
 
-## 🏗 Estratégias de Promoção e Fluxo de Branches
+## O que este projeto NÃO é
 
-A action de promoção (`cd-pull-request.yml`) suporta três estratégias consolidadas para controle do seu fluxo de código. Você escolhe a estratégia através do input `strategy`.
+- um kit de ferramentas de CI genérico
+- um repositório de modelos
+- um framework DevOps completo
+- pipelines infinitamente configuráveis
 
-| Estratégia | Fluxo | Quando promove automaticamente |
-| :--- | :--- | :--- |
-| **`trunk`** | `feature/**` → `main` | Imediatamente (sempre) |
-| **`develop`** | `feature/**` → `develop` → `main` | Apenas quando detecta nova versão via Semantic Release |
-| **`gitflow`** | `feature/**` → `develop` → `release-x.y.z` → `main` | Apenas quando detecta nova versão via Semantic Release |
+O projeto é intencionalmente opinativo.
 
-### 🔥 Hotfix (O Override Controlado)
+Os valores padrão fazem parte do seu valor.
 
-Branches prefixadas com `hotfix/*` são a exceção arquitetural controlada. Elas ignoram a estratégia atual e **sempre abrem PR diretamente para a branch principal (`main`)**. Isso garante velocidade e segurança na resposta a incidentes de produção, sem passar pela branch de desenvolvimento.
+--- 
 
----
+## ⚡ Quick Start em 3 Minutos
 
-## 📦 Workflows Disponíveis (Modo Quick)
+Para habilitar a esteira completa no seu repositório consumidor, crie os três arquivos abaixo na pasta `.github/workflows/`:
 
-### 1️⃣ CI — Quality Gate (Testes e Cobertura)
-
-Este workflow detecta a stack do seu projeto, configura o runtime, executa os testes e normaliza a cobertura, atuando como o **Juiz Único** da qualidade do código.
+### 1. `.github/workflows/ci.yml` — Validação de Qualidade
+Executa testes e calcula a cobertura a cada commit enviado:
 
 ```yaml
 name: "1. Quality Assurance"
@@ -54,100 +96,41 @@ jobs:
   qa:
     uses: heliomarpm/reusable-actions/.github/workflows/ci-quality-gate.yml@main
     with:
-      coverage-min: 85
-      coverage-mode: block # 'block' falha o job se cobertura < 85%. 'info' apenas emite alertas. 'decrease' falha se cobertura diminuir desde o ultimo merge
+      coverage-min: 80
+      coverage-mode: block # 'block' falha o job se cobertura < 80%. 'info' apenas emite alertas.
 ```
 
-**Inputs principais:** `stack`, `project-path`, `coverage-min` (padrão: 80), `coverage-mode` (`info` | `block` | `decrease`).
-
----
-
-### 2️⃣ CD — Promoção Automática de Branches (Auto PR)
-
-Orquestra a estratégia escolhida (`trunk`, `develop` ou `gitflow`) e cria ou atualiza o Pull Request automaticamente.
-
-> 💡 **Single Source of Truth (SSOT):** O Auto PR **não** requer parâmetros de cobertura (`min-coverage` ou `coverage-mode`). Ele consome automaticamente o laudo já avaliado pelo Quality Gate, aplicando as labels (`coverage-passed`, `coverage-failed`) e formatando a tabela no corpo do PR!
+### 2. `.github/workflows/auto-pr.yml` — Promoção Automática
+Disparado assim que o CI é concluído com sucesso, abrindo ou atualizando o Pull Request de acordo com o fluxo do seu time:
 
 ```yaml
 name: "2. Auto PR"
+run-name: "🔀 Auto PR: ${{ github.event.workflow_run.head_branch }} → ${{ github.event.workflow_run.head_branch == 'develop' && 'main' || 'develop' }}"
 
 on:
   workflow_run:
     workflows: ["1. Quality Assurance"]
-    types:
-      - completed
+    types: [completed]
 
 jobs:
   promote:
-    # ⚠️ IMPORTANTE: Garante que a PR SÓ será aberta se o Quality Assurance PASSOU!
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     uses: heliomarpm/reusable-actions/.github/workflows/cd-pull-request.yml@main
     with:
-      strategy: develop # trunk | develop | gitflow
-      # Opcional: Customização do título e corpo do PR
-      # pr-title: "🔀 PR ({{yyyy-MM-dd}}): {{HEAD_BRANCH}} → {{BASE_BRANCH}}"
-      # pr-body-path: ".github/custom-pr-template.md"
-      # pr-body: "Texto inline com {{QUALITY_GATE_RESULT}}"
+      strategy: develop # Opções: trunk | develop | gitflow
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
----
-
-### 🛡️ Como Funciona o Bloqueio por Cobertura Mínima
-
-O controle de qualidade segue o princípio de **separação de responsabilidades**:
-
-```
-[ Push no Código ]
-       │
-       ▼
-┌─────────────────────────────────┐
-│     1. Quality Assurance        │
-│                                 │
-│  • Executa testes unitários     │
-│  • Calcula cobertura (ex: 78%)  │
-│  • coverage-min: 85             │
-│  • coverage-mode: block         │
-└────────────────┬────────────────┘
-                 │
-       ┌─────────┴─────────┐
-       │ Cobertura < 85%?  │
-       └─────────┬─────────┘
-                 │
-        ┌────────┴────────┐
-        │                 │
-     Sim (FALHA)       Não (SUCESSO)
-        │                 │
-        ▼                 ▼
- 🚫 Job Cancelado   ✅ Dispara: 2. Auto PR
- (PR NUNCA abre!)   (Abre PR com tabela de métricas)
-```
-
-1. **Modo `block` no Quality Gate:**  
-   Se você definir `coverage-mode: block` no CI e a cobertura ficar abaixo de `coverage-min`, o job do CI **falha com erro vermelho**.
-2. **Condição no Auto PR:**  
-   Como o workflow de PR contém a cláusula:
-   ```yaml
-   if: ${{ github.event.workflow_run.conclusion == 'success' }}
-   ```
-   Ele **não é executado** caso o CI tenha falhado. A criação do Pull Request é bloqueada logo na entrada!
-3. **Modo `info` (Informativo):**  
-   Se usar `coverage-mode: info`, o CI sempre passará com sucesso. O PR será aberto normalmente, mas exibirá o status `failed` e a etiqueta vermelha `coverage-failed` como feedback visual para os revisores.
-
----
-
-### 3️⃣ CD — Release (Nativo / Zero-Dependency)
-
-Workflow universal, leve e rápido (< 2s) para criação de Git Tag, GitHub Release e atualização do `CHANGELOG.md` sem necessidade de Node.js, `npm install` ou arquivos de manifesto:
+### 3. `.github/workflows/release.yml` — Criação da Release
+Gera a Git Tag, notas categorizadas e atualiza o `CHANGELOG.md` automaticamente ao integrar na branch principal:
 
 ```yaml
 name: "3. Release"
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths-ignore:
       - 'CHANGELOG.md'
 
@@ -155,42 +138,131 @@ jobs:
   release:
     uses: heliomarpm/reusable-actions/.github/workflows/cd-release.yml@main
     with:
-      enable-changelog: true                  # Opcional (default: true): atualiza o CHANGELOG.md
-      version-format: "v%major.%minor.%patch" # Opcional: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd"
+      enable-changelog: true
+      version-format: "v%major.%minor.%patch"
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
 
-### 4️⃣ CD — Semantic Release (Stack-Aware & Package Registry)
+## ⚙️ Pré-requisitos & Permissões no GitHub
 
-Para projetos que necessitam do ecossistema completo de plugins do `semantic-release` (publicação de pacotes em registries como npm, Maven, etc., ou suporte multi-linguagem):
+Para que o GitHub Actions possa criar Pull Requests e enviar tags/releases automaticamente, configure as permissões no repositório consumidor:
+
+1. Acesse **Settings > Actions > General > Workflow permissions**.
+2. Selecione **Read and write permissions**.
+3. Marque a caixa **Allow GitHub Actions to create and approve pull requests**.
+4. Clique em **Save**.
+
+---
+
+## 🏗️ Estratégias de Promoção de Branches
+
+O workflow `cd-pull-request.yml` gerencia o ciclo de vida dos Pull Requests de acordo com a estratégia informada no input `strategy`:
+
+| Estratégia | Fluxo de Promoção | Quando abre o PR de Release |
+| :--- | :--- | :--- |
+| **`trunk`** | `feature/**` → `main` | Imediatamente a cada push aprovado no CI |
+| **`develop`** | `feature/**` → `develop` → `main` | Apenas quando há commits que alteram a versão |
+| **`gitflow`** | `feature/**` → `develop` → `release-x.y.z` → `main` | Apenas quando há commits que alteram a versão |
+| **`hotfix`** | `hotfix/**` → `main` | Sempre (override imediato para correção emergencial) |
+
+### 🔥 Hotfix (O Override Controlado)
+Branches prefixadas com `hotfix/*` são tratadas como exceção arquitetural controlada: **sempre abrem PR diretamente para a branch principal (`main`)**, ignorando a branch de desenvolvimento para garantir correção imediata de incidentes em produção.
+
+---
+
+## 📦 Catálogo de Reusable Workflows
+
+### 1️⃣ CI — Quality Gate (`ci-quality-gate.yml`)
+
+Detecta automaticamente a tecnologia do projeto, instala o runtime, roda os testes e avalia a cobertura de código.
 
 ```yaml
-name: "3. Semantic Release"
+jobs:
+  qa:
+    uses: heliomarpm/reusable-actions/.github/workflows/ci-quality-gate.yml@main
+    with:
+      stack: ''            # Opcional: 'node' ou 'php' (vazio = auto-detect)
+      project-path: '.'     # Opcional: caminho do código (para monorepos/subpastas)
+      coverage-min: 80     # Porcentagem mínima de cobertura exigida
+      coverage-mode: block # 'block' (falha o job) | 'info' (alerta) | 'decrease' (bloqueia queda)
+```
 
-on:
-  push:
-    branches:
-      - main
+#### 🛡️ Modos de Avaliação do Quality Gate:
+- **`block`**: Se a cobertura ficar abaixo de `coverage-min`, o job falha com erro vermelho. Como o Auto PR depende do sucesso do CI, o PR **não é aberto**.
+- **`info`**: O CI sempre conclui com sucesso, mas anexa a etiqueta vermelha `coverage-failed` e a tabela detalhada de cobertura no PR para os revisores.
+- **`decrease`**: Compara com a cobertura da branch de destino e impede regressões.
 
+---
+
+### 2️⃣ CD — Promoção Automática de Branches (`cd-pull-request.yml`)
+
+Abre ou atualiza Pull Requests automaticamente, injetando o laudo de cobertura e métricas diretamente no corpo do PR.
+
+```yaml
+jobs:
+  promote:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    uses: heliomarpm/reusable-actions/.github/workflows/cd-pull-request.yml@main
+    with:
+      strategy: develop                    # trunk | develop | gitflow
+      main-branch: 'main'                  # Nome da branch principal
+      develop-branch: 'develop'            # Nome da branch de integração
+      prefix-release-branch: 'release-'    # Prefixo usado no GitFlow (ex: release-1.2.0)
+      pr-title: '🔀 PR ({{yyyy-MM-dd}}): {{HEAD_BRANCH}} → {{BASE_BRANCH}}'
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+> [!TIP]
+> **Título Personalizado na Aba Actions (`run-name`):**  
+> Para exibir exatamente as branches de origem e destino na lista de execuções do GitHub Actions:
+> ```yaml
+> run-name: "🔀 Auto PR: ${{ github.event.workflow_run.head_branch }} → ${{ github.event.workflow_run.head_branch == 'develop' && 'main' || 'develop' }}"
+> ```
+
+---
+
+### 3️⃣ CD — Release Nativa & Zero-Dependency (`cd-release.yml`)
+
+Engine ultra-rápida (< 2 segundos) para criação de **Git Tag**, **GitHub Release** e atualização opcional do `CHANGELOG.md` sem necessidade de Node.js, `npm install` ou ferramentas externas:
+
+```yaml
+jobs:
+  release:
+    uses: heliomarpm/reusable-actions/.github/workflows/cd-release.yml@main
+    with:
+      enable-changelog: true                  # Opcional (default: true): atualiza o CHANGELOG.md
+      version-format: "v%major.%minor.%patch" # Opcional: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd"
+      changelog-file: "CHANGELOG.md"          # Caminho do arquivo de changelog
+      commit-changelog: true                  # Fazer commit e push do CHANGELOG.md
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+---
+
+### 4️⃣ CD — Semantic Release (`cd-semantic-release.yml`)
+
+Para projetos que necessitam do ecossistema de plugins do `semantic-release` (análise avançada de commits, plugins npm, etc.):
+
+```yaml
 jobs:
   release:
     uses: heliomarpm/reusable-actions/.github/workflows/cd-semantic-release.yml@main
     with:
-      project-path: '.' # Opcional: subpasta onde está o código
+      project-path: '.' # Subpasta onde está o package.json (opcional)
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
 
-### 5️⃣ CD — Publish (Multi-Registry & Agnóstico)
+### 5️⃣ CD — Publish Multi-Registry (`cd-publish.yml`)
 
-Publicação automatizada de pacotes de código para um ou **múltiplos registries simultâneos** (ex: `npm` e `github` ao mesmo tempo), com suporte a Node.js, PHP, comandos customizados e modo de simulação (`dry-run`).
-
-O repositório consumidor decide livremente o gatilho (ao publicar uma GitHub Release, encadeado após o workflow de release, ou manual):
+Publicação automatizada e agnóstica de pacotes para **um ou múltiplos registries simultâneos**, com suporte a Node.js (`npm`), PHP (`Packagist`) ou comandos customizados:
 
 ```yaml
 name: "4. Publish"
@@ -199,37 +271,59 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      dry-run:
+        type: boolean
+        default: false
 
 jobs:
   publish:
     uses: heliomarpm/reusable-actions/.github/workflows/cd-publish.yml@main
     with:
-      # Suporta múltiplos registries separados por vírgula!
-      registries: 'npm, github'
-      # dry-run: false
+      registries: 'npm, github' # Publica no npmjs.org e no GitHub Packages ao mesmo tempo!
+      dry-run: ${{ inputs.dry-run || false }}
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 ```
 
 ---
 
-## 🔧 Composite Actions (Modo Custom)
+## 🔒 Conventional Commits & Impacto nas Releases
 
-Se você preferir construir seu próprio fluxo, este repositório exporta as ações unitárias (localizadas na pasta `/actions/`):
+O versionamento segue a especificação de [Conventional Commits](https://www.conventionalcommits.org/):
 
-- `heliomarpm/reusable-actions/actions/detect-stack@main`
-- `heliomarpm/reusable-actions/actions/setup-runtime@main`
-- `heliomarpm/reusable-actions/actions/run-tests@main`
-- `heliomarpm/reusable-actions/actions/run-coverage@main`
-- `heliomarpm/reusable-actions/actions/semantic-release@main`
-- `heliomarpm/reusable-actions/actions/changelog@main`
-- `heliomarpm/reusable-actions/actions/release@main`
-- `heliomarpm/reusable-actions/actions/create-pr@main`
-- `heliomarpm/reusable-actions/actions/publish@main`
+| Prefixo do Commit | Dispara Nova Release? | Impacto no SemVer | Exemplo |
+| :--- | :---: | :---: | :--- |
+| `feat:` | ✅ **Sim** | `minor` | `1.0.0` → `1.1.0` |
+| `fix:` | ✅ **Sim** | `patch` | `1.0.0` → `1.0.1` |
+| `perf:` | ✅ **Sim** | `patch` | `1.0.0` → `1.0.1` |
+| `feat!:`, `refactor!:` ou `BREAKING CHANGE:` | ✅ **Sim** | `major` | `1.0.0` → `2.0.0` |
+| `docs:` | ❌ Não | *(Nenhum)* | Apenas documentação |
+| `chore:` | ❌ Não | *(Nenhum)* | Manutenção e dependências |
+| `ci:` | ❌ Não | *(Nenhum)* | Ajustes de pipeline |
+| `test:` | ❌ Não | *(Nenhum)* | Criação ou ajuste de testes |
+| `refactor:` | ❌ Não | *(Nenhum)* | Refatoração interna sem quebra |
 
-**Exemplo Prático (Custom Pipeline):**
+---
+
+## 🔧 Composite Actions (Pipelines Customizados)
+
+Se preferir montar seu próprio workflow passo a passo, utilize as ações atômicas da pasta `/actions`:
+
+| Action | Descrição |
+| :--- | :--- |
+| `heliomarpm/reusable-actions/actions/detect-stack@main` | Identifica a tecnologia do projeto (`node`, `php`, etc.). |
+| `heliomarpm/reusable-actions/actions/setup-runtime@main` | Configura versão e cache de dependências. |
+| `heliomarpm/reusable-actions/actions/run-tests@main` | Executa a suíte de testes unitários da stack. |
+| `heliomarpm/reusable-actions/actions/run-coverage@main` | Normaliza relatório de cobertura e valida metas mínimas. |
+| `heliomarpm/reusable-actions/actions/changelog@main` | Gera e comita exclusivamente o arquivo `CHANGELOG.md`. |
+| `heliomarpm/reusable-actions/actions/release@main` | Cria a Git Tag e publica a release oficial no GitHub. |
+| `heliomarpm/reusable-actions/actions/create-pr@main` | Cria ou atualiza Pull Requests via GitHub CLI. |
+| `heliomarpm/reusable-actions/actions/publish@main` | Publica artefatos em um ou múltiplos registries. |
+| `heliomarpm/reusable-actions/actions/semantic-release@main` | Wrapper otimizado para o runner do Semantic Release. |
+
+### Exemplo de Uso Customizado:
 ```yaml
 jobs:
   custom-ci:
@@ -248,74 +342,77 @@ jobs:
           coverage-mode: block
 ```
 
-### 📝 Action de Changelog Nativa (`actions/changelog`)
-
-A action `actions/changelog` é uma engine leve e **zero-dependency** (100% Bash nativo + `git log`), focada **exclusivamente na geração e manutenção do arquivo de changelog**:
-
-* **Ciclo de vida `[Unreleased]`:** Em branches como `develop`, agrupa os Conventional Commits sob `## [Unreleased]`. A seção é sempre única e atualizada atomicamente a cada push.
-* **Promoção para Versão:** Ao integrar na `main`/`master`, `[Unreleased]` passa a ser uma versão definitiva.
-* **Template de Versão Flexível (`version-format`):** Suporta qualquer combinação de tokens SemVer (`%major`, `%minor`, `%patch`) e data (`%YYYY`, `%YY`, `%mm`, `%m`, `%dd`, `%d`). Ex: `"v%major.%minor.%patch"`, `"%YYYY-%mm-%dd"` ou `"%YYYY.%mm.%patch"`.
-* **Persistência Automática (`commit-changelog`):** Faz commit e push das alterações no `CHANGELOG.md` por padrão (`true`).
-
-```yaml
-- name: 📝 Update Changelog
-  uses: heliomarpm/reusable-actions/actions/changelog@main
-  with:
-    changelog-file: 'CHANGELOG.md'
-    commit-changelog: true
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### 🚀 Action de Release Nativa (`actions/release`)
-
-A action `actions/release` é responsável **exclusivamente pela criação da Git Tag e da GitHub Release**:
-
-* **Detecção Automática:** Identifica se há alterações relevantes desde a última release/tag.
-* **Cálculo SemVer Automático ou Explícito:** Determina a versão com base nos Conventional Commits (`feat`, `fix`, breaking changes) ou utiliza a versão repassada pelo changelog.
-* **GitHub Release com Notas:** Publica a release via GitHub CLI com as notas categorizadas.
-
-```yaml
-- name: 🚀 Create Git Tag & GitHub Release
-  uses: heliomarpm/reusable-actions/actions/release@main
-  with:
-    version-format: 'v%major.%minor.%patch'
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-```
-
----
-
-## 🔒 STRICT MODE — Commits Convencionais
-
-Opção habilitada por padrão (`strict_conventional_commits: true`).
-Ela **bloqueia as releases** silenciosamente erradas, forçando que todos os commits promovidos para a master sigam o padrão *Conventional Commits*. 
-Isso adiciona Annotations visíveis no GitHub e orienta o time com um Summary rico, caso haja erros no padrão.
-
 ---
 
 ## 🧱 Stacks Suportadas
 
-- ✅ Node.js (Suporte a Jest/Vitest, NPM/Yarn/PNPM)
-- ✅ PHP (Suporte a PHPUnit/Pest, Cobertura em Clover)
-- 🚧 .NET (Prioridade futura)
-- 🚧 Python (Prioridade futura)
-- 🚧 Go (Prioridade futura)
-
-Cada stack isola seus próprios scripts de dependência em `scripts/plugins/<stack>`, sendo chamadas automaticamente pelas Actions com base no repositório consumidor.
+| Stack | Detecção Automática | Ferramentas Suportadas | Cobertura |
+| :--- | :--- | :--- | :--- |
+| **Node.js** | `package.json` | Jest, Vitest, NPM, Yarn, PNPM | LCOV (`lcov.info`) |
+| **PHP** | `composer.json` | PHPUnit, Pest, Composer | Clover XML (`clover.xml`) |
+| **.NET / C#** | `*.csproj`, `*.sln` | *Em desenvolvimento* | OpenCover / Cobertura |
+| **Python** | `pyproject.toml`, `requirements.txt` | *Em desenvolvimento* | Coverage.py |
+| **Go** | `go.mod` | *Em desenvolvimento* | Go Cover |
 
 ---
 
-## 📝 Contribuições e Roadmap
+## 📚 Documentação Técnica Interna & Agentes
 
-- O projeto está em fase `main` e será promovido para versão `v1` assim que a fase de testes internos terminar.
-- Veja nosso [TODO.md](TODO.md) para o roadmap.
-- Veja os Arquivos [ADR](docs/adrs) para o histórico de decisões da arquitetura.
+Para detalhes técnicos avançados, funcionamento dos parsers em Bash, tratamento de escopo no GitHub Packages e referências de arquitetura (ADRs), consulte a documentação dedicada:
+- 📖 [Arquitetura Interna & Guias de Mantenedores](.agents/ARCHITECTURE.md)
+- 🤖 [Contexto para Agentes de IA](.agents/CONTEXT.md)
+- 📐 [Architecture Decision Records (ADRs)](docs/adrs)
 
-### ❤️ Apoie este projeto
+---
 
-Se este projeto lhe foi útil de alguma forma:
-⭐ Adicione o repositório aos seus favoritos \
-🐞 Reporte erros \
-💵 [Apoie no GitHub Sponsors](https://github.com/sponsors/heliomarpm)
+## 🤝 Contribuições & Suporte
+
+- Quer contribuir com uma nova stack ou melhoria? Veja nosso [Guia de Contribuição](docs/CONTRIBUTING.md).
+- Precisa de ajuda ou encontrou um problema? Consulte nosso [Suporte](docs/SUPPORT.md) ou abra uma [Issue](https://github.com/heliomarpm/reusable-actions/issues).
+- Leia o [Código de Conduta](docs/CODE_OF_CONDUCT.md).
+
+Obrigado a todos que já contribuíram para o projeto!
+
+<a href="https://github.com/heliomarpm/reusable-actions/graphs/contributors" target="_blank">
+<img src="https://contrib.nn.ci/api?repo=heliomarpm/reusable-actions&no_bot=true" />
+</a>
+
+###### Criado com [contrib.nn](https://contrib.nn.ci/?repo=heliomarpm/reusable-actions&no_bot=true).
+
+Dito isso, existem várias maneiras de contribuir para este projeto, como:
+
+⭐ Marcando o repositório com uma estrela (star) \
+🐞 Relatando bugs \
+💡 Sugerindo funcionalidades \
+🧾 Melhorando a documentação \
+📢 Compartilhando este projeto e recomendando-o aos seus amigos
+
+## 💵 Apoie o Projeto
+
+Se você gosta do projeto, considere fazer uma doação ao desenvolvedor via GitHub Sponsors, Ko-fi, PayPal ou Liberapay — a escolha é sua. 😉
+
+<div class="badges">
+
+  [![GitHub Sponsors][url-github-sponsors-badge]][url-github-sponsors]
+  [![PayPal][url-paypal-badge]][url-paypal]
+  [![Ko-fi][url-kofi-badge]][url-kofi]
+  [![Liberapay][url-liberapay-badge]][url-liberapay]
+
+</div>
 
 ## 📝 Licença
-[MIT © Heliomar P. Marques](LICENSE)
+
+Distribuído sob a licença [MIT](LICENSE) © [Heliomar P. Marques](https://github.com/heliomarpm). <a href="#top">🔝</a>
+
+
+----
+<!-- Sponsor badges -->
+[url-github-sponsors-badge]: https://img.shields.io/badge/GitHub%20-Sponsor-1C1E26?style=for-the-badge&labelColor=1C1E26&color=db61a2
+[url-github-sponsors]: https://github.com/sponsors/heliomarpm
+[url-paypal-badge]: https://img.shields.io/badge/donate%20on-paypal-1C1E26?style=for-the-badge&labelColor=1C1E26&color=0475fe
+[url-paypal]: https://bit.ly/paypal-sponsor-heliomarpm
+[url-kofi-badge]: https://img.shields.io/badge/kofi-1C1E26?style=for-the-badge&labelColor=1C1E26&color=ff5f5f
+[url-kofi]: https://ko-fi.com/heliomarpm
+[url-liberapay-badge]: https://img.shields.io/badge/liberapay-1C1E26?style=for-the-badge&labelColor=1C1E26&color=f6c915
+[url-liberapay]: https://liberapay.com/heliomarpm
+
