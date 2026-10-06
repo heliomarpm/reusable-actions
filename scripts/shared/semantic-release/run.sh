@@ -58,7 +58,9 @@ else
 fi
 STRICT_TEMPLATE="$REUSABLE_PATH/templates/strict-mode-error.md"
 
-bash "$REUSABLE_PATH/scripts/shared/semantic-release/install.sh"
+if [[ "${SKIP_TOOLCHAIN_INSTALL:-false}" != "true" ]]; then
+  bash "$REUSABLE_PATH/scripts/shared/semantic-release/install.sh"
+fi
 
 # ------------------------------------------------------------
 # Build semantic-release command
@@ -144,7 +146,7 @@ strict_mode() {
     {
       echo "# 🚫 Release bloqueada por STRICT MODE"
       echo ""
-      echo "**Repositório:** \`$GITHUB_REPOSITORY\`"
+      echo "**Repositório:** \`${GITHUB_REPOSITORY:-unknown}\`"
       echo "**Branch:** \`${GITHUB_REF_NAME:-unknown}\`"
       echo ""
       echo "❌ Os seguintes commits **não seguem** a especificação Conventional Commits:"
@@ -343,5 +345,7 @@ EOF
   trap - EXIT
 }
 
-run
-log "🎉 Done."
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  run
+  log "🎉 Done."
+fi

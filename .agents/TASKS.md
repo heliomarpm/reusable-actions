@@ -1,7 +1,7 @@
 # 📋 Project Tasks & Execution Backlog
 
 > **Status Geral**: 🟢 Em Evolução  
-> **Progresso**: 5/11 tarefas concluídas (45%)  
+> **Progresso**: 6/11 tarefas concluídas (55%)  
 > **Última Atualização**: 2026-10-06  
 > **Arquivo**: [TASKS.md](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/.agents/TASKS.md)
 
@@ -14,21 +14,7 @@ Consolidar a estabilidade do Core da biblioteca através de testes automatizados
 
 ## 🚀 1. Em Progresso (WIP - Limite: 2 tarefas)
 
-- [/] **T-001: Criar suíte de testes automatizados para scripts Bash com `bats-core`**
-  - **Ref**: [scripts/shared/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared)
-  - **Critérios de Aceite**:
-    - [ ] Configurar runner do Bats no workflow de CI do repositório
-    - [ ] Testar helpers e template rendering em [shell-helpers.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/shell-helpers.sh)
-    - [ ] Testar parser de commits e delimitadores ASCII em [changelog/run.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/changelog/run.sh)
-    - [ ] Testar cálculo SemVer, pré-releases (RC) e bumps em [release/run.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/release/run.sh)
-    - [ ] Testar validação estrita de commits em [semantic-release/run.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/semantic-release/run.sh)
-
----
-
-## 📋 2. Backlog de Tarefas Prioritárias
-
-### Fase 1: Confiabilidade do Core & Validação E2E (Fechamento da v1.0.0)
-- [ ] **T-002: Validar fluxo E2E no repositório de teste consumidor (`reusable-actions-test-node`)**
+- [/] **T-002: Validar fluxo E2E no repositório de teste consumidor (`reusable-actions-test-node`)**
   - **Ref**: [README.md](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/README.md)
   - **Critérios de Aceite**:
     - [ ] Validar cadeia GitFlow completa: `feature` → `develop` → `release-*` (com RC) → `main`
@@ -36,6 +22,11 @@ Consolidar a estabilidade do Core da biblioteca através de testes automatizados
     - [ ] Validar commits convencionais sem release (`ci:`, `chore:`, `docs:`) concluindo com sucesso verde
     - [ ] Documentar repositório de demonstração oficial no README principal
 
+---
+
+## 📋 2. Backlog de Tarefas Prioritárias
+
+### Fase 1: Confiabilidade do Core & Validação E2E (Fechamento da v1.0.0)
 - [ ] **T-003: Lançamento oficial da versão estável v1.0.0**
   - **Ref**: [cd-release.yml](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/.github/workflows/cd-release.yml)
   - **Critérios de Aceite**:
@@ -83,6 +74,10 @@ Consolidar a estabilidade do Core da biblioteca através de testes automatizados
 ---
 
 ## ✅ 4. Concluído Recentemente
+
+- [x] **T-001: Suíte de testes automatizados para scripts Bash com `bats-core`** *(Concluído em 2026-10-06)*
+  - **Ref**: [tests/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/tests), [.github/workflows/ci.yml](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/.github/workflows/ci.yml)
+  - 28 testes cobrindo `shell-helpers`, `changelog`, `release`, `semantic-release` (strict mode) e `detect-stack`.
 
 - [x] **T-C01: Separação de responsabilidades de Changelog e Release** *(Concluído em 2026-10-06)*
   - **Ref**: [actions/changelog/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/actions/changelog), [actions/release/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/actions/release)

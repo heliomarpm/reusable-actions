@@ -1,0 +1,28 @@
+name: CI - Shell Test Suite
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-scripts:
+    name: 🧪 Run Bats Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📌 Checkout repository
+        uses: actions/checkout@v7
+
+      - name: 🧪 Execute Bats tests
+        run: |
+          chmod +x tests/run.sh
+          bash tests/run.sh
