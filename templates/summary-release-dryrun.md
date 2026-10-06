@@ -1,6 +1,6 @@
 ## 🧪 Simulação de Release (Dry Run)
 
-| Detalhe | Informação |
+|      |      |
 | :--- | :--- |
 | **Status** | 🧪 **Simulação (Dry Run ativado)** |
 | **Próxima Versão Prevista** | `{{NEXT_TAG}}` |

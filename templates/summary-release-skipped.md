@@ -1,6 +1,6 @@
 ## ℹ️ Nenhuma Nova Release Publicada
 
-| Detalhe | Informação |
+|      |      |
 | :--- | :--- |
 | **Status** | ⚪ **Ignorado (Sem alterações de versão)** |
 | **Última Versão Conhecida** | {{LAST_VERSION}} |

@@ -1,6 +1,6 @@
 ## ℹ️ Criação de Release Ignorada
 
-| Detalhe | Informação |
+|      |      |
 | :--- | :--- |
 | **Status** | ⚪ **Branch de Integração / Não-Release** |
 | **Branch Atual** | `{{CURRENT_BRANCH}}` |
