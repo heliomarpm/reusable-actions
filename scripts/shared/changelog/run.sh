@@ -699,7 +699,7 @@ fi
 # Job Summary para o GitHub Actions
 # ─────────────────────────────────────────────────────────────
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-  local CHANGELOG_NOTES=""
+  CHANGELOG_NOTES=""
   if [[ -s "$NOTES_FILE" ]]; then
     CHANGELOG_NOTES=$(cat <<EOF
 <details open><summary>📋 <strong>Visualizar Alterações Registradas (\`$RESOLVED_VERSION\`)</strong></summary>

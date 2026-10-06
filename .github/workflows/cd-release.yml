@@ -75,8 +75,13 @@ on:
         value: ${{ jobs.release.outputs.has-changes }}
 
 permissions:
-  contents: write
-
+  contents: write       # → permite criar e atualizar tags, commits e pushes no repositório.
+  issues: write         # (opcional) → se você quiser que o release crie comentários em issues.
+  pull-requests: write  # (opcional) → se quiser que o release comente em PRs.
+  checks: read          # (opcional) → se precisar ler check runs  
+  statuses: write       # (opcional) → se precisar criar e atualizar status checks  
+  actions: read         # (opcional) → se precisar ler action runs
+  
 jobs:
   release:
     name: 🚀 Release & Changelog

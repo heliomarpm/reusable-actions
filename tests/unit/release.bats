@@ -12,6 +12,9 @@ setup() {
   git init -b main >/dev/null 2>&1
   git config user.name "Tester"
   git config user.email "tester@example.com"
+
+  export GITHUB_STEP_SUMMARY="$TEST_TMPDIR/summary.md"
+  touch "$GITHUB_STEP_SUMMARY"
 }
 
 teardown() {
