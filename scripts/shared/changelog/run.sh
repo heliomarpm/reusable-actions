@@ -419,6 +419,14 @@ if [[ "$HAS_CHANGES" == "false" && "$MODE" != "develop" ]]; then
   echo "tag=" >> "${GITHUB_OUTPUT:-/dev/null}"
   echo "has_changes=false" >> "${GITHUB_OUTPUT:-/dev/null}"
   echo "release_notes=" >> "${GITHUB_OUTPUT:-/dev/null}"
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    append_template_to_summary "summary-changelog-skipped.md" \
+      CHANGELOG_FILE "$CHANGELOG_FILE" \
+      CURRENT_BRANCH "$CURRENT_BRANCH" \
+      MODE "$MODE" \
+      COMMITS_COUNT "$TOTAL_COMMITS" \
+      SINCE_LABEL "$SINCE_LABEL"
+  fi
   exit 0
 fi
 
@@ -636,23 +644,25 @@ fi
 # Job Summary para o GitHub Actions
 # ─────────────────────────────────────────────────────────────
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-  {
-    echo "## 📦 Changelog Engine"
-    echo ""
-    echo "- **Modo:** \`$MODE\`"
-    echo "- **Branch:** \`$CURRENT_BRANCH\`"
-    echo "- **Versão:** \`$RESOLVED_VERSION\`"
-    echo "- **Arquivo:** \`$CHANGELOG_FILE\`"
-    echo "- **Commits analisados:** $TOTAL_COMMITS"
-    echo ""
-    if [[ -s "$NOTES_FILE" ]]; then
-      echo "<details><summary>📋 <strong>Visualizar Alterações Registradas</strong></summary>"
-      echo ""
-      cat "$NOTES_FILE"
-      echo ""
-      echo "</details>"
-    fi
-  } >> "$GITHUB_STEP_SUMMARY"
+  local CHANGELOG_NOTES=""
+  if [[ -s "$NOTES_FILE" ]]; then
+    CHANGELOG_NOTES=$(cat <<EOF
+<details open><summary>📋 <strong>Visualizar Alterações Registradas (\`$RESOLVED_VERSION\`)</strong></summary>
+
+$(cat "$NOTES_FILE")
+
+</details>
+EOF
+)
+  fi
+
+  append_template_to_summary "summary-changelog.md" \
+    CHANGELOG_FILE "$CHANGELOG_FILE" \
+    VERSION "$RESOLVED_VERSION" \
+    MODE "$MODE" \
+    CURRENT_BRANCH "$CURRENT_BRANCH" \
+    COMMITS_COUNT "$TOTAL_COMMITS" \
+    CHANGELOG_NOTES "$CHANGELOG_NOTES"
 fi
 
 log "🎉 Changelog Action completed successfully!"

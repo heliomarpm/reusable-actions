@@ -165,6 +165,12 @@ if [[ "$MODE" != "release" && -z "$INPUT_VERSION" ]]; then
     echo "has_changes=false" >> "$GITHUB_OUTPUT"
     echo "release_notes=" >> "$GITHUB_OUTPUT"
   fi
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    append_template_to_summary "summary-release-develop.md" \
+      CURRENT_BRANCH "$CURRENT_BRANCH" \
+      RELEASE_BRANCHES "$RELEASE_BRANCHES" \
+      MODE "$MODE"
+  fi
   exit 0
 fi
 
@@ -377,6 +383,35 @@ if [[ "$HAS_CHANGES" == "false" && -z "$INPUT_VERSION" ]]; then
     echo "has_changes=false" >> "$GITHUB_OUTPUT"
     echo "release_notes=" >> "$GITHUB_OUTPUT"
   fi
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    local LAST_TAG_URL=""
+    if [[ -n "$REPO_URL" && -n "$LAST_TAG" ]]; then
+      LAST_TAG_URL="${REPO_URL}/releases/tag/${LAST_TAG}"
+    fi
+
+    local LAST_VERSION_CELL="_(Nenhuma tag anterior encontrada)_"
+    if [[ -n "$LAST_TAG_URL" ]]; then
+      LAST_VERSION_CELL="[**\`$LAST_TAG\`**]($LAST_TAG_URL)"
+    elif [[ -n "$LAST_TAG" ]]; then
+      LAST_VERSION_CELL="\`$LAST_TAG\`"
+    fi
+
+    local EXTRA_METADATA="| **Commits Analisados** | $TOTAL_COMMITS |"
+    local EXPLANATION
+    EXPLANATION=$(cat <<EOF
+Não foram identificados novos commits com impacto para gerar um release desde a tag \`${LAST_TAG:-inicial}\`.
+> 👉 Para gerar uma nova release, envie commits convencionais como \`feat:\` (minor) ou \`fix:\` (patch).
+EOF
+)
+
+    append_template_to_summary "summary-release-skipped.md" \
+      LAST_VERSION "$LAST_VERSION_CELL" \
+      CURRENT_BRANCH "$CURRENT_BRANCH" \
+      EXTRA_METADATA "$EXTRA_METADATA" \
+      REASON "Nenhuma alteração com impacto de versão encontrada desde $SINCE_LABEL." \
+      EXPLANATION "$EXPLANATION" \
+      LAST_TAG "${LAST_TAG:-inicial}"
+  fi
   exit 0
 fi
 
@@ -498,22 +533,82 @@ fi
 # Job Summary para o GitHub Actions
 # ─────────────────────────────────────────────────────────────
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-  {
-    echo "## 🚀 Release Engine"
-    echo ""
-    echo "- **Branch:** \`$CURRENT_BRANCH\`"
-    echo "- **Versão:** \`$RESOLVED_VERSION\`"
-    echo "- **Tag:** \`$RESOLVED_TAG\`"
-    echo "- **Commits analisados:** $TOTAL_COMMITS"
-    echo ""
-    if [[ -s "$NOTES_FILE" ]]; then
-      echo "<details><summary>📋 <strong>Notas da Release</strong></summary>"
-      echo ""
-      cat "$NOTES_FILE"
-      echo ""
-      echo "</details>"
+  RELEASE_URL=""
+  COMPARE_URL=""
+  LAST_TAG_URL=""
+  COMMIT_URL=""
+  COMMIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo '')"
+
+  if [[ -n "$REPO_URL" ]]; then
+    [[ -n "$RESOLVED_TAG" ]] && RELEASE_URL="${REPO_URL}/releases/tag/${RESOLVED_TAG}"
+    [[ -n "$LAST_TAG" ]] && LAST_TAG_URL="${REPO_URL}/releases/tag/${LAST_TAG}"
+    if [[ -n "$LAST_TAG" && -n "$RESOLVED_TAG" && "$LAST_TAG" != "$RESOLVED_TAG" ]]; then
+      COMPARE_URL="${REPO_URL}/compare/${LAST_TAG}...${RESOLVED_TAG}"
     fi
-  } >> "$GITHUB_STEP_SUMMARY"
+    [[ -n "$COMMIT_SHA" ]] && COMMIT_URL="${REPO_URL}/commit/${COMMIT_SHA}"
+  fi
+
+  BUMP_TYPE="patch"
+  if [[ "$HAS_BREAKING" == "true" ]]; then
+    BUMP_TYPE="major 💥"
+  elif [[ "$HAS_FEAT" == "true" ]]; then
+    BUMP_TYPE="minor 🚀"
+  elif [[ "$HAS_FIX" == "true" ]]; then
+    BUMP_TYPE="patch 🐛"
+  elif [[ -n "$INPUT_VERSION" ]]; then
+    BUMP_TYPE="manual / custom"
+  fi
+
+  local NEW_VERSION_CELL="\`$RESOLVED_TAG\`"
+  [[ -n "$RELEASE_URL" ]] && NEW_VERSION_CELL="[**\`$RESOLVED_TAG\`**]($RELEASE_URL)"
+
+  local LAST_VERSION_CELL="_(Primeira release)_"
+  if [[ -n "$LAST_TAG_URL" ]]; then
+    LAST_VERSION_CELL="[**\`$LAST_TAG\`**]($LAST_TAG_URL)"
+  elif [[ -n "$LAST_TAG" ]]; then
+    LAST_VERSION_CELL="\`$LAST_TAG\`"
+  fi
+
+  local COMMIT_CELL="\`$COMMIT_SHA\`"
+  [[ -n "$COMMIT_URL" ]] && COMMIT_CELL="[\`$COMMIT_SHA\`]($COMMIT_URL)"
+
+  local EXTRA_METADATA="| **Commits Analisados** | $TOTAL_COMMITS |"
+
+  local QUICK_LINKS=""
+  if [[ -n "$RELEASE_URL" || -n "$COMPARE_URL" ]]; then
+    local LNK_REL=""
+    local LNK_CMP=""
+    [[ -n "$RELEASE_URL" ]] && LNK_REL="- 📦 [Visualizar Release no GitHub]($RELEASE_URL)"
+    [[ -n "$COMPARE_URL" ]] && LNK_CMP="- 🔍 [Comparar Alterações com a Release Anterior (\`$LAST_TAG...$RESOLVED_TAG\`)]($COMPARE_URL)"
+    QUICK_LINKS=$(cat <<EOF
+### 🔗 Links Rápidos
+$LNK_REL
+$LNK_CMP
+EOF
+)
+  fi
+
+  local RELEASE_NOTES=""
+  if [[ -s "$NOTES_FILE" ]]; then
+    RELEASE_NOTES=$(cat <<EOF
+<details open><summary>📋 <strong>Notas da Release (\`$RESOLVED_TAG\`)</strong></summary>
+
+$(cat "$NOTES_FILE")
+
+</details>
+EOF
+)
+  fi
+
+  append_template_to_summary "summary-release-published.md" \
+    NEW_VERSION "$NEW_VERSION_CELL" \
+    LAST_VERSION "$LAST_VERSION_CELL" \
+    RELEASE_TYPE "$BUMP_TYPE" \
+    CURRENT_BRANCH "$CURRENT_BRANCH" \
+    COMMIT "$COMMIT_CELL" \
+    EXTRA_METADATA "$EXTRA_METADATA" \
+    QUICK_LINKS "$QUICK_LINKS" \
+    RELEASE_NOTES "$RELEASE_NOTES"
 fi
 
 log "🎉 Release Engine completed successfully!"

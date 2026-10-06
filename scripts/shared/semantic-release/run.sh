@@ -133,7 +133,157 @@ run() {
   fi
   
   log "🚀 Running: ${CMD[*]}"
-  "${CMD[@]}"
+
+  local RUN_LOG
+  RUN_LOG="$(mktemp)"
+  trap 'rm -f "$RUN_LOG"' EXIT
+
+  set +e
+  "${CMD[@]}" 2>&1 | tee "$RUN_LOG"
+  local CMD_EXIT="${PIPESTATUS[0]}"
+  set -e
+
+  # Se o comando falhou
+  if [[ "$CMD_EXIT" -ne 0 ]]; then
+    if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+      append_template_to_summary "summary-release-failed.md" \
+        REPOSITORY "${GITHUB_REPOSITORY:-unknown}" \
+        BRANCH "${GITHUB_REF_NAME:-unknown}" \
+        ENGINE "Semantic Release ($STACK)" \
+        EXIT_CODE "$CMD_EXIT"
+    fi
+    exit "$CMD_EXIT"
+  fi
+
+  # Extrai informações do log
+  local NEXT_VERSION=""
+  NEXT_VERSION="$(grep -Eo 'The next release version is [0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?|Published release [0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' "$RUN_LOG" | sed -E 's/.* (([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?))/\1/' | head -n1 || true)"
+  if [[ -z "$NEXT_VERSION" ]]; then
+    NEXT_VERSION="$(grep -Eo 'next release version is ([0-9]+\.[0-9]+\.[0-9]+)' "$RUN_LOG" | sed -E 's/.* ([0-9]+\.[0-9]+\.[0-9]+)/\1/' | head -n1 || true)"
+  fi
+
+  local LAST_VERSION=""
+  LAST_VERSION="$(grep -Eo 'Found git tag [^ ]+ associated with version [0-9]+\.[0-9]+\.[0-9]+' "$RUN_LOG" | sed -E 's/.* version ([0-9]+\.[0-9]+\.[0-9]+)/\1/' | head -n1 || true)"
+  if [[ -z "$LAST_VERSION" ]]; then
+    local LAST_TAG_RAW
+    LAST_TAG_RAW="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+    LAST_VERSION="${LAST_TAG_RAW#v}"
+  fi
+
+  local RELEASE_TYPE=""
+  RELEASE_TYPE="$(grep -Eo 'Analysis of [0-9]+ commits complete: ([a-z]+) release' "$RUN_LOG" | sed -E 's/.*: ([a-z]+) release/\1/' | head -n1 || true)"
+  RELEASE_TYPE="${RELEASE_TYPE:-patch}"
+
+  local REPO_URL="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}"
+  local COMMIT_SHA
+  COMMIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo '')"
+  local CURRENT_BRANCH="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'main')}"
+
+  local NEXT_TAG=""
+  local LAST_TAG=""
+  [[ -n "$NEXT_VERSION" ]] && NEXT_TAG="v$NEXT_VERSION"
+  [[ -n "$LAST_VERSION" ]] && LAST_TAG="v$LAST_VERSION"
+
+  local RELEASE_URL=""
+  local COMPARE_URL=""
+  local LAST_TAG_URL=""
+  local COMMIT_URL=""
+  if [[ -n "$REPO_URL" && -n "${GITHUB_REPOSITORY:-}" ]]; then
+    [[ -n "$NEXT_TAG" ]] && RELEASE_URL="${REPO_URL}/releases/tag/${NEXT_TAG}"
+    [[ -n "$LAST_TAG" ]] && LAST_TAG_URL="${REPO_URL}/releases/tag/${LAST_TAG}"
+    [[ -n "$LAST_TAG" && -n "$NEXT_TAG" && "$LAST_TAG" != "$NEXT_TAG" ]] && COMPARE_URL="${REPO_URL}/compare/${LAST_TAG}...${NEXT_TAG}"
+    [[ -n "$COMMIT_SHA" ]] && COMMIT_URL="${REPO_URL}/commit/${COMMIT_SHA}"
+  fi
+
+  # Outputs para GitHub Actions
+  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+    echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+    echo "tag=$NEXT_TAG" >> "$GITHUB_OUTPUT"
+    echo "last_version=$LAST_VERSION" >> "$GITHUB_OUTPUT"
+    echo "last_tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
+    echo "release_type=$RELEASE_TYPE" >> "$GITHUB_OUTPUT"
+    echo "published=$([[ -n "$NEXT_VERSION" && "$IS_DRY_RUN" != "true" ]] && echo 'true' || echo 'false')" >> "$GITHUB_OUTPUT"
+  fi
+
+  # Geração do GITHUB_STEP_SUMMARY via templates
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    local EXTRA_METADATA
+    EXTRA_METADATA=$(cat <<EOF
+| **Stack** | \`$STACK\` |
+| **Project Path** | \`$PROJECT_PATH\` |
+EOF
+)
+
+    if [[ -n "$NEXT_VERSION" && "$IS_DRY_RUN" != "true" ]]; then
+      local NEW_VERSION_CELL="\`$NEXT_TAG\`"
+      [[ -n "$RELEASE_URL" ]] && NEW_VERSION_CELL="[**\`$NEXT_TAG\`**]($RELEASE_URL)"
+
+      local LAST_VERSION_CELL="_(Primeira release)_"
+      if [[ -n "$LAST_TAG_URL" ]]; then
+        LAST_VERSION_CELL="[**\`$LAST_TAG\`**]($LAST_TAG_URL)"
+      elif [[ -n "$LAST_TAG" ]]; then
+        LAST_VERSION_CELL="\`$LAST_TAG\`"
+      fi
+
+      local COMMIT_CELL="\`$COMMIT_SHA\`"
+      [[ -n "$COMMIT_URL" ]] && COMMIT_CELL="[\`$COMMIT_SHA\`]($COMMIT_URL)"
+
+      local QUICK_LINKS=""
+      if [[ -n "$RELEASE_URL" || -n "$COMPARE_URL" ]]; then
+        local LNK_REL=""
+        local LNK_CMP=""
+        [[ -n "$RELEASE_URL" ]] && LNK_REL="- 📦 [Visualizar Release no GitHub]($RELEASE_URL)"
+        [[ -n "$COMPARE_URL" ]] && LNK_CMP="- 🔍 [Comparar Alterações com a Release Anterior (\`$LAST_TAG...$NEXT_TAG\`)]($COMPARE_URL)"
+        QUICK_LINKS=$(cat <<EOF
+### 🔗 Links Rápidos
+$LNK_REL
+$LNK_CMP
+EOF
+)
+      fi
+
+      append_template_to_summary "summary-release-published.md" \
+        NEW_VERSION "$NEW_VERSION_CELL" \
+        LAST_VERSION "$LAST_VERSION_CELL" \
+        RELEASE_TYPE "$RELEASE_TYPE" \
+        CURRENT_BRANCH "$CURRENT_BRANCH" \
+        COMMIT "$COMMIT_CELL" \
+        EXTRA_METADATA "$EXTRA_METADATA" \
+        QUICK_LINKS "$QUICK_LINKS" \
+        RELEASE_NOTES ""
+
+    elif [[ -n "$NEXT_VERSION" && "$IS_DRY_RUN" == "true" ]]; then
+      append_template_to_summary "summary-release-dryrun.md" \
+        NEXT_TAG "$NEXT_TAG" \
+        LAST_TAG "${LAST_TAG:-N/A}" \
+        RELEASE_TYPE "$RELEASE_TYPE" \
+        CURRENT_BRANCH "$CURRENT_BRANCH" \
+        EXTRA_METADATA "$EXTRA_METADATA"
+
+    else
+      local LAST_VERSION_CELL="_(Nenhuma tag encontrada)_"
+      if [[ -n "$LAST_TAG_URL" ]]; then
+        LAST_VERSION_CELL="[**\`$LAST_TAG\`**]($LAST_TAG_URL)"
+      elif [[ -n "$LAST_TAG" ]]; then
+        LAST_VERSION_CELL="\`$LAST_TAG\`"
+      fi
+
+      local EXPLANATION
+      EXPLANATION=$(cat <<EOF
+Todos os commits enviados desde a tag \`${LAST_TAG:-inicial}\` foram do tipo sem impacto no SemVer (ex: \`docs:\`, \`chore:\`, \`ci:\`, \`test:\`, \`refactor:\`).
+> 👉 Para gerar uma nova release, envie commits com prefixo \`feat:\` (minor) ou \`fix:\` (patch).
+EOF
+)
+
+      append_template_to_summary "summary-release-skipped.md" \
+        LAST_VERSION "$LAST_VERSION_CELL" \
+        CURRENT_BRANCH "$CURRENT_BRANCH" \
+        EXTRA_METADATA "$EXTRA_METADATA" \
+        REASON "Nenhum commit com impacto semântico foi encontrado desde o último release." \
+        EXPLANATION "$EXPLANATION" \
+        LAST_TAG "${LAST_TAG:-inicial}"
+    fi
+  fi
 }
 
 run

@@ -99,15 +99,13 @@ jobs:
           release-notes: ${{ steps.changelog.outputs.release-notes }}
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: 🧾 Job Summary
-        if: always()
+      - name: 🧾 Job Summary (Fallback em Falha)
+        if: failure()
         run: |
           {
-            echo "## 🚀 Release & Changelog"
+            echo "## ❌ Falha no Workflow de Release"
             echo ""
             echo "- **Branch:** \`${{ github.ref_name }}\`"
-            echo "- **Versão:** \`${{ steps.release.outputs.version || steps.changelog.outputs.version || 'N/A' }}\`"
-            echo "- **Tag:** \`${{ steps.release.outputs.tag || 'N/A' }}\`"
-            echo "- **Release Criada:** \`${{ steps.release.outputs.tag != '' && 'Sim' || 'Não' }}\`"
-            echo "- **Changelog Atualizado:** \`${{ steps.changelog.outputs.has-changes == 'true' && 'Sim' || 'Não' }}\`"
+            echo "- **Status:** Ocorreu um erro durante a execução da pipeline de release."
+            echo "- Verifique os logs das etapas anteriores para detalhes do erro."
           } >> "$GITHUB_STEP_SUMMARY"

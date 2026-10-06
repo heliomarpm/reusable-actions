@@ -38,6 +38,15 @@ outputs:
   version:
     description: 'Next release version (empty if none)'
     value: ${{ steps.release.outputs.version }}
+  tag:
+    description: 'Next release tag (empty if none)'
+    value: ${{ steps.release.outputs.tag }}
+  published:
+    description: 'Whether a new version was published'
+    value: ${{ steps.release.outputs.published }}
+  release-type:
+    description: 'Type of release (major, minor, patch)'
+    value: ${{ steps.release.outputs.release_type }}
 
 runs:
   using: 'composite'
@@ -60,21 +69,4 @@ runs:
       run: |
         SCRIPT="${{ github.action_path }}/../../scripts/shared/semantic-release/run.sh"
         chmod +x "$SCRIPT"
-        
-        set -o pipefail
-        TEMP_LOG=$(mktemp)
-        "$SCRIPT" 2>&1 | tee "$TEMP_LOG" >&2
-        EXIT_CODE="${PIPESTATUS[0]}"
-        
-        if [[ "$EXIT_CODE" -ne 0 ]]; then
-          rm -f "$TEMP_LOG"
-          exit "$EXIT_CODE"
-        fi
-        
-        # Robust version extraction
-        VERSION=$(grep -Eo 'next release version is ([0-9]+\.[0-9]+\.[0-9]+)' "$TEMP_LOG" \
-          | sed -E 's/.* ([0-9]+\.[0-9]+\.[0-9]+)/\1/' \
-          | head -n1 || true)
-        rm -f "$TEMP_LOG"
-          
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        "$SCRIPT"

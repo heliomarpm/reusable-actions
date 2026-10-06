@@ -121,11 +121,39 @@ summary_failure() { summary_section "❌ Failure"; summary_line "$1"; }
 # ────────────────────────────────────────
 # Template Rendering helpers
 # ────────────────────────────────────────
+get_templates_dir() {
+  if [[ -n "${TEMPLATES_DIR:-}" && -d "$TEMPLATES_DIR" ]]; then
+    echo "$TEMPLATES_DIR"
+  elif [[ -n "${REUSABLE_PATH:-}" && -d "${REUSABLE_PATH}/templates" ]]; then
+    echo "${REUSABLE_PATH}/templates"
+  else
+    local helper_dir
+    helper_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    echo "$helper_dir/../../templates"
+  fi
+}
+
+resolve_template_file() {
+  local file="${1:-}"
+  if [[ -f "$file" ]]; then
+    echo "$file"
+    return 0
+  fi
+  local tdir
+  tdir="$(get_templates_dir)"
+  if [[ -f "$tdir/$file" ]]; then
+    echo "$tdir/$file"
+    return 0
+  fi
+  echo "$file"
+}
+
 render_template() {
   local template_file="${1:-}"
   local output_file="${2:-}"
   shift 2 || true
 
+  template_file="$(resolve_template_file "$template_file")"
   [[ -f "$template_file" ]] || fail "Template file not found: $template_file"
 
   local content
