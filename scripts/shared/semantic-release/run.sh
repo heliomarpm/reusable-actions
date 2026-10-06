@@ -28,6 +28,7 @@ IS_DRY_RUN="${SEMANTIC_RELEASE_DRY_RUN:-false}"
 IS_DEBUG_MODE="${SEMANTIC_RELEASE_DEBUG_MODE:-false}"
 STRICT_MODE="${STRICT_CONVENTIONAL_COMMITS:-false}"
 BRANCH="${BRANCH:-}"
+RUN_LOG=""
 
 if [[ -n "$BRANCH" ]]; then
   export GITHUB_REF="refs/heads/$BRANCH"
@@ -134,9 +135,8 @@ run() {
   
   log "🚀 Running: ${CMD[*]}"
 
-  local RUN_LOG
   RUN_LOG="$(mktemp)"
-  trap 'rm -f "$RUN_LOG"' EXIT
+  trap 'rm -f "${RUN_LOG:-}"' EXIT
 
   set +e
   "${CMD[@]}" 2>&1 | tee "$RUN_LOG"
@@ -284,6 +284,9 @@ EOF
         LAST_TAG "${LAST_TAG:-inicial}"
     fi
   fi
+
+  rm -f "${RUN_LOG:-}"
+  trap - EXIT
 }
 
 run

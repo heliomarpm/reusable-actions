@@ -212,7 +212,7 @@ else
 fi
 
 TEMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TEMP_DIR"' EXIT
+trap 'rm -rf "${TEMP_DIR:-}"' EXIT
 
 FEAT_FILE="$TEMP_DIR/feat.txt"
 FIX_FILE="$TEMP_DIR/fix.txt"
