@@ -89,15 +89,57 @@ log "Strict Mode enabled: $STRICT_MODE"
 # STRICT MODE — Enforce conventional commits
 # ------------------------------------------------------------
 strict_mode() {
-  local STRICT_CMD=("$@")
-  STRICT_CMD+=(--dry-run)
-  
   log "Strict mode enabled — validating conventional commits"
 
-  OUTPUT=$("${STRICT_CMD[@]}" 2>&1 || true)
+  local LAST_TAG
+  LAST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+  local RANGE=""
+  if [[ -n "$LAST_TAG" ]]; then
+    RANGE="${LAST_TAG}..HEAD"
+  else
+    RANGE="HEAD"
+  fi
 
-  if echo "$OUTPUT" | grep -qiE "no release type found|There are no relevant changes"; then
-    echo "::error title=RELEASE BLOCKED (STRICT MODE)::No valid Conventional Commits found since the last release. See job summary for instructions."
+  local COMMITS_RAW
+  COMMITS_RAW="$(git log "$RANGE" --no-merges --pretty=format:"%H%x1f%s%x1e" 2>/dev/null || true)"
+
+  if [[ -z "$COMMITS_RAW" ]]; then
+    COMMITS_RAW="$(git log -n 1 --pretty=format:"%H%x1f%s%x1e" 2>/dev/null || true)"
+  fi
+
+  local HAS_INVALID=false
+  local INVALID_COMMITS=()
+  local REGEX_CONVENTIONAL='^([a-zA-Z]+)(\([^\)]+\))?!?:[[:space:]]*(.+)$'
+  local VALID_TYPES="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)$"
+
+  if [[ -n "$COMMITS_RAW" ]]; then
+    while IFS=$'\x1f' read -d $'\x1e' -r HASH SUBJECT; do
+      [[ -z "$HASH" ]] && continue
+
+      # Ignora commits automáticos ou merges
+      if [[ "$SUBJECT" =~ ^Merge[[:space:]] || "$SUBJECT" =~ ^chore\(release\): || "$SUBJECT" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+        continue
+      fi
+
+      # Remove shortcodes de emoji (ex: :memo:, :sparkles:) do início se houver
+      local CLEAN_SUBJECT="$SUBJECT"
+      CLEAN_SUBJECT="$(echo "$CLEAN_SUBJECT" | sed -E 's/^:[a-zA-Z0-9_+-]+:[[:space:]]*//')"
+
+      if [[ "$CLEAN_SUBJECT" =~ $REGEX_CONVENTIONAL ]]; then
+        local TYPE="${BASH_REMATCH[1],,}"
+        if [[ ! "$TYPE" =~ $VALID_TYPES ]]; then
+          HAS_INVALID=true
+          INVALID_COMMITS+=("\`${HASH:0:7}\`: $SUBJECT (tipo inválido: \`$TYPE\`)")
+        fi
+      else
+        HAS_INVALID=true
+        INVALID_COMMITS+=("\`${HASH:0:7}\`: $SUBJECT")
+      fi
+    done <<< "$COMMITS_RAW"
+  fi
+
+  if [[ "$HAS_INVALID" == "true" ]]; then
+    echo "::error title=RELEASE BLOCKED (STRICT MODE)::Commits não convencionais encontrados desde o último release. Veja o job summary para instruções."
 
     {
       echo "# 🚫 Release bloqueada por STRICT MODE"
@@ -105,7 +147,11 @@ strict_mode() {
       echo "**Repositório:** \`$GITHUB_REPOSITORY\`"
       echo "**Branch:** \`${GITHUB_REF_NAME:-unknown}\`"
       echo ""
-      echo "❌ Nenhum **Conventional Commit** válido foi encontrado desde o último release."
+      echo "❌ Os seguintes commits **não seguem** a especificação Conventional Commits:"
+      echo ""
+      for item in "${INVALID_COMMITS[@]}"; do
+        echo "- $item"
+      done
       echo ""
       echo "---"
     } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
@@ -119,7 +165,7 @@ strict_mode() {
     exit 1
   fi
 
-  log "Conventional commits validation passed"
+  log "✅ Conventional commits validation passed"
 }
 
 # ------------------------------------------------------------
