@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 
 
+## [v0.1.1.1] - 2026-10-06
+
+### ♻️ Code Refactoring
+- **ci**: 📝 refatorar resumos de workflows para templates ([5143e75](https://github.com/heliomarpm/reusable-actions/commit/5143e75c6103a59342f263e79d80b68d29db76cc))
+- **ci**: ♻️ separar actions de changelog e release ([59b4e20](https://github.com/heliomarpm/reusable-actions/commit/59b4e20020d7b9beec1a0c72e3a80ae8eae1d240))
+
+### 📝 Documentation
+- 📝 remover linha de ambiente da tabela ([69c420a](https://github.com/heliomarpm/reusable-actions/commit/69c420ade88020e113ffb8dfadd1e533e450275d))
+- 📝 refatorar e expandir documentação do README ([97cbba0](https://github.com/heliomarpm/reusable-actions/commit/97cbba0aaab0654bad8b2d1564a4937811accbc5))
+
+### 🔧 CI & Build System
+- 📝 renomear workflow de changelog ([d23e661](https://github.com/heliomarpm/reusable-actions/commit/d23e66120efb913835fed8b99c1033c7be8f30f4))
+- 👷 atualizar nome do fluxo de trabalho de PR automático ([42cb7eb](https://github.com/heliomarpm/reusable-actions/commit/42cb7eb5302314958ec016b4813654e5ee271be4))
+
 ## [v0.1.1] - 2026-10-06
 
 ### ♻️ Code Refactoring
