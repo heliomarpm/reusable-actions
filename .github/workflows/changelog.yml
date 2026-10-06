@@ -1,8 +1,8 @@
-name: "Changelog & Release"
+name: "Changelog Generator"
 
 on:
   workflow_dispatch:
-  inputs:
+    inputs:
       version-format:
         description: 'Formato da versão (ex: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd")'
         type: string
@@ -17,7 +17,7 @@ on:
 
 jobs:
   changelog:
-    name: 📝 Generate Changelog
+    name: 📝 Changelog Generator
     runs-on: ubuntu-latest
     permissions:
       contents: write
