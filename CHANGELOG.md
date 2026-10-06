@@ -30,77 +30,44 @@ All notable changes to this project will be documented in this file.
 - 📝 renomear workflow de changelog ([d23e661](https://github.com/heliomarpm/reusable-actions/commit/d23e66120efb913835fed8b99c1033c7be8f30f4))
 - 👷 atualizar nome do fluxo de trabalho de PR automático ([42cb7eb](https://github.com/heliomarpm/reusable-actions/commit/42cb7eb5302314958ec016b4813654e5ee271be4))
 
-## [2026-10-04.7]
+## [2026-10-04]
 
 ### 🚀 Features
 - add pull request CD workflow and node release configuration plugin ([6c854c7](https://github.com/heliomarpm/reusable-actions/commit/6c854c7e779ff1474028fdeaf5f8c994a8ef8094))
-
-## [2026-10-04.6]
-
-### 🚀 Features
 - **create-pr**: ✨ automatizar checklist de PR ([20408f9](https://github.com/heliomarpm/reusable-actions/commit/20408f9cc045fb500d110c21765f848fa1597992))
-
-## [2026-10-04.5]
+- **pr**: ✨ adicionar opções de título e corpo customizados para PRs ([38c95f0](https://github.com/heliomarpm/reusable-actions/commit/38c95f09a71f2f85147574385619f00fb5c98078))
+- **ci**: ✨ adicionar autodeteção de caminho de projeto ([1e07b6a](https://github.com/heliomarpm/reusable-actions/commit/1e07b6ab8ed101bd038d78c90fdf9f1d2febc092))
 
 ### 🔧 CI & Build System
 - 👷 ajustar caminhos de shell-helpers e templates ([5141b51](https://github.com/heliomarpm/reusable-actions/commit/5141b51bbdb7736d563c825907558d02c920d453))
 
-## [2026-10-04.4]
-
-### 🚀 Features
-- **pr**: ✨ adicionar opções de título e corpo customizados para PRs ([38c95f0](https://github.com/heliomarpm/reusable-actions/commit/38c95f09a71f2f85147574385619f00fb5c98078))
-- **ci**: ✨ adicionar autodeteção de caminho de projeto ([1e07b6a](https://github.com/heliomarpm/reusable-actions/commit/1e07b6ab8ed101bd038d78c90fdf9f1d2febc092))
-
-## [2026-10-04.3]
-
 ### 🔄 Other Changes
 - ﻿fix(create-pr): add output aliases and support skipped PRs in summary ([c9cb500](https://github.com/heliomarpm/reusable-actions/commit/c9cb5001d69582cb32e530450e6cd0fa1d4a3ceb))
-
-## [2026-10-04.2]
-
-### 🔄 Other Changes
 - ﻿fix(cd-pr): include resolve job in promote needs to restore outputs ([1ee2fd9](https://github.com/heliomarpm/reusable-actions/commit/1ee2fd9ac8f7221ca75a163777feb3c965f8fa68))
-
-## [2026-10-04.1]
-
-### 🔄 Other Changes
 - ﻿fix(cd-pr): forward project-path to semantic-release and improve error summaries ([cfc255d](https://github.com/heliomarpm/reusable-actions/commit/cfc255d7f6f0263e744f76707a0accaa02ac2bec))
-
-## [2026-10-04]
-
-### 🔄 Other Changes
 - ﻿fix(semantic-release): prevent stdout pollution in config resolution and fix plugin paths ([c952641](https://github.com/heliomarpm/reusable-actions/commit/c952641fac6d7662d4349f941ba134a44cd25253))
 
-## [2026-10-03.6]
+## [2026-10-03]
 
-### 🔄 Other Changes
-- ``` ci(workflows): 🔧 adicionar fallback para variáveis de cobertura ([269a4c1](https://github.com/heliomarpm/reusable-actions/commit/269a4c1996987e9bb7794f1d8ef4dd9c14f657c8))
-
-## [2026-10-03.5]
+### 🚀 Features
+- **coverage**: ✨ adicionar modo 'decrease' para bloquear queda de cobertura ([50a5b79](https://github.com/heliomarpm/reusable-actions/commit/50a5b790a6d1dc51bd0a3e835a81ab108308c318))
 
 ### ♻️ Code Refactoring
 - **coverage**: ♻️ limpar script de cobertura Node.js ([81ed468](https://github.com/heliomarpm/reusable-actions/commit/81ed468d65d6d348bf41f0fee32800fa25e91fc9))
-
-## [2026-10-03.4]
 
 ### 🐛 Bug Fixes
 - **tests**: 🐛 corrigir detecção de ausência de testes configurados ([5dc5041](https://github.com/heliomarpm/reusable-actions/commit/5dc50413106b9e2ca8bd6a2e6ad117f1f5b6195a))
 - **changelog**: 🐛 corrigir escopo do git log para diretório atual ([3b06e0d](https://github.com/heliomarpm/reusable-actions/commit/3b06e0dd19a02192fbbb6e7daf1c19bf53c56c4e))
 
-## [2026-10-03.3]
-
-### 🚀 Features
-- **coverage**: ✨ adicionar modo 'decrease' para bloquear queda de cobertura ([50a5b79](https://github.com/heliomarpm/reusable-actions/commit/50a5b790a6d1dc51bd0a3e835a81ab108308c318))
-
-## [2026-10-03.2]
-
 ### 📝 Documentation
 - **changelog**: 📝 atualizar exemplo de workflow no README ([f760b37](https://github.com/heliomarpm/reusable-actions/commit/f760b377a82cb7806e4fb259d61fc2b7e707c521))
 
-## [2026-10-03.1]
-
 ### 🔧 CI & Build System
 - ⬆️ atualizar versões das actions do GitHub ([a5a0422](https://github.com/heliomarpm/reusable-actions/commit/a5a042283d64090f8a0159d007af1780d7a18967))
+
+### 🔄 Other Changes
+- ``` ci(workflows): 🔧 adicionar fallback para variáveis de cobertura ([269a4c1](https://github.com/heliomarpm/reusable-actions/commit/269a4c1996987e9bb7794f1d8ef4dd9c14f657c8))
+
 
 ## [2026-10-03]
 
