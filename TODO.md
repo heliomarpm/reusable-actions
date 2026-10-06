@@ -1,27 +1,26 @@
 # 📌 Pendências e Roadmap do projeto `reusable-actions`
 
-✅ **Fase 1 e 2 concluídas!** (Implementação das Composite Actions e reestruturação)
-✅ **Fase 3 concluída!** (Estratégias `trunk`, `develop` e `gitflow` + engine de promoção)
-✅ **Fase 4 em andamento!** (PHP adicionado. Faltam as próximas stacks)
+✅ **Fase 1 e 2 concluídas!** (Implementação das Composite Actions e reestruturação)  
+✅ **Fase 3 concluída!** (Estratégias `trunk`, `develop` e `gitflow` + engine de promoção com RC)  
+✅ **Fase 4 concluída!** (Suporte consolidado a Node.js e PHP, templates modularizados e publish multi-registry)  
 
-## Próximos Passos Imediatos (Backlog)
+---
 
-### 1. Versionamento do Framework
-- [x] **Action de Changelog Nativa (`actions/changelog`)**: Implementada com zero dependências externas, ciclo de vida `[Unreleased]` atômico, promoção para versão na main (por data `YYYY-MM-DD` ou SemVer) e suporte a Git Tag / GitHub Release.
-- [x] **Workflow de Dogfooding (`.github/workflows/changelog.yml`)**: Implementado para executar `actions/changelog` no próprio repositório a cada merge ou commit na main/develop.
-- [ ] Aplicar release v1 no próprio repositório `reusable-actions`.
+## 🎯 Meta Imediata: Fechamento da Versão Estável v1.0.0
 
-### 2. Multi-Stack (Próximas Stacks)
-- [ ] **.NET**: Adicionar `scripts/plugins/dotnet/install-deps.sh`, `test.sh`, `coverage.sh` (cobertura via coverlet) e `releaserc.json`.
-- [ ] **Python**: Adicionar plugins `python` (suporte a pytest, coverage.py).
-- [ ] **Go**: Adicionar plugins `go` (suporte a `go test -cover`).
-- [ ] **Java** (Futuro)
-- [ ] **Flutter** (Futuro)
+### 1. Confiabilidade das Engines Internas & Testes
+- [ ] **Testes para Scripts Bash com `bats-core`**: Cobrir `shell-helpers.sh`, bump SemVer de `release/run.sh`, parser de commits em `changelog/run.sh` e strict mode.
 
-### 3. Melhorias nas Actions e Scripts
-- [ ] **Estratégia `decrease-only`**: Na action de cobertura, criar uma inteligência para comparar o artefato de cobertura atual com o artefato da branch alvo (base), falhando apenas se o percentual diminuir.
-- [ ] **Testes para Scripts Bash**: Usar `bats-core` para testar as unidades lógicas em `shell-helpers.sh`, `detect-stack.sh`, etc.
-- [ ] **Publishers (cd-publish)**: Melhorar a abstração para publicação npm/packagist etc.
+### 2. Validação E2E e Lançamento
+- [ ] **Validação E2E no Consumidor**: Validar ciclo completo no repositório consumidor de testes (`reusable-actions-test-node`).
+- [ ] **Lançamento Oficial v1.0.0**: Promover a versão estável oficial do repositório `reusable-actions`.
 
-### 4. Exemplos Reais
-- [ ] Criar um repositório consumidor de exemplo apenas para simular o workflow e deixar exposto no README.
+---
+
+## 🚀 Expansão Multi-Stack (Roadmap Pós-v1.0.0)
+> *Cada nova stack implementada deverá obrigatoriamente incluir a criação e execução de seus próprios testes automatizados.*
+
+- [ ] **.NET**: Adicionar `install-deps.sh`, `test.sh`, `coverage.sh` (coverlet), `publish.sh` (NuGet) + testes da stack.
+- [ ] **Python**: Adicionar `install-deps.sh`, `test.sh` (pytest), `coverage.sh` (coverage.py), `publish.sh` (twine) + testes da stack.
+- [ ] **Go**: Adicionar `install-deps.sh`, `test.sh`, `coverage.sh` (`go test -cover`) + testes da stack.
+- [ ] **Java & Flutter**: Suporte futuro.

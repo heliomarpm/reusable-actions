@@ -7,69 +7,78 @@
 
 ---
 
-## 🎯 Meta da Iteração Atual
-Expandir o suporte multi-stack (plugins de `.NET`, `Python` e `Go`) e implementar testes automatizados com `bats-core` para as engines em Bash, consolidando o ciclo GitFlow e pré-releases antes da versão `v1.0.0`.
+## 🎯 Meta da Iteração Atual (Rumo à v1.0.0)
+Consolidar a estabilidade do Core da biblioteca através de testes automatizados com `bats-core` e validação E2E do ciclo GitFlow/Releases no repositório de testes, finalizando o lançamento oficial da **v1.0.0** antes de iniciar a expansão para novas stacks.
 
 ---
 
 ## 🚀 1. Em Progresso (WIP - Limite: 2 tarefas)
 
-- [/] **T-001: Implementar plugin para a stack .NET (C#)**
-  - **Ref**: [scripts/plugins/dotnet/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/plugins/dotnet)
+- [/] **T-001: Criar suíte de testes automatizados para scripts Bash com `bats-core`**
+  - **Ref**: [scripts/shared/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared)
   - **Critérios de Aceite**:
-    - [ ] Criar `install-deps.sh` (`dotnet restore`)
-    - [ ] Criar `test.sh` (`dotnet test`)
-    - [ ] Criar `coverage.sh` com normalização de cobertura (Coverlet / Cobertura XML)
-    - [ ] Criar `publish.sh` para publicação de pacotes NuGet
+    - [ ] Configurar runner do Bats no workflow de CI do repositório
+    - [ ] Testar helpers e template rendering em [shell-helpers.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/shell-helpers.sh)
+    - [ ] Testar parser de commits e delimitadores ASCII em [changelog/run.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/changelog/run.sh)
+    - [ ] Testar cálculo SemVer, pré-releases (RC) e bumps em [release/run.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/release/run.sh)
+    - [ ] Testar validação estrita de commits em [semantic-release/run.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/semantic-release/run.sh)
 
 ---
 
 ## 📋 2. Backlog de Tarefas Prioritárias
 
-### Fase 1: Expansão Multi-Stack
-- [ ] **T-002: Implementar plugin para a stack Python**
+### Fase 1: Confiabilidade do Core & Validação E2E (Fechamento da v1.0.0)
+- [ ] **T-002: Validar fluxo E2E no repositório de teste consumidor (`reusable-actions-test-node`)**
+  - **Ref**: [README.md](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/README.md)
+  - **Critérios de Aceite**:
+    - [ ] Validar cadeia GitFlow completa: `feature` → `develop` → `release-*` (com RC) → `main`
+    - [ ] Validar override de `hotfix/*` direto para `main`
+    - [ ] Validar commits convencionais sem release (`ci:`, `chore:`, `docs:`) concluindo com sucesso verde
+    - [ ] Documentar repositório de demonstração oficial no README principal
+
+- [ ] **T-003: Lançamento oficial da versão estável v1.0.0**
+  - **Ref**: [cd-release.yml](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/.github/workflows/cd-release.yml)
+  - **Critérios de Aceite**:
+    - [ ] Fechar marcos e notas de lançamento estáveis
+    - [ ] Promover tags e formalizar a release principal v1.0.0 do projeto
+
+---
+
+### Fase 2: Expansão Multi-Stack (Pós-v1.0.0)
+> ⚠️ **Regra Mandatória**: Cada nova stack implementada deve obrigatoriamente incluir a criação e execução de seus próprios testes unitários e de integração.
+
+- [ ] **T-004: Implementar plugin para a stack .NET (C#) com testes dedicados**
+  - **Ref**: [scripts/plugins/dotnet/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/plugins/dotnet)
+  - **Critérios de Aceite**:
+    - [ ] Criar `install-deps.sh` (`dotnet restore`)
+    - [ ] Criar `test.sh` (`dotnet test`)
+    - [ ] Criar `coverage.sh` com normalização de cobertura (Coverlet / Cobertura XML)
+    - [ ] Criar `publish.sh` para pacotes NuGet
+    - [ ] **Testes da Stack**: Criar projeto de teste de exemplo para validar a suíte do plugin
+
+- [ ] **T-005: Implementar plugin para a stack Python com testes dedicados**
   - **Ref**: [scripts/plugins/python/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/plugins/python)
   - **Critérios de Aceite**:
     - [ ] Criar `install-deps.sh` (`pip install` / `poetry` / `requirements.txt`)
     - [ ] Criar `test.sh` (suporte a `pytest`)
     - [ ] Criar `coverage.sh` (suporte a `coverage.py` com extração JSON)
     - [ ] Criar `publish.sh` (upload para PyPI / TestPyPI via `twine`)
+    - [ ] **Testes da Stack**: Criar suíte de testes de integração para o plugin Python
 
-- [ ] **T-003: Implementar plugin para a stack Go**
+- [ ] **T-006: Implementar plugin para a stack Go com testes dedicados**
   - **Ref**: [scripts/plugins/go/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/plugins/go)
   - **Critérios de Aceite**:
     - [ ] Criar `install-deps.sh` (`go mod download`)
-    - [ ] Criar `test.sh` e `coverage.sh` (`go test -coverprofile` e conversão)
-
-### Fase 2: Confiabilidade & Testes das Engines Internas
-- [ ] **T-004: Criar suíte de testes unitários para scripts Bash com `bats-core`**
-  - **Ref**: [scripts/shared/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared)
-  - **Critérios de Aceite**:
-    - [ ] Configurar runner do Bats no CI do repositório
-    - [ ] Testar helpers de string e templates em [shell-helpers.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/shell-helpers.sh)
-    - [ ] Testar cálculo de SemVer e bumps em [release/run.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/release/run.sh)
-    - [ ] Testar parser de commits e delimitadores ASCII em [changelog/run.sh](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/scripts/shared/changelog/run.sh)
-
-### Fase 3: Validação de Consumo & Release Final
-- [ ] **T-005: Validar fluxo E2E no repositório de teste consumidor (`reusable-actions-test-node`)**
-  - **Ref**: [README.md](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/README.md)
-  - **Critérios de Aceite**:
-    - [ ] Validar cadeia GitFlow completa: `feature` → `develop` → `release-*` (com RC) → `main`
-    - [ ] Validar override de `hotfix/*` direto para `main`
-    - [ ] Documentar repositório de demonstração oficial no README principal
-
-- [ ] **T-006: Lançamento oficial da versão v1.0.0**
-  - **Ref**: [cd-release.yml](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/.github/workflows/cd-release.yml)
-  - **Critérios de Aceite**:
-    - [ ] Promover tags e formalizar a release principal v1.0.0
+    - [ ] Criar `test.sh` e `coverage.sh` (`go test -coverprofile` e conversão de cobertura)
+    - [ ] **Testes da Stack**: Criar projeto de teste de exemplo para validar o plugin Go
 
 ---
 
-## 💡 3. Débitos Técnicos & Melhorias Futuras
+## 💡 3. Débitos Técnicos & Roadmap Futuro
 
-- [ ] **T-007: Plugins futuros para Java e Flutter**
+- [ ] **T-007: Plugins futuros para Java e Flutter com testes dedicados**
   - **Ref**: [TODO.md](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/TODO.md)
-  - Mapear suporte a Gradle/Maven (Java) e Flutter CLI.
+  - Suporte a Gradle/Maven (Java) e Flutter CLI.
 
 ---
 
