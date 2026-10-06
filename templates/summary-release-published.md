@@ -1,8 +1,8 @@
 ## 🚀 Release Publicada com Sucesso!
 
-| Detalhe | Informação |
+|      |      |
 | :--- | :--- |
-| **Status** | 🟢 **Publicada no GitHub** |
+| **Status** | {{STATUS}} |
 | **Nova Versão / Tag** | {{NEW_VERSION}} |
 | **Versão Anterior** | {{LAST_VERSION}} |
 | **Tipo de Versão** | `{{RELEASE_TYPE}}` |

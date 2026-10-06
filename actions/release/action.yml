@@ -18,6 +18,18 @@ inputs:
     description: 'Comma-separated list of development branches (e.g. develop,dev)'
     required: false
     default: 'develop,dev'
+  prerelease-branches:
+    description: 'Comma-separated glob patterns for pre-release branches (e.g. "release-*,release/*")'
+    required: false
+    default: 'release-*,release/*'
+  prerelease-strategy:
+    description: 'Pre-release strategy: "rc" (default: v1.0.0-rc.1 on release-*) or "same-tag" (v1.0.0 on release-*)'
+    required: false
+    default: 'rc'
+  prerelease-suffix:
+    description: 'Pre-release tag suffix for rc strategy (default: "rc")'
+    required: false
+    default: 'rc'
   version:
     description: 'Explicit version override or version passed from changelog step'
     required: false
@@ -60,6 +72,9 @@ runs:
         INPUT_BRANCH: ${{ inputs.branch }}
         RELEASE_BRANCHES: ${{ inputs.release-branches }}
         DEVELOP_BRANCHES: ${{ inputs.develop-branches }}
+        PRERELEASE_BRANCHES: ${{ inputs.prerelease-branches }}
+        PRERELEASE_STRATEGY: ${{ inputs.prerelease-strategy }}
+        PRERELEASE_SUFFIX: ${{ inputs.prerelease-suffix }}
         INPUT_VERSION: ${{ inputs.version }}
         VERSION_FORMAT: ${{ inputs.version-format }}
         INPUT_RELEASE_NOTES: ${{ inputs.release-notes }}

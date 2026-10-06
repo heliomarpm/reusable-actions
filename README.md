@@ -90,7 +90,7 @@ name: "1. Quality Assurance"
 
 on:
   push:
-    branches: ["develop", "feature/**", "hotfix/**"]
+    branches: ["develop", "feature/**", "hotfix/**", "release-*"]
 
 jobs:
   qa:
@@ -168,6 +168,11 @@ O workflow `cd-pull-request.yml` gerencia o ciclo de vida dos Pull Requests de a
 | **`gitflow`** | `feature/**` → `develop` → `release-x.y.z` → `main` | Apenas quando há commits que alteram a versão |
 | **`hotfix`** | `hotfix/**` → `main` | Sempre (override imediato para correção emergencial) |
 
+> [!TIP]
+> **Para que o GitFlow funcione em cascata de ponta a ponta:**  
+> Certifique-se de que o workflow de CI (`Quality Assurance`) do repositório consumidor inclua a branch de release nos gatilhos de `push` (ex: `branches: ["develop", "feature/**", "hotfix/**", "release-*"]`).  
+> Assim, ao mesclar a PR de `develop` para `release-x.y.z`, o CI será executado na branch de release e o workflow de Auto PR abrirá automaticamente a PR final da release para `main`.
+
 ### 🔥 Hotfix (O Override Controlado)
 Branches prefixadas com `hotfix/*` são tratadas como exceção arquitetural controlada: **sempre abrem PR diretamente para a branch principal (`main`)**, ignorando a branch de desenvolvimento para garantir correção imediata de incidentes em produção.
 
@@ -238,9 +243,16 @@ jobs:
       version-format: "v%major.%minor.%patch" # Opcional: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd"
       changelog-file: "CHANGELOG.md"          # Caminho do arquivo de changelog
       commit-changelog: true                  # Fazer commit e push do CHANGELOG.md
+      prerelease-strategy: 'rc'               # 'rc' (default: v1.0.0-rc.1 em release-*) | 'same-tag' (v1.0.0 como pré-release)
+      prerelease-suffix: 'rc'                 # Sufixo da pré-release para a estratégia 'rc' (default: 'rc')
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+> [!NOTE]
+> **Estratégias de Pré-Release em Branches `release-*`:**  
+> - **`rc` (Padrão / Recomendado)**: Na branch de release gera tags incrementais (`v1.0.0-rc.1`, `v1.0.0-rc.2`, etc.) marcadas como Pre-Release no GitHub. Ao fazer merge na `main`, publica a tag final limpa (`v1.0.0`) classificada como **Latest**.
+> - **`same-tag`**: Na branch de release gera a tag de destino final (`v1.0.0`) como Pre-Release no GitHub. Ao fazer merge na `main`, essa mesma release é editada e promovida para **Latest** (`prerelease: false`).
 
 ---
 
@@ -253,7 +265,9 @@ jobs:
   release:
     uses: heliomarpm/reusable-actions/.github/workflows/cd-semantic-release.yml@main
     with:
-      project-path: '.' # Subpasta onde está o package.json (opcional)
+      project-path: '.'                       # Subpasta onde está o código (opcional)
+      prerelease-strategy: 'rc'               # 'rc' (default: v1.0.0-rc.1 em release-*) | 'same-tag' (v1.0.0)
+      prerelease-suffix: 'rc'                 # Sufixo da pré-release (default: 'rc')
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```

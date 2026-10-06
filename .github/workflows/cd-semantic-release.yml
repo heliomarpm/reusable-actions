@@ -33,6 +33,16 @@ on:
         required: false
         type: boolean
         default: true
+      prerelease-strategy:
+        description: 'Estratégia de pre-release para branches release-* ("rc" ou "same-tag")'
+        required: false
+        type: string
+        default: 'rc'
+      prerelease-suffix:
+        description: 'Sufixo da pre-release quando strategy for "rc" (default: "rc")'
+        required: false
+        type: string
+        default: 'rc'
 
     secrets:
       GH_TOKEN:
@@ -179,6 +189,8 @@ jobs:
           SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.semantic-release-dry-run }}
           SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.semantic-release-debug-mode }}
           STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict-conventional-commits }}
+          PRERELEASE_STRATEGY: ${{ inputs.prerelease-strategy || 'rc' }}
+          PRERELEASE_SUFFIX: ${{ inputs.prerelease-suffix || 'rc' }}
 
       - name: 🧾 Job Summary (Fallback)
         if: failure() && steps.stack.outputs.value == ''

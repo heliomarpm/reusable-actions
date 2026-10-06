@@ -28,6 +28,8 @@ IS_DRY_RUN="${SEMANTIC_RELEASE_DRY_RUN:-false}"
 IS_DEBUG_MODE="${SEMANTIC_RELEASE_DEBUG_MODE:-false}"
 STRICT_MODE="${STRICT_CONVENTIONAL_COMMITS:-false}"
 BRANCH="${BRANCH:-}"
+export PRERELEASE_STRATEGY="${PRERELEASE_STRATEGY:-rc}"
+export PRERELEASE_SUFFIX="${PRERELEASE_SUFFIX:-rc}"
 RUN_LOG=""
 
 if [[ -n "$BRANCH" ]]; then
@@ -242,7 +244,13 @@ EOF
 )
       fi
 
+      local STATUS_TEXT="🟢 **Publicada no GitHub**"
+      if [[ "$CURRENT_BRANCH" =~ ^release[-/] ]]; then
+        STATUS_TEXT="🟡 **Pre-Release Publicada no GitHub**"
+      fi
+
       append_template_to_summary "summary-release-published.md" \
+        STATUS "$STATUS_TEXT" \
         NEW_VERSION "$NEW_VERSION_CELL" \
         LAST_VERSION "$LAST_VERSION_CELL" \
         RELEASE_TYPE "$RELEASE_TYPE" \

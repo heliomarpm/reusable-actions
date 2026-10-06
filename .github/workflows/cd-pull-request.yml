@@ -282,7 +282,9 @@ jobs:
           fi
 
           if [[ "$ACTION" == "pr_to_release" ]]; then
-            BASE="${{ inputs.prefix-release-branch }}$VERSION"
+            # Higieniza a versão removendo sufixos de pré-release (ex: 1.0.0-dev.1 -> 1.0.0)
+            CLEAN_VERSION="${VERSION%%-*}"
+            BASE="${{ inputs.prefix-release-branch }}$CLEAN_VERSION"
           fi
 
           # Garante que a branch de destino existe no remoto

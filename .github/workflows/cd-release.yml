@@ -43,6 +43,21 @@ on:
         type: string
         required: false
         default: ''
+      prerelease-strategy:
+        description: 'Estratégia de pre-release para branches de release ("rc" ou "same-tag")'
+        type: string
+        required: false
+        default: 'rc'
+      prerelease-suffix:
+        description: 'Sufixo da pre-release quando strategy for "rc" (default: "rc")'
+        type: string
+        required: false
+        default: 'rc'
+      prerelease-branches:
+        description: 'Padrões glob de branches de pre-release separados por vírgula (default: "release-*,release/*")'
+        type: string
+        required: false
+        default: 'release-*,release/*'
     secrets:
       GH_TOKEN:
         required: false
@@ -86,6 +101,9 @@ jobs:
           project-path: ${{ inputs.project-path || '.' }}
           changelog-file: ${{ inputs.changelog-file || 'CHANGELOG.md' }}
           version-format: ${{ inputs.version-format || '' }}
+          prerelease-strategy: ${{ inputs.prerelease-strategy || 'rc' }}
+          prerelease-suffix: ${{ inputs.prerelease-suffix || 'rc' }}
+          prerelease-branches: ${{ inputs.prerelease-branches || 'release-*,release/*' }}
           commit-changelog: ${{ inputs.commit-changelog != false }}
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
@@ -96,6 +114,9 @@ jobs:
           project-path: ${{ inputs.project-path || '.' }}
           version: ${{ steps.changelog.outputs.version }}
           version-format: ${{ inputs.version-format || '' }}
+          prerelease-strategy: ${{ inputs.prerelease-strategy || 'rc' }}
+          prerelease-suffix: ${{ inputs.prerelease-suffix || 'rc' }}
+          prerelease-branches: ${{ inputs.prerelease-branches || 'release-*,release/*' }}
           release-notes: ${{ steps.changelog.outputs.release-notes }}
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 

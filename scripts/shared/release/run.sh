@@ -110,6 +110,9 @@ PROJECT_PATH="${PROJECT_PATH:-.}"
 INPUT_BRANCH="${INPUT_BRANCH:-}"
 RELEASE_BRANCHES="${RELEASE_BRANCHES:-main,master}"
 DEVELOP_BRANCHES="${DEVELOP_BRANCHES:-develop,dev}"
+PRERELEASE_BRANCHES="${PRERELEASE_BRANCHES:-release-*,release/*}"
+PRERELEASE_STRATEGY="${PRERELEASE_STRATEGY:-rc}"
+PRERELEASE_SUFFIX="${PRERELEASE_SUFFIX:-rc}"
 INPUT_VERSION="${INPUT_VERSION:-}"
 VERSION_FORMAT="${VERSION_FORMAT:-}"
 INPUT_RELEASE_NOTES="${INPUT_RELEASE_NOTES:-}"
@@ -134,14 +137,15 @@ else
 fi
 log "📌 Current branch: $CURRENT_BRANCH"
 
-# Determina o modo de operação
-is_in_csv() {
+# Determina o modo de operação via glob pattern matching
+matches_pattern_csv() {
   local item="$1"
   local csv="$2"
   local IFS=','
   for entry in $csv; do
     entry="$(echo "$entry" | xargs)" # trim
-    if [[ "$item" == "$entry" ]]; then
+    # Sem aspas em $entry para permitir glob pattern matching (ex: release-*, release/*)
+    if [[ "$item" == $entry ]]; then
       return 0
     fi
   done
@@ -149,16 +153,18 @@ is_in_csv() {
 }
 
 MODE="preview"
-if is_in_csv "$CURRENT_BRANCH" "$RELEASE_BRANCHES"; then
+if matches_pattern_csv "$CURRENT_BRANCH" "$RELEASE_BRANCHES"; then
   MODE="release"
-elif is_in_csv "$CURRENT_BRANCH" "$DEVELOP_BRANCHES"; then
+elif matches_pattern_csv "$CURRENT_BRANCH" "$PRERELEASE_BRANCHES"; then
+  MODE="prerelease"
+elif matches_pattern_csv "$CURRENT_BRANCH" "$DEVELOP_BRANCHES"; then
   MODE="develop"
 fi
 log "🎯 Operating mode: $MODE"
 
-# Se não estiver em branch de release e nenhuma versão explícita foi fornecida, não cria release
-if [[ "$MODE" != "release" && -z "$INPUT_VERSION" ]]; then
-  log "ℹ️ Branch '$CURRENT_BRANCH' is not a release branch ($RELEASE_BRANCHES). Skipping release creation."
+# Se não estiver em branch de release ou prerelease e nenhuma versão explícita foi fornecida (ou for Unreleased), não cria release
+if [[ "$MODE" != "release" && "$MODE" != "prerelease" && ( -z "$INPUT_VERSION" || "$INPUT_VERSION" == "Unreleased" ) ]]; then
+  log "ℹ️ Branch '$CURRENT_BRANCH' is not a release/prerelease branch ($RELEASE_BRANCHES, $PRERELEASE_BRANCHES). Skipping release creation."
   if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "version=" >> "$GITHUB_OUTPUT"
     echo "tag=" >> "$GITHUB_OUTPUT"
@@ -178,10 +184,15 @@ fi
 # Determina o range de commits a inspecionar
 # ─────────────────────────────────────────────────────────────
 LAST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+LAST_STABLE_TAG="$(git tag -l --sort=-v:refname 2>/dev/null | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)"
 RANGE=""
 SINCE_LABEL=""
 
-if [[ -n "$LAST_TAG" ]]; then
+if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - && -n "$LAST_STABLE_TAG" ]]; then
+  # Ao promover de release branch (RC) para release final na main, abrange todos os commits desde a última versão estável
+  RANGE="${LAST_STABLE_TAG}..HEAD"
+  SINCE_LABEL="última release estável '$LAST_STABLE_TAG'"
+elif [[ -n "$LAST_TAG" ]]; then
   RANGE="${LAST_TAG}..HEAD"
   SINCE_LABEL="tag '$LAST_TAG'"
 else
@@ -427,26 +438,54 @@ if [[ -n "$INPUT_VERSION" && "$INPUT_VERSION" != "Unreleased" ]]; then
 else
   FORMAT="${VERSION_FORMAT:-v%major.%minor.%patch}"
 
-  # Calcula SemVer (Major, Minor, Patch)
-  BASE_SEMVER="0.0.0"
-  if [[ -n "$LAST_TAG" ]]; then
-    BASE_SEMVER="${LAST_TAG#v}"
+  # Se a branch de release contiver versão no nome (ex: release-1.0.0, release/v1.0.0)
+  BRANCH_TARGET_SEMVER=""
+  if [[ "$CURRENT_BRANCH" =~ ^release[-/][vV]?([0-9]+\.[0-9]+(\.[0-9]+)?) ]]; then
+    BRANCH_TARGET_SEMVER="${BASH_REMATCH[1]}"
+    if [[ "$BRANCH_TARGET_SEMVER" =~ ^[0-9]+\.[0-9]+$ ]]; then
+      BRANCH_TARGET_SEMVER="${BRANCH_TARGET_SEMVER}.0"
+    fi
   fi
 
-  IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE_SEMVER%%-*}"
-  MAJOR="${MAJOR:-0}"
-  MINOR="${MINOR:-0}"
-  PATCH="${PATCH:-0}"
+  # Se estiver na branch main (release) e a última tag for um pre-release (ex: v1.0.0-rc.2),
+  # a versão limpa alvo é o prefixo semântico dessa tag pre-release
+  PRERELEASE_TARGET_SEMVER=""
+  if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - ]]; then
+    CLEAN_FROM_TAG="${LAST_TAG#v}"
+    CLEAN_FROM_TAG="${CLEAN_FROM_TAG%%-*}"
+    if [[ "$CLEAN_FROM_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      PRERELEASE_TARGET_SEMVER="$CLEAN_FROM_TAG"
+    fi
+  fi
 
-  if [[ "$HAS_BREAKING" == "true" ]]; then
-    MAJOR=$((MAJOR + 1))
-    MINOR=0
-    PATCH=0
-  elif [[ "$HAS_FEAT" == "true" ]]; then
-    MINOR=$((MINOR + 1))
-    PATCH=0
+  if [[ -n "$PRERELEASE_TARGET_SEMVER" ]]; then
+    IFS='.' read -r MAJOR MINOR PATCH <<< "$PRERELEASE_TARGET_SEMVER"
+  elif [[ -n "$BRANCH_TARGET_SEMVER" ]]; then
+    IFS='.' read -r MAJOR MINOR PATCH <<< "$BRANCH_TARGET_SEMVER"
   else
-    PATCH=$((PATCH + 1))
+    # Calcula SemVer a partir da última tag estável ou LAST_TAG limpa
+    BASE_SEMVER="0.0.0"
+    if [[ -n "${LAST_STABLE_TAG:-}" ]]; then
+      BASE_SEMVER="${LAST_STABLE_TAG#v}"
+    elif [[ -n "$LAST_TAG" ]]; then
+      BASE_SEMVER="${LAST_TAG#v}"
+    fi
+
+    IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE_SEMVER%%-*}"
+    MAJOR="${MAJOR:-0}"
+    MINOR="${MINOR:-0}"
+    PATCH="${PATCH:-0}"
+
+    if [[ "$HAS_BREAKING" == "true" ]]; then
+      MAJOR=$((MAJOR + 1))
+      MINOR=0
+      PATCH=0
+    elif [[ "$HAS_FEAT" == "true" ]]; then
+      MINOR=$((MINOR + 1))
+      PATCH=0
+    else
+      PATCH=$((PATCH + 1))
+    fi
   fi
 
   YEAR_4="$(date +"%Y")"
@@ -472,13 +511,32 @@ else
   RESOLVED_VERSION="${RESOLVED_VERSION//\%m/$MONTH_1}"
   RESOLVED_VERSION="${RESOLVED_VERSION//\%d/$DAY_1}"
 
-  # Evita duplicar tag existente se for formato por data
-  if git rev-parse "$RESOLVED_VERSION" >/dev/null 2>&1; then
-    COUNT=1
-    while git rev-parse "${RESOLVED_VERSION}.${COUNT}" >/dev/null 2>&1; do
-      COUNT=$((COUNT + 1))
-    done
-    RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
+  if [[ "$MODE" == "prerelease" ]]; then
+    if [[ "$PRERELEASE_STRATEGY" == "rc" ]]; then
+      CLEAN_TAG="$RESOLVED_VERSION"
+      EXISTING_RCS=$(git tag -l "${CLEAN_TAG}-${PRERELEASE_SUFFIX}.*" 2>/dev/null | sort -V || true)
+      if [[ -n "$EXISTING_RCS" ]]; then
+        LATEST_RC="$(echo "$EXISTING_RCS" | tail -n 1)"
+        RC_NUM="${LATEST_RC##*.}"
+        if [[ "$RC_NUM" =~ ^[0-9]+$ ]]; then
+          NEXT_NUM=$((RC_NUM + 1))
+        else
+          NEXT_NUM=1
+        fi
+      else
+        NEXT_NUM=1
+      fi
+      RESOLVED_VERSION="${CLEAN_TAG}-${PRERELEASE_SUFFIX}.${NEXT_NUM}"
+    fi
+  else
+    # Evita duplicar tag existente se for formato por data
+    if [[ -z "$PRERELEASE_TARGET_SEMVER" ]] && git rev-parse "$RESOLVED_VERSION" >/dev/null 2>&1; then
+      COUNT=1
+      while git rev-parse "${RESOLVED_VERSION}.${COUNT}" >/dev/null 2>&1; do
+        COUNT=$((COUNT + 1))
+      done
+      RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
+    fi
   fi
 
   RESOLVED_TAG="$RESOLVED_VERSION"
@@ -501,16 +559,51 @@ git tag -a "$RESOLVED_TAG" -m "Release $RESOLVED_TAG"
 
 if git remote get-url origin >/dev/null 2>&1; then
   log "📤 Pushing tag '$RESOLVED_TAG' to origin"
-  git push origin "$RESOLVED_TAG" || log "⚠️ Failed to push tag (check permissions)"
+  git push origin "$RESOLVED_TAG" --force 2>/dev/null || git push origin "$RESOLVED_TAG" || log "⚠️ Failed to push tag (check permissions)"
 else
   log "ℹ️ Skipping git push tag (no 'origin' remote configured)"
 fi
 
+IS_PROMOTED=false
 if command -v gh >/dev/null 2>&1 && [[ -n "$GITHUB_TOKEN" ]]; then
-  log "🚀 Creating GitHub Release: $RESOLVED_TAG"
-  GH_TOKEN="$GITHUB_TOKEN" gh release create "$RESOLVED_TAG" \
-    --title "$RESOLVED_TAG" \
-    --notes-file "$NOTES_FILE" || log "⚠️ Failed to create GitHub Release via gh CLI"
+  IS_EXISTING_RELEASE=false
+  if GH_TOKEN="$GITHUB_TOKEN" gh release view "$RESOLVED_TAG" >/dev/null 2>&1; then
+    IS_EXISTING_RELEASE=true
+  fi
+
+  if [[ "$MODE" == "prerelease" ]]; then
+    if [[ "$IS_EXISTING_RELEASE" == "true" ]]; then
+      log "🔄 Updating existing GitHub Pre-Release: $RESOLVED_TAG"
+      GH_TOKEN="$GITHUB_TOKEN" gh release edit "$RESOLVED_TAG" \
+        --title "$RESOLVED_TAG" \
+        --notes-file "$NOTES_FILE" \
+        --prerelease || log "⚠️ Failed to edit GitHub Pre-Release via gh CLI"
+    else
+      log "🚀 Creating GitHub Pre-Release: $RESOLVED_TAG"
+      GH_TOKEN="$GITHUB_TOKEN" gh release create "$RESOLVED_TAG" \
+        --title "$RESOLVED_TAG" \
+        --notes-file "$NOTES_FILE" \
+        --prerelease || log "⚠️ Failed to create GitHub Pre-Release via gh CLI"
+    fi
+  elif [[ "$MODE" == "release" ]]; then
+    if [[ "$IS_EXISTING_RELEASE" == "true" ]]; then
+      log "🚀 Promoting existing Pre-Release '$RESOLVED_TAG' to Latest Release"
+      GH_TOKEN="$GITHUB_TOKEN" gh release edit "$RESOLVED_TAG" \
+        --title "$RESOLVED_TAG" \
+        --notes-file "$NOTES_FILE" \
+        --prerelease=false \
+        --latest || log "⚠️ Failed to promote GitHub Release via gh CLI"
+      IS_PROMOTED=true
+    else
+      log "🚀 Creating GitHub Release: $RESOLVED_TAG (Latest)"
+      GH_TOKEN="$GITHUB_TOKEN" gh release create "$RESOLVED_TAG" \
+        --title "$RESOLVED_TAG" \
+        --notes-file "$NOTES_FILE" \
+        --latest || log "⚠️ Failed to create GitHub Release via gh CLI"
+    fi
+  else
+    log "ℹ️ Skipping GitHub Release creation for mode: $MODE"
+  fi
 else
   log "ℹ️ Skipping GitHub Release creation (gh CLI not installed or GITHUB_TOKEN empty)"
 fi
@@ -549,7 +642,15 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   fi
 
   BUMP_TYPE="patch"
-  if [[ "$HAS_BREAKING" == "true" ]]; then
+  if [[ "$MODE" == "prerelease" ]]; then
+    if [[ "$PRERELEASE_STRATEGY" == "rc" ]]; then
+      BUMP_TYPE="pre-release ($PRERELEASE_SUFFIX) 🧪"
+    else
+      BUMP_TYPE="pre-release (same-tag) 🧪"
+    fi
+  elif [[ "$IS_PROMOTED" == "true" ]]; then
+    BUMP_TYPE="promoção para latest 🚀"
+  elif [[ "$HAS_BREAKING" == "true" ]]; then
     BUMP_TYPE="major 💥"
   elif [[ "$HAS_FEAT" == "true" ]]; then
     BUMP_TYPE="minor 🚀"
@@ -557,6 +658,13 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     BUMP_TYPE="patch 🐛"
   elif [[ -n "$INPUT_VERSION" ]]; then
     BUMP_TYPE="manual / custom"
+  fi
+
+  STATUS_TEXT="🟢 Publicada no GitHub (Latest)"
+  if [[ "$MODE" == "prerelease" ]]; then
+    STATUS_TEXT="🟡 Pre-Release Publicada no GitHub"
+  elif [[ "$IS_PROMOTED" == "true" ]]; then
+    STATUS_TEXT="🟢 Publicada no GitHub (Promovida a Latest)"
   fi
 
   local NEW_VERSION_CELL="\`$RESOLVED_TAG\`"
@@ -601,6 +709,7 @@ EOF
   fi
 
   append_template_to_summary "summary-release-published.md" \
+    STATUS "$STATUS_TEXT" \
     NEW_VERSION "$NEW_VERSION_CELL" \
     LAST_VERSION "$LAST_VERSION_CELL" \
     RELEASE_TYPE "$BUMP_TYPE" \

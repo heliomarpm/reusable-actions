@@ -111,6 +111,9 @@ PROJECT_PATH="${PROJECT_PATH:-.}"
 INPUT_BRANCH="${INPUT_BRANCH:-}"
 RELEASE_BRANCHES="${RELEASE_BRANCHES:-main,master}"
 DEVELOP_BRANCHES="${DEVELOP_BRANCHES:-develop,dev}"
+PRERELEASE_BRANCHES="${PRERELEASE_BRANCHES:-release-*,release/*}"
+PRERELEASE_STRATEGY="${PRERELEASE_STRATEGY:-rc}"
+PRERELEASE_SUFFIX="${PRERELEASE_SUFFIX:-rc}"
 INPUT_VERSION="${INPUT_VERSION:-}"
 VERSION_FORMAT="${VERSION_FORMAT:-}"
 COMMIT_CHANGELOG="${COMMIT_CHANGELOG:-true}"
@@ -136,14 +139,15 @@ else
 fi
 log "📌 Current branch: $CURRENT_BRANCH"
 
-# Determina o modo de operação (release, develop ou preview)
-is_in_csv() {
+# Determina o modo de operação via glob pattern matching
+matches_pattern_csv() {
   local item="$1"
   local csv="$2"
   local IFS=','
   for entry in $csv; do
     entry="$(echo "$entry" | xargs)" # trim
-    if [[ "$item" == "$entry" ]]; then
+    # Sem aspas em $entry para permitir glob pattern matching (ex: release-*, release/*)
+    if [[ "$item" == $entry ]]; then
       return 0
     fi
   done
@@ -151,9 +155,11 @@ is_in_csv() {
 }
 
 MODE="preview"
-if is_in_csv "$CURRENT_BRANCH" "$RELEASE_BRANCHES"; then
+if matches_pattern_csv "$CURRENT_BRANCH" "$RELEASE_BRANCHES"; then
   MODE="release"
-elif is_in_csv "$CURRENT_BRANCH" "$DEVELOP_BRANCHES"; then
+elif matches_pattern_csv "$CURRENT_BRANCH" "$PRERELEASE_BRANCHES"; then
+  MODE="prerelease"
+elif matches_pattern_csv "$CURRENT_BRANCH" "$DEVELOP_BRANCHES"; then
   MODE="develop"
 fi
 log "🎯 Operating mode: $MODE"
@@ -162,10 +168,15 @@ log "🎯 Operating mode: $MODE"
 # Determina o range de commits a inspecionar
 # ─────────────────────────────────────────────────────────────
 LAST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+LAST_STABLE_TAG="$(git tag -l --sort=-v:refname 2>/dev/null | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)"
 RANGE=""
 SINCE_LABEL=""
 
-if [[ -n "$LAST_TAG" ]]; then
+if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - && -n "$LAST_STABLE_TAG" ]]; then
+  # Ao promover de release branch (RC) para release final na main, abrange todos os commits desde a última versão estável
+  RANGE="${LAST_STABLE_TAG}..HEAD"
+  SINCE_LABEL="última release estável '$LAST_STABLE_TAG'"
+elif [[ -n "$LAST_TAG" ]]; then
   RANGE="${LAST_TAG}..HEAD"
   SINCE_LABEL="tag '$LAST_TAG'"
 else
@@ -407,7 +418,7 @@ fi
 HAS_CHANGES=false
 if [[ -s "$NOTES_FILE" ]]; then
   HAS_CHANGES=true
-elif [[ "$MODE" == "release" && -s "$EXISTING_UNRELEASED_CONTENT" ]]; then
+elif [[ ("$MODE" == "release" || "$MODE" == "prerelease") && -s "$EXISTING_UNRELEASED_CONTENT" ]]; then
   HAS_CHANGES=true
   # Usa o conteúdo existente de unreleased como release notes
   cat "$EXISTING_UNRELEASED_CONTENT" > "$NOTES_FILE"
@@ -441,41 +452,69 @@ if [[ "$MODE" == "develop" || "$MODE" == "preview" ]]; then
   RESOLVED_VERSION="Unreleased"
   SECTION_HEADER="## [Unreleased]"
 else
-  # Modo release
-  if [[ -n "$INPUT_VERSION" ]]; then
+  # Modo release ou prerelease
+  if [[ -n "$INPUT_VERSION" && "$INPUT_VERSION" != "Unreleased" ]]; then
     RESOLVED_VERSION="$INPUT_VERSION"
     RESOLVED_TAG="$RESOLVED_VERSION"
   else
     # 1. Determina o template de formato (se não fornecido explicitamente)
     FORMAT="$VERSION_FORMAT"
     if [[ -z "$FORMAT" ]]; then
-      if [[ "$MODE" == "release" || -n "$LAST_TAG" ]]; then
+      if [[ "$MODE" == "release" || "$MODE" == "prerelease" || -n "$LAST_TAG" ]]; then
         FORMAT="v%major.%minor.%patch"
       else
         FORMAT="%YYYY-%mm-%dd"
       fi
     fi
 
-    # 2. Calcula SemVer (Major, Minor, Patch)
-    BASE_SEMVER="0.0.0"
-    if [[ -n "$LAST_TAG" ]]; then
-      BASE_SEMVER="${LAST_TAG#v}"
+    # Se a branch contiver versão no nome (ex: release-1.0.0, release/v1.0.0)
+    BRANCH_TARGET_SEMVER=""
+    if [[ "$CURRENT_BRANCH" =~ ^release[-/][vV]?([0-9]+\.[0-9]+(\.[0-9]+)?) ]]; then
+      BRANCH_TARGET_SEMVER="${BASH_REMATCH[1]}"
+      if [[ "$BRANCH_TARGET_SEMVER" =~ ^[0-9]+\.[0-9]+$ ]]; then
+        BRANCH_TARGET_SEMVER="${BRANCH_TARGET_SEMVER}.0"
+      fi
     fi
 
-    IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE_SEMVER%%-*}"
-    MAJOR="${MAJOR:-0}"
-    MINOR="${MINOR:-0}"
-    PATCH="${PATCH:-0}"
+    # Se estiver na branch main (release) e a última tag for um pre-release (ex: v1.0.0-rc.2),
+    # a versão limpa alvo é o prefixo semântico dessa tag pre-release
+    PRERELEASE_TARGET_SEMVER=""
+    if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - ]]; then
+      CLEAN_FROM_TAG="${LAST_TAG#v}"
+      CLEAN_FROM_TAG="${CLEAN_FROM_TAG%%-*}"
+      if [[ "$CLEAN_FROM_TAG" =~ ^[0-9]+\.[0-9]+$ ]]; then
+        PRERELEASE_TARGET_SEMVER="$CLEAN_FROM_TAG"
+      fi
+    fi
 
-    if [[ "$HAS_BREAKING" == "true" ]]; then
-      MAJOR=$((MAJOR + 1))
-      MINOR=0
-      PATCH=0
-    elif [[ "$HAS_FEAT" == "true" ]]; then
-      MINOR=$((MINOR + 1))
-      PATCH=0
+    if [[ -n "$PRERELEASE_TARGET_SEMVER" ]]; then
+      IFS='.' read -r MAJOR MINOR PATCH <<< "$PRERELEASE_TARGET_SEMVER"
+    elif [[ -n "$BRANCH_TARGET_SEMVER" ]]; then
+      IFS='.' read -r MAJOR MINOR PATCH <<< "$BRANCH_TARGET_SEMVER"
     else
-      PATCH=$((PATCH + 1))
+      # 2. Calcula SemVer (Major, Minor, Patch)
+      BASE_SEMVER="0.0.0"
+      if [[ -n "${LAST_STABLE_TAG:-}" ]]; then
+        BASE_SEMVER="${LAST_STABLE_TAG#v}"
+      elif [[ -n "$LAST_TAG" ]]; then
+        BASE_SEMVER="${LAST_TAG#v}"
+      fi
+
+      IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE_SEMVER%%-*}"
+      MAJOR="${MAJOR:-0}"
+      MINOR="${MINOR:-0}"
+      PATCH="${PATCH:-0}"
+
+      if [[ "$HAS_BREAKING" == "true" ]]; then
+        MAJOR=$((MAJOR + 1))
+        MINOR=0
+        PATCH=0
+      elif [[ "$HAS_FEAT" == "true" ]]; then
+        MINOR=$((MINOR + 1))
+        PATCH=0
+      else
+        PATCH=$((PATCH + 1))
+      fi
     fi
 
     # 3. Extrai partes de data
@@ -487,7 +526,6 @@ else
     DAY_1="$(date +"%-d" 2>/dev/null || echo "$((10#$DAY_2))")"
 
     # 4. Substituição de Tokens no template
-    # IMPORTANTE: SemVer tokens primeiro para evitar que %m colida com %major ou %minor
     RESOLVED_VERSION="$FORMAT"
     RESOLVED_VERSION="${RESOLVED_VERSION//\%MAJOR/$MAJOR}"
     RESOLVED_VERSION="${RESOLVED_VERSION//\%major/$MAJOR}"
@@ -495,9 +533,8 @@ else
     RESOLVED_VERSION="${RESOLVED_VERSION//\%minor/$MINOR}"
     RESOLVED_VERSION="${RESOLVED_VERSION//\%PATCH/$PATCH}"
     RESOLVED_VERSION="${RESOLVED_VERSION//\%patch/$PATCH}"
-    RESOLVED_VERSION="${RESOLVED_VERSION//\%path/$PATCH}" # Tolerância a typo
+    RESOLVED_VERSION="${RESOLVED_VERSION//\%path/$PATCH}"
 
-    # Tokens de data (maiores primeiro)
     RESOLVED_VERSION="${RESOLVED_VERSION//\%YYYY/$YEAR_4}"
     RESOLVED_VERSION="${RESOLVED_VERSION//\%YY/$YEAR_2}"
     RESOLVED_VERSION="${RESOLVED_VERSION//\%mm/$MONTH_2}"
@@ -505,20 +542,38 @@ else
     RESOLVED_VERSION="${RESOLVED_VERSION//\%m/$MONTH_1}"
     RESOLVED_VERSION="${RESOLVED_VERSION//\%d/$DAY_1}"
 
-    # 5. Evita duplicação caso seja versão puramente por data
-    if [[ -f "$CHANGELOG_FILE" ]] && grep -qE "^## \[${RESOLVED_VERSION}\]" "$CHANGELOG_FILE" 2>/dev/null; then
-      COUNT=1
-      while grep -qE "^## \[${RESOLVED_VERSION}\.${COUNT}\]" "$CHANGELOG_FILE" 2>/dev/null; do
-        COUNT=$((COUNT + 1))
-      done
-      RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
+    if [[ "$MODE" == "prerelease" ]]; then
+      if [[ "$PRERELEASE_STRATEGY" == "rc" ]]; then
+        CLEAN_TAG="$RESOLVED_VERSION"
+        EXISTING_RCS=$(git tag -l "${CLEAN_TAG}-${PRERELEASE_SUFFIX}.*" 2>/dev/null | sort -V || true)
+        if [[ -n "$EXISTING_RCS" ]]; then
+          LATEST_RC="$(echo "$EXISTING_RCS" | tail -n 1)"
+          RC_NUM="${LATEST_RC##*.}"
+          if [[ "$RC_NUM" =~ ^[0-9]+$ ]]; then
+            NEXT_NUM=$((RC_NUM + 1))
+          else
+            NEXT_NUM=1
+          fi
+        else
+          NEXT_NUM=1
+        fi
+        RESOLVED_VERSION="${CLEAN_TAG}-${PRERELEASE_SUFFIX}.${NEXT_NUM}"
+      fi
+    else
+      # 5. Evita duplicação caso seja versão puramente por data
+      if [[ -z "$PRERELEASE_TARGET_SEMVER" ]] && [[ -f "$CHANGELOG_FILE" ]] && grep -qE "^## \[${RESOLVED_VERSION}\]" "$CHANGELOG_FILE" 2>/dev/null; then
+        COUNT=1
+        while grep -qE "^## \[${RESOLVED_VERSION}\.${COUNT}\]" "$CHANGELOG_FILE" 2>/dev/null; do
+          COUNT=$((COUNT + 1))
+        done
+        RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
+      fi
     fi
 
     RESOLVED_TAG="$RESOLVED_VERSION"
   fi
 
   # Monta o cabeçalho no CHANGELOG.md
-  # Se a versão já contiver a data (ex: 2026-10-03 ou v2026.10.03), não duplica a data no cabeçalho
   if [[ "$RESOLVED_VERSION" =~ [0-9]{4}[.-][0-9]{2} ]]; then
     SECTION_HEADER="## [${RESOLVED_VERSION}]"
   else
