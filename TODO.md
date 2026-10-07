@@ -1,4 +1,4 @@
-# 📌 Pendências e Roadmap do projeto `reusable-actions`
+# 📌 Pendências e Roadmap do projeto `reusable-workflows`
 
 ✅ **Fase 1 e 2 concluídas!** (Implementação das Composite Actions e reestruturação)  
 ✅ **Fase 3 concluída!** (Estratégias `trunk`, `develop` e `gitflow` + engine de promoção com RC)  
@@ -12,8 +12,8 @@
 - [x] **Testes para Scripts Bash com `bats-core`**: 28 testes cobrindo `shell-helpers.sh`, bump SemVer de `release/run.sh`, parser de commits em `changelog/run.sh`, `detect-stack.sh` e strict mode em `semantic-release/run.sh`.
 
 ### 2. Validação E2E e Lançamento
-- [/] **Validação E2E no Consumidor**: Validar ciclo completo no repositório consumidor de testes (`reusable-actions-test-node`).
-- [ ] **Lançamento Oficial v1.0.0**: Promover a versão estável oficial do repositório `reusable-actions`.
+- [/] **Validação E2E no Consumidor**: Validar ciclo completo no repositório consumidor de testes (`reusable-workflows-test-node`).
+- [ ] **Lançamento Oficial v1.0.0**: Promover a versão estável oficial do repositório `reusable-workflows`.
 
 ---
 

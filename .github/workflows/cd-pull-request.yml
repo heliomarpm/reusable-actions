@@ -162,10 +162,10 @@ jobs:
         with:
           ref: ${{ needs.resolve.outputs.head }}
 
-      - name: 📌 Checkout reusable-actions scripts
+      - name: 📌 Checkout reusable-workflows scripts
         uses: actions/checkout@v7
         with:
-          repository: heliomarpm/reusable-actions
+          repository: heliomarpm/reusable-workflows
           ref: main
           path: ${{ env.REUSABLE_PATH }}
 
@@ -209,10 +209,10 @@ jobs:
           ref: ${{ needs.resolve.outputs.head }}
           token: ${{ secrets.GH_TOKEN }}
 
-      - name: 📌 Checkout reusable-actions scripts
+      - name: 📌 Checkout reusable-workflows scripts
         uses: actions/checkout@v7
         with:
-          repository: heliomarpm/reusable-actions
+          repository: heliomarpm/reusable-workflows
           ref: main
           path: __reusable_actions__
           token: ${{ secrets.GH_TOKEN }}

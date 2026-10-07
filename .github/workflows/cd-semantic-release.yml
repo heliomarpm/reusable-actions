@@ -79,10 +79,10 @@ jobs:
       - name: 📌 Checkout consumer repository
         uses: actions/checkout@v7
 
-      - name: 📌 Checkout reusable-actions scripts
+      - name: 📌 Checkout reusable-workflows scripts
         uses: actions/checkout@v7
         with:
-          repository: heliomarpm/reusable-actions
+          repository: heliomarpm/reusable-workflows
           ref: main
           path: ${{ env.REUSABLE_PATH }}
 
@@ -127,10 +127,10 @@ jobs:
           persist-credentials: true  # → permite push com GITHUB_TOKEN
           token: ${{ secrets.GH_TOKEN }} # Necessário para autenticar PUSH
 
-      - name: 📌 Checkout reusable-actions scripts
+      - name: 📌 Checkout reusable-workflows scripts
         uses: actions/checkout@v7
         with:
-          repository: heliomarpm/reusable-actions
+          repository: heliomarpm/reusable-workflows
           ref: main
           path: ${{ env.REUSABLE_PATH }}
           token: ${{ secrets.GH_TOKEN }} # Necessário se o repositório for privado

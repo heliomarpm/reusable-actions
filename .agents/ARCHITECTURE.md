@@ -1,4 +1,4 @@
-# 🧠 Arquitetura Técnica Interna — Reusable Actions
+# 🧠 Arquitetura Técnica Interna — Reusable Workflows
 
 > **Público-alvo:** Mantenedores do projeto, contribuidores de core e Agentes de IA.  
 > Este documento concentra o funcionamento técnico detalhado, decisões de arquitetura e mecânica interna dos scripts e ações, mantendo o `README.md` principal 100% focado no usuário consumidor.

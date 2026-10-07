@@ -53,5 +53,5 @@ Instruções mandatórias que qualquer agente de IA ou desenvolvedor automatizad
    - Todo commit deve seguir rigorosamente o padrão Conventional Commits 1.0.0 (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `ci:`, `test:`, `perf:`).
    - Commits de quebra de compatibilidade devem conter `!` após o tipo/escopo ou `BREAKING CHANGE:` no rodapé.
 2. **Separação de Documentação (Consumidor vs Interno)**:
-   - O [README.md](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/README.md) principal é destinado exclusivamente aos desenvolvedores consumidores da biblioteca (foco em uso, exemplos em 3 minutos e inputs).
-   - Documentações técnicas de arquitetura interna, ADRs e guias de manutenção pertencem a [.agents/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/.agents/) e [docs/adrs/](file:///d:/WORKS/DEV/GitHubActions/reusable-actions/docs/adrs/).
+   - O [README.md](file:///d:/WORKS/DEV/GitHubActions/reusable-workflows/README.md) principal é destinado exclusivamente aos desenvolvedores consumidores da biblioteca (foco em uso, exemplos em 3 minutos e inputs).
+   - Documentações técnicas de arquitetura interna, ADRs e guias de manutenção pertencem a [.agents/](file:///d:/WORKS/DEV/GitHubActions/reusable-workflows/.agents/) e [docs/adrs/](file:///d:/WORKS/DEV/GitHubActions/reusable-workflows/docs/adrs/).

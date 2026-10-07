@@ -1,6 +1,6 @@
 # 📊 Mapa de Dados, Contratos de Estado e Integrações (DATA.md)
 
-Este documento descreve o fluxo de dados, modelos de estado em tempo de execução, contratos de arquivos normalizados e integrações com serviços externos utilizados pelo ecossistema `reusable-actions`.
+Este documento descreve o fluxo de dados, modelos de estado em tempo de execução, contratos de arquivos normalizados e integrações com serviços externos utilizados pelo ecossistema `reusable-workflows`.
 
 ---
 
@@ -58,7 +58,7 @@ git log "$RANGE" --no-merges --pretty=format:"%H%x1f%h%x1f%s%x1f%b%x1e" -- .
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        reusable-actions Engine                         │
+│                        reusable-workflows Engine                         │
 └───────┬─────────────────────────┬────────────────────────────┬─────────┘
         │                         │                            │
         ▼                         ▼                            ▼

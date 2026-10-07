@@ -1,5 +1,5 @@
 <div id="top" align="center">
-  <h1>🚀 Reusable Actions — CI/CD Sem Boilerplate no GitHub Actions <a href="https://navto.me/heliomarpm" target="_blank"><img src="https://navto.me/assets/navigatetome-brand.png" width="32"/></a></h1>
+  <h1>🚀 Reusable Workflows — CI/CD Sem Boilerplate no GitHub Actions <a href="https://navto.me/heliomarpm" target="_blank"><img src="https://navto.me/assets/navigatetome-brand.png" width="32"/></a></h1>
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
   [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF.svg?logo=githubactions&logoColor=white)](https://github.com/features/actions)
@@ -18,7 +18,7 @@
   </div>
 </div>
 
-**Reusable Actions** é um conjunto opinativo de **Reusable Workflows** e **Composite Actions** projetado para padronizar e acelerar esteiras de integração contínua (CI), controle de qualidade, promoção automática de branches e releases no GitHub Actions.
+**Reusable Workflows** é um conjunto opinativo de **Reusable Workflows** e **Composite Actions** projetado para padronizar e acelerar esteiras de integração contínua (CI), controle de qualidade, promoção automática de branches e releases no GitHub Actions.
 
 Com apenas algumas linhas de YAML, qualquer repositório herda:
 - 🧪 **Quality Gate determinístico**: execução de testes e validação rigorosa de cobertura mínima.
@@ -94,7 +94,7 @@ on:
 
 jobs:
   qa:
-    uses: heliomarpm/reusable-actions/.github/workflows/ci-quality-gate.yml@main
+    uses: heliomarpm/reusable-workflows/.github/workflows/ci-quality-gate.yml@main
     with:
       coverage-min: 80
       coverage-mode: block # 'block' falha o job se cobertura < 80%. 'info' apenas emite alertas.
@@ -115,7 +115,7 @@ on:
 jobs:
   promote:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    uses: heliomarpm/reusable-actions/.github/workflows/cd-pull-request.yml@main
+    uses: heliomarpm/reusable-workflows/.github/workflows/cd-pull-request.yml@main
     with:
       strategy: develop # Opções: trunk | develop | gitflow
     secrets:
@@ -136,7 +136,7 @@ on:
 
 jobs:
   release:
-    uses: heliomarpm/reusable-actions/.github/workflows/cd-release.yml@main
+    uses: heliomarpm/reusable-workflows/.github/workflows/cd-release.yml@main
     with:
       enable-changelog: true
       version-format: "v%major.%minor.%patch"
@@ -187,7 +187,7 @@ Detecta automaticamente a tecnologia do projeto, instala o runtime, roda os test
 ```yaml
 jobs:
   qa:
-    uses: heliomarpm/reusable-actions/.github/workflows/ci-quality-gate.yml@main
+    uses: heliomarpm/reusable-workflows/.github/workflows/ci-quality-gate.yml@main
     with:
       stack: ''            # Opcional: 'node' ou 'php' (vazio = auto-detect)
       project-path: '.'     # Opcional: caminho do código (para monorepos/subpastas)
@@ -210,7 +210,7 @@ Abre ou atualiza Pull Requests automaticamente, injetando o laudo de cobertura e
 jobs:
   promote:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    uses: heliomarpm/reusable-actions/.github/workflows/cd-pull-request.yml@main
+    uses: heliomarpm/reusable-workflows/.github/workflows/cd-pull-request.yml@main
     with:
       strategy: develop                    # trunk | develop | gitflow
       main-branch: 'main'                  # Nome da branch principal
@@ -237,7 +237,7 @@ Engine ultra-rápida (< 2 segundos) para criação de **Git Tag**, **GitHub Rele
 ```yaml
 jobs:
   release:
-    uses: heliomarpm/reusable-actions/.github/workflows/cd-release.yml@main
+    uses: heliomarpm/reusable-workflows/.github/workflows/cd-release.yml@main
     with:
       enable-changelog: true                  # Opcional (default: true): atualiza o CHANGELOG.md
       version-format: "v%major.%minor.%patch" # Opcional: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd"
@@ -263,7 +263,7 @@ Para projetos que necessitam do ecossistema de plugins do `semantic-release` (an
 ```yaml
 jobs:
   release:
-    uses: heliomarpm/reusable-actions/.github/workflows/cd-semantic-release.yml@main
+    uses: heliomarpm/reusable-workflows/.github/workflows/cd-semantic-release.yml@main
     with:
       project-path: '.'                       # Subpasta onde está o código (opcional)
       prerelease-strategy: 'rc'               # 'rc' (default: v1.0.0-rc.1 em release-*) | 'same-tag' (v1.0.0)
@@ -292,7 +292,7 @@ on:
 
 jobs:
   publish:
-    uses: heliomarpm/reusable-actions/.github/workflows/cd-publish.yml@main
+    uses: heliomarpm/reusable-workflows/.github/workflows/cd-publish.yml@main
     with:
       registries: 'npm, github' # Publica no npmjs.org e no GitHub Packages ao mesmo tempo!
       dry-run: ${{ inputs.dry-run || false }}
@@ -327,15 +327,15 @@ Se preferir montar seu próprio workflow passo a passo, utilize as ações atôm
 
 | Action | Descrição |
 | :--- | :--- |
-| `heliomarpm/reusable-actions/actions/detect-stack@main` | Identifica a tecnologia do projeto (`node`, `php`, etc.). |
-| `heliomarpm/reusable-actions/actions/setup-runtime@main` | Configura versão e cache de dependências. |
-| `heliomarpm/reusable-actions/actions/run-tests@main` | Executa a suíte de testes unitários da stack. |
-| `heliomarpm/reusable-actions/actions/run-coverage@main` | Normaliza relatório de cobertura e valida metas mínimas. |
-| `heliomarpm/reusable-actions/actions/changelog@main` | Gera e comita exclusivamente o arquivo `CHANGELOG.md`. |
-| `heliomarpm/reusable-actions/actions/release@main` | Cria a Git Tag e publica a release oficial no GitHub. |
-| `heliomarpm/reusable-actions/actions/create-pr@main` | Cria ou atualiza Pull Requests via GitHub CLI. |
-| `heliomarpm/reusable-actions/actions/publish@main` | Publica artefatos em um ou múltiplos registries. |
-| `heliomarpm/reusable-actions/actions/semantic-release@main` | Wrapper otimizado para o runner do Semantic Release. |
+| `heliomarpm/reusable-workflows/actions/detect-stack@main` | Identifica a tecnologia do projeto (`node`, `php`, etc.). |
+| `heliomarpm/reusable-workflows/actions/setup-runtime@main` | Configura versão e cache de dependências. |
+| `heliomarpm/reusable-workflows/actions/run-tests@main` | Executa a suíte de testes unitários da stack. |
+| `heliomarpm/reusable-workflows/actions/run-coverage@main` | Normaliza relatório de cobertura e valida metas mínimas. |
+| `heliomarpm/reusable-workflows/actions/changelog@main` | Gera e comita exclusivamente o arquivo `CHANGELOG.md`. |
+| `heliomarpm/reusable-workflows/actions/release@main` | Cria a Git Tag e publica a release oficial no GitHub. |
+| `heliomarpm/reusable-workflows/actions/create-pr@main` | Cria ou atualiza Pull Requests via GitHub CLI. |
+| `heliomarpm/reusable-workflows/actions/publish@main` | Publica artefatos em um ou múltiplos registries. |
+| `heliomarpm/reusable-workflows/actions/semantic-release@main` | Wrapper otimizado para o runner do Semantic Release. |
 
 ### Exemplo de Uso Customizado:
 ```yaml
@@ -345,11 +345,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - id: stack
-        uses: heliomarpm/reusable-actions/actions/detect-stack@main
-      - uses: heliomarpm/reusable-actions/actions/setup-runtime@main
+        uses: heliomarpm/reusable-workflows/actions/detect-stack@main
+      - uses: heliomarpm/reusable-workflows/actions/setup-runtime@main
         with:
           stack: ${{ steps.stack.outputs.stack }}
-      - uses: heliomarpm/reusable-actions/actions/run-coverage@main
+      - uses: heliomarpm/reusable-workflows/actions/run-coverage@main
         with:
           stack: ${{ steps.stack.outputs.stack }}
           coverage-min: 85
@@ -382,16 +382,16 @@ Para detalhes técnicos avançados, funcionamento dos parsers em Bash, tratament
 ## 🤝 Contribuições & Suporte
 
 - Quer contribuir com uma nova stack ou melhoria? Veja nosso [Guia de Contribuição](docs/CONTRIBUTING.md).
-- Precisa de ajuda ou encontrou um problema? Consulte nosso [Suporte](docs/SUPPORT.md) ou abra uma [Issue](https://github.com/heliomarpm/reusable-actions/issues).
+- Precisa de ajuda ou encontrou um problema? Consulte nosso [Suporte](docs/SUPPORT.md) ou abra uma [Issue](https://github.com/heliomarpm/reusable-workflows/issues).
 - Leia o [Código de Conduta](docs/CODE_OF_CONDUCT.md).
 
 Obrigado a todos que já contribuíram para o projeto!
 
-<a href="https://github.com/heliomarpm/reusable-actions/graphs/contributors" target="_blank">
-<img src="https://contrib.nn.ci/api?repo=heliomarpm/reusable-actions&no_bot=true" />
+<a href="https://github.com/heliomarpm/reusable-workflows/graphs/contributors" target="_blank">
+<img src="https://contrib.nn.ci/api?repo=heliomarpm/reusable-workflows&no_bot=true" />
 </a>
 
-###### Criado com [contrib.nn](https://contrib.nn.ci/?repo=heliomarpm/reusable-actions&no_bot=true).
+###### Criado com [contrib.nn](https://contrib.nn.ci/?repo=heliomarpm/reusable-workflows&no_bot=true).
 
 Dito isso, existem várias maneiras de contribuir para este projeto, como:
 
@@ -421,12 +421,13 @@ Distribuído sob a licença [MIT](LICENSE) © [Heliomar P. Marques](https://gith
 
 ----
 <!-- Sponsor badges -->
-[url-github-sponsors-badge]: https://img.shields.io/badge/GitHub%20-Sponsor-1C1E26?style=for-the-badge&labelColor=1C1E26&color=db61a2
+
 [url-github-sponsors]: https://github.com/sponsors/heliomarpm
-[url-paypal-badge]: https://img.shields.io/badge/donate%20on-paypal-1C1E26?style=for-the-badge&labelColor=1C1E26&color=0475fe
-[url-paypal]: https://bit.ly/paypal-sponsor-heliomarpm
-[url-kofi-badge]: https://img.shields.io/badge/kofi-1C1E26?style=for-the-badge&labelColor=1C1E26&color=ff5f5f
+[url-github-sponsors-badge]: https://img.shields.io/badge/GitHub%20-Sponsor-1C1E26?style=for-the-badge&labelColor=1C1E26&color=db61a2
 [url-kofi]: https://ko-fi.com/heliomarpm
-[url-liberapay-badge]: https://img.shields.io/badge/liberapay-1C1E26?style=for-the-badge&labelColor=1C1E26&color=f6c915
+[url-kofi-badge]: https://img.shields.io/badge/kofi-1C1E26?style=for-the-badge&labelColor=1C1E26&color=ff5f5f
 [url-liberapay]: https://liberapay.com/heliomarpm
+[url-liberapay-badge]: https://img.shields.io/badge/liberapay-1C1E26?style=for-the-badge&labelColor=1C1E26&color=f6c915
+[url-paypal]: https://bit.ly/paypal-sponsor-heliomarpm
+[url-paypal-badge]: https://img.shields.io/badge/donate%20on-paypal-1C1E26?style=for-the-badge&labelColor=1C1E26&color=0475fe
 

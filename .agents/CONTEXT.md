@@ -1,8 +1,8 @@
 # 🤖 Contexto do Projeto para Agentes de IA
 
 ## 📌 Identificação do Projeto
-- **Nome:** `heliomarpm/reusable-actions`
-- **Repositório:** `heliomarpm/reusable-actions`
+- **Nome:** `heliomarpm/reusable-workflows`
+- **Repositório:** `heliomarpm/reusable-workflows`
 - **Propósito:** Plataforma opinativa de Reusable Workflows e Composite Actions no GitHub Actions para automação de CI, Quality Gate determinístico, Promoção Automática de Branches (Trunk, Develop, GitFlow e Hotfix), Releases SemVer nativas com changelog atômico e Publicação multi-registry.
 - **Filosofia:** Alta coesão, baixo acoplamento, zero dependências externas nas engines centrais (100% Bash puro) e facilidade absoluta de consumo com poucas linhas de YAML.
 
@@ -24,7 +24,7 @@
 ## 🗂️ Topologia de Pastas
 
 ```text
-reusable-actions/
+reusable-workflows/
 ├── .github/workflows/         # Reusable Workflows chamados via 'uses: ...@main'
 │   ├── ci-quality-gate.yml    # CI: Detecção, runtime, testes unitários, validação de cobertura
 │   ├── cd-pull-request.yml    # CD: Promoção automática de branches, Auto PR com laudo de qualidade
