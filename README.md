@@ -312,7 +312,8 @@ O versionamento segue a especificação de [Conventional Commits](https://www.co
 | `feat:` | ✅ **Sim** | `minor` | `1.0.0` → `1.1.0` |
 | `fix:` | ✅ **Sim** | `patch` | `1.0.0` → `1.0.1` |
 | `perf:` | ✅ **Sim** | `patch` | `1.0.0` → `1.0.1` |
-| `feat!:`, `refactor!:` ou `BREAKING CHANGE:` | ✅ **Sim** | `major` | `1.0.0` → `2.0.0` |
+| `revert:` | ✅ **Sim** | `patch` | `1.0.0` → `1.0.1` |
+| `BREAKING CHANGE:` ou `!` no prefixo | ✅ **Sim** | `major` | `1.0.0` → `2.0.0` |
 | `docs:` | ❌ Não | *(Nenhum)* | Apenas documentação |
 | `chore:` | ❌ Não | *(Nenhum)* | Manutenção e dependências |
 | `ci:` | ❌ Não | *(Nenhum)* | Ajustes de pipeline |

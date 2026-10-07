@@ -21,19 +21,18 @@ Crie **pelo menos um commit** seguindo o formato de Commits Convencionais e envi
 
 ### Tipos aceitos
 
-| Tipo de Commit | Dispara Release? | Impacto no lançamento |
-| :--- | --- | :--- |
-| feat!:       | ✅ Sim     | major (ex: 2.0.0)  |
-| refactor!:   | ✅ Sim	   | major (ex: 2.0.0)  |
-| feat:        | ✅ Sim	   | minor (ex: 1.1.0)  |
-| fix:         | ✅ Sim	   | patch (ex: 1.0.1)  |
-| perf:        | ✅ Sim	   | patch (ex: 1.0.1)  |
-| revert:      | ✅ Sim	   | patch (ex: 1.0.1)  |
-| chore:       | ❌ Não	   | (Nenhuma)          |
-| docs:        | ❌ Não	   | (Nenhuma)          |
-| ci:          | ❌ Não	   | (Nenhuma)          |
-| test:        | ❌ Não	   | (Nenhuma)          |
-| refactor:    | ❌ Não	   | (Nenhuma)          | 
+| Prefixo do Commit | Dispara Nova Release? | Impacto no SemVer | Exemplo |
+| :--- | :---: | :---: | :--- |
+| `feat:` | ✅ **Sim** | `minor` | `1.0.0` → `1.1.0` |
+| `fix:` | ✅ **Sim** | `patch` | `1.0.0` → `1.0.1` |
+| `perf:` | ✅ **Sim** | `patch` | `1.0.0` → `1.0.1` |
+| `revert:` | ✅ **Sim** | `patch` | `1.0.0` → `1.0.1` |
+| `BREAKING CHANGE:` ou `!` no prefixo | ✅ **Sim** | `major` | `1.0.0` → `2.0.0` |
+| `docs:` | ❌ Não | *(Nenhum)* | Apenas documentação |
+| `chore:` | ❌ Não | *(Nenhum)* | Manutenção e dependências |
+| `ci:` | ❌ Não | *(Nenhum)* | Ajustes de pipeline |
+| `test:` | ❌ Não | *(Nenhum)* | Criação ou ajuste de testes |
+| `refactor:` | ❌ Não | *(Nenhum)* | Refatoração interna sem quebra |
 
 ---
 
