@@ -3,6 +3,43 @@
 All notable changes to this project will be documented in this file.
 
 
+## [v1.0.0.4] - 2026-10-07
+
+### ⚠️ Breaking Changes
+- **repo**: ♻️ renomear projeto para 'reusable-workflows' ([e093268](https://github.com/heliomarpm/reusable-actions/commit/e0932683c76fb313c64a0850c66ee8d723bf96c9))
+- **release**: ✨ adicionar estratégias de pré-release e promoção ([b7bd501](https://github.com/heliomarpm/reusable-actions/commit/b7bd50109f0c64bb7760bfd673bb5a84ad7d789c))
+
+### 🚀 Features
+- **release**: ✨ adicionar estratégias de pré-release e promoção ([b7bd501](https://github.com/heliomarpm/reusable-actions/commit/b7bd50109f0c64bb7760bfd673bb5a84ad7d789c))
+- add execution scripts for semantic-release, changelog, and release workflows ([de1cdae](https://github.com/heliomarpm/reusable-actions/commit/de1cdae3d8e308da7b249988dd2499be2f0846d6))
+
+### 🐛 Bug Fixes
+- **changelog**: 🐛 remover declaração 'local' inválida fora de escopo de função ([7fc3a25](https://github.com/heliomarpm/reusable-actions/commit/7fc3a2571330add347f0a21b80189c7c254a3b83))
+
+### ♻️ Code Refactoring
+- **repo**: ♻️ renomear projeto para 'reusable-workflows' ([e093268](https://github.com/heliomarpm/reusable-actions/commit/e0932683c76fb313c64a0850c66ee8d723bf96c9))
+- **release**: ♻️ validar commits em modo estrito ([e47b904](https://github.com/heliomarpm/reusable-actions/commit/e47b9040e276cb9564ce23d4c676b19d9a1af1d3))
+- **ci**: 📝 refatorar resumos de workflows para templates ([5143e75](https://github.com/heliomarpm/reusable-actions/commit/5143e75c6103a59342f263e79d80b68d29db76cc))
+- **ci**: ♻️ separar actions de changelog e release ([59b4e20](https://github.com/heliomarpm/reusable-actions/commit/59b4e20020d7b9beec1a0c72e3a80ae8eae1d240))
+
+### 📝 Documentation
+- 📝 atualizar o backlog e metas da iteração atual ([e854275](https://github.com/heliomarpm/reusable-actions/commit/e854275fcbbd89c76ed860d9f5d691ec37bee8e0))
+- **.agents**: 📝 adicionar diretrizes e contratos de dados para IAs ([0111e79](https://github.com/heliomarpm/reusable-actions/commit/0111e79b75cc2af05be2f77c301481c602ef2fe2))
+- update changelog entries and consolidate release versions ([f3f3d36](https://github.com/heliomarpm/reusable-actions/commit/f3f3d36b81d99219656eaba67317f9420fa5530f))
+- 📝 remover linha de ambiente da tabela ([69c420a](https://github.com/heliomarpm/reusable-actions/commit/69c420ade88020e113ffb8dfadd1e533e450275d))
+- 📝 refatorar e expandir documentação do README ([97cbba0](https://github.com/heliomarpm/reusable-actions/commit/97cbba0aaab0654bad8b2d1564a4937811accbc5))
+
+### 🧪 Tests
+- 🧪 adicionar suíte de testes Bats para scripts Bash ([47678ea](https://github.com/heliomarpm/reusable-actions/commit/47678ea35adec21a59e0ab5bf28352a8642adeca))
+
+### 🔧 CI & Build System
+- ⚙️ atualizar estratégia de promoção no workflow ([a21355c](https://github.com/heliomarpm/reusable-actions/commit/a21355cc6fd4256b449b9cc6c434ece224a9dde2))
+- 📝 renomear workflow de changelog ([d23e661](https://github.com/heliomarpm/reusable-actions/commit/d23e66120efb913835fed8b99c1033c7be8f30f4))
+- 👷 atualizar nome do fluxo de trabalho de PR automático ([42cb7eb](https://github.com/heliomarpm/reusable-actions/commit/42cb7eb5302314958ec016b4813654e5ee271be4))
+
+### 🔄 Other Changes
+- **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://github.com/heliomarpm/reusable-actions/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
+
 ## [v1.0.0.3] - 2026-10-06
 
 ### ⚠️ Breaking Changes
