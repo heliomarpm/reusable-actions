@@ -618,7 +618,7 @@ log "🏷️ Target Version: $RESOLVED_VERSION (Header: $SECTION_HEADER)"
 # ─────────────────────────────────────────────────────────────
 NEW_SECTION_FILE="$TEMP_DIR/new_section.md"
 {
-  echo "$SECTION_HEADER"
+  echo "\\n---\\n\\n$SECTION_HEADER"
   echo ""
   if [[ -s "$NOTES_FILE" ]]; then
     cat "$NOTES_FILE"
