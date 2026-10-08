@@ -121,10 +121,25 @@ jobs:
           log "🔹 Using project path: $PROJECT_PATH"
           echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
 
-  publish:
-    name: 📦 Publish Packages
+  setup-matrix:
     runs-on: ubuntu-latest
-    needs: workdir
+    outputs:
+      registries: ${{ steps.matrix.outputs.registries }}
+    steps:
+      - id: matrix
+        run: |
+          INPUT="${{ inputs.registries || inputs.registry || 'github' }}"
+          JSON=$(echo "$INPUT" | jq -R -c 'split(",") | map(sub("^\\s+"; "") | sub("\\s+$"; "")) | map(select(length > 0))')
+          echo "registries=$JSON" >> $GITHUB_OUTPUT
+
+  publish:
+    name: 📦 Publish to ${{ matrix.registry }}
+    runs-on: ubuntu-latest
+    needs: [workdir, setup-matrix]
+    strategy:
+      fail-fast: false
+      matrix:
+        registry: ${{ fromJson(needs.setup-matrix.outputs.registries) }}
     defaults:
       run:
         shell: bash
@@ -167,7 +182,7 @@ jobs:
         with:
           stack: ${{ steps.stack.outputs.stack }}
           project-path: ${{ needs.workdir.outputs.path || inputs.project-path || '.' }}
-          registries: ${{ inputs.registries || inputs.registry || 'github' }}
+          registries: ${{ matrix.registry }}
           publish-command: ${{ inputs.publish-command }}
           dry-run: ${{ inputs.dry-run }}
           version: ${{ inputs.version }}
