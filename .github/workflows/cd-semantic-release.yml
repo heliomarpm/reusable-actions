@@ -1,8 +1,19 @@
 name: CD - Semantic Release
+run-name: Semantic Release (PRs: ${{ github.event.pull_request.title }})
 
 on:
   workflow_call:
     inputs:
+      skip-version-file:
+        description: 'Skip updating package.json / composer.json version'
+        required: false
+        type: boolean
+        default: false
+      skip-changelog:
+        description: 'Skip generating CHANGELOG.md'
+        required: false
+        type: boolean
+        default: false
       stack:
         description: 'Stack the project. (node | php | dotnet | python | go | empty for auto-detect)'
         required: false
@@ -192,6 +203,8 @@ jobs:
           STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict-conventional-commits }}
           PRERELEASE_STRATEGY: ${{ inputs.prerelease-strategy || 'rc' }}
           PRERELEASE_SUFFIX: ${{ inputs.prerelease-suffix || 'rc' }}
+          SEMANTIC_RELEASE_SKIP_VERSION: ${{ inputs.skip-version-file }}
+          SEMANTIC_RELEASE_SKIP_CHANGELOG: ${{ inputs.skip-changelog }}
 
       - name: 🧾 Job Summary (Fallback)
         if: failure() && steps.stack.outputs.value == ''

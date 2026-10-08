@@ -383,11 +383,21 @@ else
   if [[ -s "$NOTES_FILE" ]]; then
     HAS_CHANGES=true
   fi
+
+  HAS_BUMP=false
+  if [[ "$HAS_BREAKING" == "true" || "$HAS_FEAT" == "true" || "$HAS_FIX" == "true" ]]; then
+    HAS_BUMP=true
+  fi
 fi
 
-# Se não há mudanças identificadas e nenhuma versão explícita foi dada
-if [[ "$HAS_CHANGES" == "false" && -z "$INPUT_VERSION" ]]; then
-  log "ℹ️ No changes detected since last release ($LAST_TAG). No new release needed."
+PRERELEASE_PROMOTION=false
+if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - ]]; then
+  PRERELEASE_PROMOTION=true
+fi
+
+# Se não há mudanças com impacto SemVer identificadas e nenhuma versão explícita foi dada
+if [[ "$HAS_BUMP" == "false" && "$PRERELEASE_PROMOTION" == "false" && ( -z "$INPUT_VERSION" || "$INPUT_VERSION" == "Unreleased" ) ]]; then
+  log "ℹ️ No SemVer-impacting changes detected since last release ($LAST_TAG). No new release needed."
   if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "version=" >> "$GITHUB_OUTPUT"
     echo "tag=" >> "$GITHUB_OUTPUT"
@@ -482,7 +492,7 @@ else
     elif [[ "$HAS_FEAT" == "true" ]]; then
       MINOR=$((MINOR + 1))
       PATCH=0
-    else
+    elif [[ "$HAS_FIX" == "true" ]]; then
       PATCH=$((PATCH + 1))
     fi
   fi

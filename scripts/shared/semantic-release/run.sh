@@ -30,6 +30,8 @@ STRICT_MODE="${STRICT_CONVENTIONAL_COMMITS:-false}"
 BRANCH="${BRANCH:-}"
 export PRERELEASE_STRATEGY="${PRERELEASE_STRATEGY:-rc}"
 export PRERELEASE_SUFFIX="${PRERELEASE_SUFFIX:-rc}"
+export SEMANTIC_RELEASE_SKIP_VERSION="${SEMANTIC_RELEASE_SKIP_VERSION:-false}"
+export SEMANTIC_RELEASE_SKIP_CHANGELOG="${SEMANTIC_RELEASE_SKIP_CHANGELOG:-false}"
 RUN_LOG=""
 
 if [[ -n "$BRANCH" ]]; then
@@ -45,7 +47,8 @@ if [[ -n "$CUSTOM_CONFIG_PATH" && ! -f "$CUSTOM_CONFIG_PATH" ]]; then
   CUSTOM_CONFIG_PATH=""
 fi
 
-GENERIC_CONFIG="$REUSABLE_PATH/scripts/shared/semantic-release/default-releaserc.json"
+GENERIC_CONFIG_JS="$REUSABLE_PATH/scripts/shared/semantic-release/default-releaserc.js"
+GENERIC_CONFIG_JSON="$REUSABLE_PATH/scripts/shared/semantic-release/default-releaserc.json"
 PLUGIN_CONFIG_JS="$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.js"
 PLUGIN_CONFIG_JSON="$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.json"
 
@@ -53,8 +56,10 @@ if [[ -n "$STACK" && -f "$PLUGIN_CONFIG_JS" ]]; then
   DEFAULT_CONFIG="$PLUGIN_CONFIG_JS"
 elif [[ -n "$STACK" && -f "$PLUGIN_CONFIG_JSON" ]]; then
   DEFAULT_CONFIG="$PLUGIN_CONFIG_JSON"
+elif [[ -f "$GENERIC_CONFIG_JS" ]]; then
+  DEFAULT_CONFIG="$GENERIC_CONFIG_JS"
 else
-  DEFAULT_CONFIG="$GENERIC_CONFIG"
+  DEFAULT_CONFIG="$GENERIC_CONFIG_JSON"
 fi
 STRICT_TEMPLATE="$REUSABLE_PATH/templates/strict-mode-error.md"
 
@@ -86,6 +91,8 @@ log "Custom Path detected: ${CUSTOM_CONFIG_PATH:-<none>}"
 log "Default Path detected: $DEFAULT_CONFIG"
 log "Dry run enabled: $IS_DRY_RUN"
 log "Strict Mode enabled: $STRICT_MODE"
+log "Skip Version File: $SEMANTIC_RELEASE_SKIP_VERSION"
+log "Skip Changelog: $SEMANTIC_RELEASE_SKIP_CHANGELOG"
 
 # ------------------------------------------------------------
 # STRICT MODE — Enforce conventional commits
@@ -96,14 +103,17 @@ strict_mode() {
   local LAST_TAG
   LAST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
   local RANGE=""
+  local LOG_LIMIT=""
   if [[ -n "$LAST_TAG" ]]; then
     RANGE="${LAST_TAG}..HEAD"
   else
     RANGE="HEAD"
+    LOG_LIMIT="-n 50"
+    log "ℹ️ No previous tag found. Strict mode will check at most the last 50 commits."
   fi
 
   local COMMITS_RAW
-  COMMITS_RAW="$(git log "$RANGE" --no-merges --pretty=format:"%H%x1f%s%x1e" 2>/dev/null || true)"
+  COMMITS_RAW="$(git log $LOG_LIMIT "$RANGE" --no-merges --pretty=format:"%H%x1f%s%x1e" 2>/dev/null || true)"
 
   if [[ -z "$COMMITS_RAW" ]]; then
     COMMITS_RAW="$(git log -n 1 --pretty=format:"%H%x1f%s%x1e" 2>/dev/null || true)"
@@ -261,6 +271,8 @@ run() {
     EXTRA_METADATA=$(cat <<EOF
 | **Stack** | \`$STACK\` |
 | **Project Path** | \`$PROJECT_PATH\` |
+| **Skip Version File** | \`$SEMANTIC_RELEASE_SKIP_VERSION\` |
+| **Skip Changelog** | \`$SEMANTIC_RELEASE_SKIP_CHANGELOG\` |
 EOF
 )
 

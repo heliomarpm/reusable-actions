@@ -38,7 +38,7 @@ teardown() {
   run grep -F "## [Unreleased]" CHANGELOG.md
   [ "$status" -eq 0 ]
 
-  run grep -F "### 🚀 Features" CHANGELOG.md
+  run grep -E "### .*Features" CHANGELOG.md
   [ "$status" -eq 0 ]
 
   run grep -F "adicionar funcionalidade de login" CHANGELOG.md
@@ -104,3 +104,36 @@ EOF
   run grep -F "## [v1.2.0-rc.1]" CHANGELOG.md
   [ "$status" -eq 0 ]
 }
+
+@test "changelog: não gera versão para commits sem impacto SemVer (docs, chore, ci, test, refactor)" {
+  echo "v1.0.0" > version.txt
+  git add version.txt
+  git commit -m "chore: initial release" >/dev/null 2>&1
+  git tag -a "v1.0.0" -m "v1.0.0"
+
+  echo "docs" >> version.txt
+  git add version.txt
+  git commit -m "docs: atualizar readme" >/dev/null 2>&1
+
+  echo "chore" >> version.txt
+  git add version.txt
+  git commit -m "chore: atualizar dependencias" >/dev/null 2>&1
+
+  export CURRENT_BRANCH="main"
+  export INPUT_BRANCH="main"
+  export COMMIT_CHANGELOG="false"
+  export CHANGELOG_FILE="CHANGELOG.md"
+  export GITHUB_OUTPUT="$TEST_TMPDIR/github_output.txt"
+  touch "$GITHUB_OUTPUT"
+
+  run bash "$ROOT_DIR/scripts/shared/changelog/run.sh"
+  [ "$status" -eq 0 ]
+
+  run grep -F "version=" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+  run grep -F "tag=" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+  run grep -F "has_changes=false" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+}
+

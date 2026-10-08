@@ -8,6 +8,7 @@ if (path.isAbsolute(rawPath) && rawPath.startsWith(process.cwd())) {
   rawPath = path.relative(process.cwd(), rawPath) || '.';
 }
 let pkgRoot = rawPath.replace(/^\.\//, '').replace(/\/$/, '') || '.';
+const pathGitAssets = pkgRoot === '.' ? '' : `${pkgRoot}/`;
 
 if (!fs.existsSync(path.resolve(process.cwd(), pkgRoot, 'package.json'))) {
   if (fs.existsSync(path.resolve(process.cwd(), 'package.json'))) {
@@ -25,26 +26,34 @@ if (!fs.existsSync(path.resolve(process.cwd(), pkgRoot, 'package.json'))) {
           }
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 }
 
 // Assets a serem incluídos no commit de release
-const gitAssets = ['CHANGELOG.md'];
-if (pkgRoot === '.') {
-  gitAssets.push('package.json', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml');
-} else {
+const skipVersion = process.env.SEMANTIC_RELEASE_SKIP_VERSION === 'true';
+const skipChangelog = process.env.SEMANTIC_RELEASE_SKIP_CHANGELOG === 'true';
+
+const gitAssets = [];
+if (!skipChangelog) {
+  gitAssets.push('CHANGELOG.md');
+
+  if (pathGitAssets !== '.') {
+    gitAssets.push(`${pathGitAssets}CHANGELOG.md`);
+  }
+}
+
+if (!skipVersion) {
   gitAssets.push(
-    `${pkgRoot}/package.json`,
-    `${pkgRoot}/package-lock.json`,
-    `${pkgRoot}/yarn.lock`,
-    `${pkgRoot}/pnpm-lock.yaml`,
-    `${pkgRoot}/CHANGELOG.md`
+    `${pathGitAssets}package.json`,
+    `${pathGitAssets}package-lock.json`,
+    `${pathGitAssets}yarn.lock`,
+    `${pathGitAssets}pnpm-lock.yaml`
   );
 }
 
 // Clona e enriquece os plugins do base com as especificidades do Node.js
-const plugins = base.plugins.map(plugin => {
+let plugins = base.plugins.map(plugin => {
   const name = Array.isArray(plugin) ? plugin[0] : plugin;
   if (name === '@semantic-release/git') {
     return [
@@ -58,16 +67,34 @@ const plugins = base.plugins.map(plugin => {
   return plugin;
 });
 
+// Remove changelog plugin if skipped
+if (skipChangelog) {
+  plugins = plugins.filter(plugin => {
+    const name = Array.isArray(plugin) ? plugin[0] : plugin;
+    return name !== '@semantic-release/changelog';
+  });
+}
+
 // Insere o plugin npm logo antes do git com o pkgRoot correto
-const gitIndex = plugins.findIndex(p => (Array.isArray(p) ? p[0] : p) === '@semantic-release/git');
-if (gitIndex !== -1) {
-  plugins.splice(gitIndex, 0, [
-    '@semantic-release/npm',
-    {
-      npmPublish: false,
-      pkgRoot: pkgRoot
-    }
-  ]);
+if (!skipVersion) {
+  const gitIndex = plugins.findIndex(p => (Array.isArray(p) ? p[0] : p) === '@semantic-release/git');
+  if (gitIndex !== -1) {
+    plugins.splice(gitIndex, 0, [
+      '@semantic-release/npm',
+      {
+        npmPublish: false,
+        pkgRoot: pkgRoot
+      }
+    ]);
+  }
+}
+
+// Se não houver assets para commit, remove o plugin git
+if (gitAssets.length === 0) {
+  plugins = plugins.filter(plugin => {
+    const name = Array.isArray(plugin) ? plugin[0] : plugin;
+    return name !== '@semantic-release/git';
+  });
 }
 
 const prereleaseStrategy = process.env.PRERELEASE_STRATEGY || 'rc';

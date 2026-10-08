@@ -154,3 +154,101 @@ teardown() {
   run grep -F "tag=v1.1.0" "$GITHUB_OUTPUT"
   [ "$status" -eq 0 ]
 }
+
+@test "release: bump PATCH para commits do tipo perf e revert" {
+  echo "v1.0.0" > version.txt
+  git add version.txt
+  git commit -m "chore: initial release" >/dev/null 2>&1
+  git tag -a "v1.0.0" -m "v1.0.0"
+
+  echo "perf" >> version.txt
+  git add version.txt
+  git commit -m "perf: otimizar carregamento" >/dev/null 2>&1
+
+  export INPUT_BRANCH="main"
+  export RELEASE_BRANCHES="main"
+  export GITHUB_OUTPUT="$TEST_TMPDIR/github_output.txt"
+  touch "$GITHUB_OUTPUT"
+
+  run bash "$ROOT_DIR/scripts/shared/release/run.sh"
+  [ "$status" -eq 0 ]
+
+  run grep -F "version=v1.0.1" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+
+  run grep -F "tag=v1.0.1" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+}
+
+@test "release: bump MAJOR para breaking changes no corpo da mensagem (BREAKING CHANGE:)" {
+  echo "v1.0.0" > version.txt
+  git add version.txt
+  git commit -m "chore: initial release" >/dev/null 2>&1
+  git tag -a "v1.0.0" -m "v1.0.0"
+
+  echo "breaking body" >> version.txt
+  git add version.txt
+  git commit -m "refactor: reestruturar modulo" -m "BREAKING CHANGE: assinatura dos metodos alterada" >/dev/null 2>&1
+
+  export INPUT_BRANCH="main"
+  export RELEASE_BRANCHES="main"
+  export GITHUB_OUTPUT="$TEST_TMPDIR/github_output.txt"
+  touch "$GITHUB_OUTPUT"
+
+  run bash "$ROOT_DIR/scripts/shared/release/run.sh"
+  [ "$status" -eq 0 ]
+
+  run grep -F "version=v2.0.0" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+
+  run grep -F "tag=v2.0.0" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+}
+
+@test "release: não gera release nem tag para commits docs, chore, ci, test e refactor" {
+  echo "v1.0.0" > version.txt
+  git add version.txt
+  git commit -m "chore: initial release" >/dev/null 2>&1
+  git tag -a "v1.0.0" -m "v1.0.0"
+
+  echo "doc" >> version.txt
+  git add version.txt
+  git commit -m "docs: atualizar documentacao de instalacao" >/dev/null 2>&1
+
+  echo "chore" >> version.txt
+  git add version.txt
+  git commit -m "chore: atualizar dependencias" >/dev/null 2>&1
+
+  echo "ci" >> version.txt
+  git add version.txt
+  git commit -m "ci: ajustar runner da pipeline" >/dev/null 2>&1
+
+  echo "test" >> version.txt
+  git add version.txt
+  git commit -m "test: adicionar testes unitarios" >/dev/null 2>&1
+
+  echo "refactor" >> version.txt
+  git add version.txt
+  git commit -m "refactor: simplificar logica interna sem quebra" >/dev/null 2>&1
+
+  export INPUT_BRANCH="main"
+  export RELEASE_BRANCHES="main"
+  export GITHUB_OUTPUT="$TEST_TMPDIR/github_output.txt"
+  touch "$GITHUB_OUTPUT"
+
+  run bash "$ROOT_DIR/scripts/shared/release/run.sh"
+  [ "$status" -eq 0 ]
+
+  # Saídas de versão e tag devem estar vazias
+  run grep -F "version=" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+  run grep -F "tag=" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+  run grep -F "has_changes=false" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+
+  # Nenhuma tag nova deve ter sido criada no Git
+  LATEST_TAG="$(git describe --tags --abbrev=0)"
+  [ "$LATEST_TAG" = "v1.0.0" ]
+}
+

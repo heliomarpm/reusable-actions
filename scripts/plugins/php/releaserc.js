@@ -2,15 +2,25 @@ const path = require('path');
 const base = require(path.resolve(__dirname, '../../shared/semantic-release/default-releaserc.json'));
 
 let pkgRoot = (process.env.PROJECT_PATH || '.').replace(/^\.\//, '').replace(/\/$/, '') || '.';
-const gitAssets = ['CHANGELOG.md'];
-if (pkgRoot === '.') {
-  gitAssets.push('composer.json');
-} else {
-  gitAssets.push(`${pkgRoot}/composer.json`, 'composer.json');
+const pathGitAssets = pkgRoot === '.' ? '' : pkgRoot;
+
+const skipVersion = process.env.SEMANTIC_RELEASE_SKIP_VERSION === 'true';
+const skipChangelog = process.env.SEMANTIC_RELEASE_SKIP_CHANGELOG === 'true';
+
+const gitAssets = [];
+if (!skipChangelog) {
+  gitAssets.push('CHANGELOG.md');
+
+  if (pathGitAssets !== '.') {
+    gitAssets.push(`${pathGitAssets}/CHANGELOG.md`);
+  }
+}
+if (!skipVersion) {
+  gitAssets.push(`${pathGitAssets}/composer.json`);
 }
 
 // Clona e enriquece os plugins do base com as especificidades do PHP
-const plugins = base.plugins.map(plugin => {
+let plugins = base.plugins.map(plugin => {
   const name = Array.isArray(plugin) ? plugin[0] : plugin;
   if (name === '@semantic-release/git') {
     return [
@@ -23,6 +33,22 @@ const plugins = base.plugins.map(plugin => {
   }
   return plugin;
 });
+
+// Remove changelog plugin if skipped
+if (skipChangelog) {
+  plugins = plugins.filter(plugin => {
+    const name = Array.isArray(plugin) ? plugin[0] : plugin;
+    return name !== '@semantic-release/changelog';
+  });
+}
+
+// Se não houver assets para commit, remove o plugin git
+if (gitAssets.length === 0) {
+  plugins = plugins.filter(plugin => {
+    const name = Array.isArray(plugin) ? plugin[0] : plugin;
+    return name !== '@semantic-release/git';
+  });
+}
 
 const prereleaseStrategy = process.env.PRERELEASE_STRATEGY || 'rc';
 const prereleaseSuffix = process.env.PRERELEASE_SUFFIX || 'rc';

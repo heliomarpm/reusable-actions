@@ -33,6 +33,14 @@ inputs:
     description: 'Target branch to evaluate (overrides GITHUB_REF for workflow_run)'
     required: false
     default: ''
+  skip-version-file:
+    description: 'Skip updating package.json / composer.json version'
+    required: false
+    default: 'false'
+  skip-changelog:
+    description: 'Skip generating CHANGELOG.md'
+    required: false
+    default: 'false'
   prerelease-strategy:
     description: 'Pre-release strategy: "rc" (default: v1.0.0-rc.1 on release-*) or "same-tag" (v1.0.0 on release-*)'
     required: false
@@ -76,6 +84,8 @@ runs:
         PRERELEASE_SUFFIX: ${{ inputs.prerelease-suffix }}
         REUSABLE_PATH: ${{ github.action_path }}/../..
         PROJECT_PATH: ${{ inputs.project-path }}
+        SEMANTIC_RELEASE_SKIP_VERSION: ${{ inputs.skip-version-file }}
+        SEMANTIC_RELEASE_SKIP_CHANGELOG: ${{ inputs.skip-changelog }}
       run: |
         SCRIPT="${{ github.action_path }}/../../scripts/shared/semantic-release/run.sh"
         chmod +x "$SCRIPT"

@@ -424,6 +424,39 @@ elif [[ ("$MODE" == "release" || "$MODE" == "prerelease") && -s "$EXISTING_UNREL
   cat "$EXISTING_UNRELEASED_CONTENT" > "$NOTES_FILE"
 fi
 
+HAS_BUMP=false
+if [[ "$HAS_BREAKING" == "true" || "$HAS_FEAT" == "true" || "$HAS_FIX" == "true" ]]; then
+  HAS_BUMP=true
+fi
+
+if [[ -s "$EXISTING_UNRELEASED_CONTENT" ]]; then
+  if grep -qiE "Breaking Changes|Features|Bug Fixes|Performance Improvements|Reverts" "$EXISTING_UNRELEASED_CONTENT"; then
+    HAS_BUMP=true
+  fi
+fi
+
+PRERELEASE_PROMOTION=false
+if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - ]]; then
+  PRERELEASE_PROMOTION=true
+fi
+
+if [[ "$MODE" != "develop" && "$HAS_BUMP" == "false" && "$PRERELEASE_PROMOTION" == "false" && ( -z "$INPUT_VERSION" || "$INPUT_VERSION" == "Unreleased" ) ]]; then
+  log "ℹ️ No SemVer-impacting changes detected since last release ($LAST_TAG). No new changelog version needed."
+  echo "version=" >> "${GITHUB_OUTPUT:-/dev/null}"
+  echo "tag=" >> "${GITHUB_OUTPUT:-/dev/null}"
+  echo "has_changes=false" >> "${GITHUB_OUTPUT:-/dev/null}"
+  echo "release_notes=" >> "${GITHUB_OUTPUT:-/dev/null}"
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    append_template_to_summary "summary-changelog-skipped.md" \
+      CHANGELOG_FILE "$CHANGELOG_FILE" \
+      CURRENT_BRANCH "$CURRENT_BRANCH" \
+      MODE "$MODE" \
+      COMMITS_COUNT "$TOTAL_COMMITS" \
+      SINCE_LABEL "$SINCE_LABEL"
+  fi
+  exit 0
+fi
+
 if [[ "$HAS_CHANGES" == "false" && "$MODE" != "develop" ]]; then
   log "ℹ️ No changes detected. Changelog is up to date."
   echo "version=" >> "${GITHUB_OUTPUT:-/dev/null}"
@@ -512,7 +545,7 @@ else
       elif [[ "$HAS_FEAT" == "true" ]]; then
         MINOR=$((MINOR + 1))
         PATCH=0
-      else
+      elif [[ "$HAS_FIX" == "true" ]]; then
         PATCH=$((PATCH + 1))
       fi
     fi
