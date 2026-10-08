@@ -1,5 +1,4 @@
 name: CD - Semantic Release
-run-name: Semantic Release (PRs: ${{ github.event.pull_request.title }})
 
 on:
   workflow_call:

@@ -1,5 +1,4 @@
 name: "CD - Release"
-run-name: "Release (PRs: ${{ github.event.pull_request.title }})"
 
 on:
   # push:
