@@ -1,17 +1,17 @@
 name: CD - Pull Request
-# run-name: "🔀 Auto PR: ${{ github.event.workflow_run.head_branch || github.ref_name }} → ${{ (github.event.workflow_run.head_branch == 'develop' || github.ref_name == 'develop') && 'main' || 'develop' }}"
-# run-name: "🔀 Auto PR: ${{ github.event.workflow_run.head_branch }} → ${{ startsWith(github.event.workflow_run.head_branch, 'hotfix/') && 'main' || (github.event.workflow_run.head_branch == 'develop' && 'main' || 'develop') }}"
+# run-name: "🔀 Auto PR: ${{ github.head_ref || github.ref_name }} → ${{ (github.head_ref == 'develop' || github.ref_name == 'develop') && 'main' || 'develop' }}"
+# run-name: "🔀 Auto PR: ${{ github.head_ref }} → ${{ startsWith(github.head_ref, 'hotfix/') && 'main' || (github.head_ref == 'develop' && 'main' || 'develop') }}"
 run-name: >-
-  🔀 Auto PR: (${{ github.event.workflow_run.head_branch || github.ref_name }} → ${{
-    startsWith(github.event.workflow_run.head_branch || github.ref_name, 'hotfix') && 'main' ||
-    (startsWith(github.event.workflow_run.head_branch || github.ref_name, 'release') && 'main' ||
-    ((github.event.workflow_run.head_branch == 'develop' || github.ref_name == 'develop') && 'release-*' || 'develop'))
-  }}): ${{ github.event.workflow_run.head_commit.message || 'Disparo manual' }}
+  🔀 Auto PR: (${{ github.head_ref || github.ref_name }} → ${{
+    startsWith(github.head_ref || github.ref_name, 'hotfix') && 'main' ||
+    (startsWith(github.head_ref || github.ref_name, 'release') && 'main' ||
+    ((github.head_ref == 'develop' || github.ref_name == 'develop') && 'release-*' || 'develop'))
+  }}): ${{ github.event.head_commit.message || 'Disparo manual' }}
 
 
 on:
   workflow_call:
-    inputs:
+    inputs:      
       strategy:
         description: 'Promotion strategy (trunk | develop | gitflow )'
         required: false
@@ -61,6 +61,33 @@ on:
         required: false
         type: string
         default: ''
+
+      
+      stack:
+        description: 'Stack override (empty for auto-detect)'
+        required: false
+        type: string
+        default: ''
+      stack-version:
+        description: 'Runtime Stack version'
+        required: false
+        type: string
+        default: ''
+      coverage-min:
+        description: 'Minimum coverage threshold (0-100)'
+        type: number
+        required: false
+        default: 80
+      coverage-mode:
+        description: 'Coverage mode (info | block | decrease)'
+        type: string
+        required: false
+        default: 'info'
+      coverage-continue-on-failure:
+        description: 'Continue pipeline even if tests fail'
+        required: false
+        type: boolean
+        default: true
     secrets:
       GH_TOKEN:
         required: true
@@ -83,7 +110,7 @@ jobs:
         id: engine
         run: |
           STRATEGY="${{ inputs.strategy }}"
-          HEAD="${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}"
+          HEAD="${{ github.head_ref || github.head_ref || github.ref_name }}"
           MAIN="${{ inputs.main-branch }}"
           DEV="${{ inputs.develop-branch }}"
           PREFIX="${{ inputs.prefix-release-branch }}"
@@ -185,8 +212,65 @@ jobs:
           log "🔹 Using project path: $PROJECT_PATH"
           echo "value=$PROJECT_PATH" >> "$GITHUB_OUTPUT"
 
+
+  quality-gate:
+    needs: workdir
+    if: needs.resolve.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      tests_status: ${{ steps.tests.outputs.status }}
+      coverage_status: ${{ steps.coverage.outputs.status }}
+      coverage_line: ${{ steps.coverage.outputs.line }}
+      coverage_min: ${{ steps.coverage.outputs.min }}
+      coverage_mode: ${{ steps.coverage.outputs.mode }}
+    steps:
+      - name: 📌 Checkout consumer repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.head }}
+
+      - name: 📌 Checkout reusable-workflows scripts
+        uses: actions/checkout@v7
+        with:
+          repository: heliomarpm/reusable-workflows
+          ref: main
+          path: __reusable_actions__
+
+      - name: 🔍 Detect Stack
+        uses: ./__reusable_actions__/actions/detect-stack
+        id: stack
+        with:
+          stack: ${{ inputs.stack }}
+          project-path: ${{ needs.workdir.outputs.path }}
+
+      - name: ⚙️ Setup Runtime
+        uses: ./__reusable_actions__/actions/setup-runtime
+        with:
+          stack: ${{ steps.stack.outputs.stack }}
+          stack-version: ${{ inputs.stack-version }}
+          project-path: ${{ needs.workdir.outputs.path }}
+
+      - name: 🧪 Run Tests
+        uses: ./__reusable_actions__/actions/run-tests
+        id: tests
+        with:
+          stack: ${{ steps.stack.outputs.stack }}
+          project-path: ${{ needs.workdir.outputs.path }}
+          coverage-mode: ${{ inputs.coverage-mode }}
+
+      - name: 📊 Run Coverage
+        uses: ./__reusable_actions__/actions/run-coverage
+        id: coverage
+        continue-on-error: ${{ inputs.coverage-continue-on-failure }}
+        with:
+          stack: ${{ steps.stack.outputs.stack }}
+          project-path: ${{ needs.workdir.outputs.path }}
+          coverage-min: ${{ inputs.coverage-min }}
+          coverage-mode: ${{ inputs.coverage-mode }}
+          github-token: ${{ secrets.GH_TOKEN }}
+
   promote:    
-    needs: [resolve, workdir]
+    needs: [resolve, workdir, quality-gate]
     if: needs.resolve.outputs.skip != 'true'
     runs-on: ubuntu-latest
 
@@ -222,35 +306,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
-      - name: 📥 Download coverage artifact
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          RUN_ID="${{ github.event.workflow_run.id || github.run_id }}"
-          mkdir -p coverage
-          echo "→ Buscando artefato de cobertura da execução CI #$RUN_ID..."
-          if gh run download "$RUN_ID" -n coverage-report -D coverage 2>/dev/null; then
-            echo "✅ Artefato de cobertura baixado com sucesso."
-          else
-            echo "ℹ️ Artefato de cobertura não encontrado para o run #$RUN_ID (opcional)."
-          fi
-
-      - name: 📊 Read coverage report
+      - name: 📊 Map coverage report
         id: coverage
         run: |
-          FILE="coverage/coverage-summary.normalized.json"
-          if [ -f "$FILE" ]; then
-            LINE=$(jq -r '.line // empty' "$FILE")
-            MIN=$(jq -r '.min // empty' "$FILE")
-            STATUS=$(jq -r '.status // "passed"' "$FILE")
-            MODE=$(jq -r '.mode // "info"' "$FILE")
-            echo "line=$LINE" >> $GITHUB_OUTPUT
-            echo "min=$MIN" >> $GITHUB_OUTPUT
-            echo "status=$STATUS" >> $GITHUB_OUTPUT
-            echo "mode=$MODE" >> $GITHUB_OUTPUT
-          else
-            echo "status=missing" >> $GITHUB_OUTPUT
-          fi
+          echo "line=${{ needs.quality-gate.outputs.coverage_line }}" >> $GITHUB_OUTPUT
+          echo "min=${{ needs.quality-gate.outputs.coverage_min }}" >> $GITHUB_OUTPUT
+          echo "status=${{ needs.quality-gate.outputs.coverage_status || 'missing' }}" >> $GITHUB_OUTPUT
+          echo "mode=${{ needs.quality-gate.outputs.coverage_mode }}" >> $GITHUB_OUTPUT
 
       - name: 🚀 Resolve Semantic Release
         id: semantic-release
