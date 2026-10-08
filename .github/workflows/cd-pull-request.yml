@@ -93,9 +93,10 @@ on:
         required: true
 
 permissions:
-  contents: write       # → permite criar e atualizar tags, commits e pushes no repositório.
-  pull-requests: write  # → se precisar criar ou atualizar pull requests
-  checks: read          # → (opcional) se precisar ler check runs
+  contents: write       # Permite criar e atualizar branches e pushes
+  pull-requests: write  # Permite criar e atualizar pull requests
+  # checks: read          # → se precisar ler check runs
+
 
 jobs:
   resolve:
@@ -280,9 +281,7 @@ jobs:
         working-directory: ${{ needs.workdir.outputs.path || '.' }}
 
     permissions:
-      actions: read
       contents: write
-      issues: write
       pull-requests: write
 
     steps:

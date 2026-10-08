@@ -92,6 +92,10 @@ on:
   push:
     branches: ["develop", "feature/**", "hotfix/**", "release-*"]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   ci-pr:
     uses: heliomarpm/reusable-workflows/.github/workflows/cd-pull-request.yml@main
@@ -115,6 +119,9 @@ on:
     paths-ignore:
       - 'CHANGELOG.md'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     uses: heliomarpm/reusable-workflows/.github/workflows/cd-release.yml@main
@@ -129,12 +136,25 @@ jobs:
 
 ## ⚙️ Pré-requisitos & Permissões no GitHub
 
-Para que o GitHub Actions possa criar Pull Requests e enviar tags/releases automaticamente, configure as permissões no repositório consumidor:
+Para que o GitHub Actions possa criar Pull Requests, enviar tags, gerar releases ou publicar pacotes, configure as permissões no repositório consumidor:
 
+### 1. Configuração do Repositório (Settings)
 1. Acesse **Settings > Actions > General > Workflow permissions**.
-2. Selecione **Read and write permissions**.
-3. Marque a caixa **Allow GitHub Actions to create and approve pull requests**.
+2. Selecione **Read and write permissions** (permite que o `GITHUB_TOKEN` crie tags, commits e releases).
+3. Marque a caixa **Allow GitHub Actions to create and approve pull requests** (essencial para o Auto PR).
 4. Clique em **Save**.
+
+### 2. Declaração Obrigatória de Permissões no Workflow Chamador (`permissions`)
+No GitHub Actions, um **Reusable Workflow (`workflow_call`)** só pode executar com permissões que foram explicitamente concedidas pelo workflow chamador (*caller workflow*). Caso o chamador não defina `permissions:`, o GitHub aplica o perfil restritivo padrão (`contents: read`), resultando em erro de validação estática.
+
+Sempre declare o bloco `permissions:` no início do seu workflow chamador ou no nível do job:
+
+| Reusable Workflow | Permissões Mínimas no Chamador | Motivo Técnico |
+| :--- | :--- | :--- |
+| **`cd-release.yml`** | `contents: write` | Criar tags Git, comitar `CHANGELOG.md` e publicar a GitHub Release. |
+| **`cd-semantic-release.yml`** | `contents: write`<br>`issues: write`<br>`pull-requests: write` | Criar tags/releases, comitar mudanças e notificar issues e PRs associados à release. |
+| **`cd-pull-request.yml`** | `contents: write`<br>`pull-requests: write` | Criar/atualizar Pull Requests e criar branches remotas de release se inexistentes. |
+| **`cd-publish.yml`** | `contents: read`<br>`packages: write` | Ler código para empacotamento e publicar no GitHub Packages (quando utilizado). |
 
 ---
 
@@ -166,6 +186,10 @@ Branches prefixadas com `hotfix/*` são tratadas como exceção arquitetural con
 Abre ou atualiza Pull Requests automaticamente, injetando o laudo de cobertura e métricas diretamente no corpo do PR.
 
 ```yaml
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   promote:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
@@ -209,6 +233,9 @@ jobs:
 Engine ultra-rápida (< 2 segundos) para criação de **Git Tag**, **GitHub Release** e atualização opcional do `CHANGELOG.md` sem necessidade de Node.js, `npm install` ou ferramentas externas. Segue as mesmas regras de SemVer e Conventional Commits do Semantic Release (veja a tabela abaixo):
 
 ```yaml
+permissions:
+  contents: write
+
 jobs:
   release:
     uses: heliomarpm/reusable-workflows/.github/workflows/cd-release.yml@main
@@ -235,6 +262,11 @@ jobs:
 Para projetos que necessitam do ecossistema de plugins do `semantic-release` (análise avançada de commits, plugins npm, etc.):
 
 ```yaml
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 jobs:
   release:
     uses: heliomarpm/reusable-workflows/.github/workflows/cd-semantic-release.yml@main
@@ -265,6 +297,10 @@ on:
       dry-run:
         type: boolean
         default: false
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   publish:
