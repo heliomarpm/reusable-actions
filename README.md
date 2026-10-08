@@ -80,49 +80,30 @@ Os valores padrão fazem parte do seu valor.
 
 ## ⚡ Quick Start em 3 Minutos
 
-Para habilitar a esteira completa no seu repositório consumidor, crie os três arquivos abaixo na pasta `.github/workflows/`:
+Para habilitar a esteira completa no seu repositório consumidor, crie os dois arquivos abaixo na pasta `.github/workflows/`:
 
-### 1. `.github/workflows/ci.yml` — Validação de Qualidade
-Executa testes e calcula a cobertura a cada commit enviado:
+### 1. `.github/workflows/ci-pr.yml` — CI & Promoção Automática
+Executa testes, calcula a cobertura e, em caso de sucesso, abre ou atualiza automaticamente o Pull Request de acordo com o fluxo do seu time:
 
 ```yaml
-name: "1. Quality Assurance"
+name: "1. CI & Auto PR"
 
 on:
   push:
     branches: ["develop", "feature/**", "hotfix/**", "release-*"]
 
 jobs:
-  qa:
-    uses: heliomarpm/reusable-workflows/.github/workflows/ci-quality-gate.yml@main
-    with:
-      coverage-min: 80
-      coverage-mode: block # 'block' falha o job se cobertura < 80%. 'info' apenas emite alertas.
-```
-
-### 2. `.github/workflows/auto-pr.yml` — Promoção Automática
-Disparado assim que o CI é concluído com sucesso, abrindo ou atualizando o Pull Request de acordo com o fluxo do seu time:
-
-```yaml
-name: "2. Auto PR"
-run-name: "🔀 Auto PR: ${{ github.event.workflow_run.head_branch }} → ${{ github.event.workflow_run.head_branch == 'develop' && 'main' || 'develop' }}"
-
-on:
-  workflow_run:
-    workflows: ["1. Quality Assurance"]
-    types: [completed]
-
-jobs:
-  promote:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  ci-pr:
     uses: heliomarpm/reusable-workflows/.github/workflows/cd-pull-request.yml@main
     with:
-      strategy: develop # Opções: trunk | develop | gitflow
+      strategy: develop      # Opções: trunk | develop | gitflow
+      coverage-min: 80
+      coverage-mode: block   # 'block' falha a PR se cobertura < 80%. 'info' apenas alerta.
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### 3. `.github/workflows/release.yml` — Criação da Release
+### 2. `.github/workflows/release.yml` — Criação da Release
 Gera a Git Tag, notas categorizadas e atualiza o `CHANGELOG.md` automaticamente ao integrar na branch principal:
 
 ```yaml
@@ -180,29 +161,7 @@ Branches prefixadas com `hotfix/*` são tratadas como exceção arquitetural con
 
 ## 📦 Catálogo de Reusable Workflows
 
-### 1️⃣ CI — Quality Gate (`ci-quality-gate.yml`)
-
-Detecta automaticamente a tecnologia do projeto, instala o runtime, roda os testes e avalia a cobertura de código.
-
-```yaml
-jobs:
-  qa:
-    uses: heliomarpm/reusable-workflows/.github/workflows/ci-quality-gate.yml@main
-    with:
-      stack: ''            # Opcional: 'node' ou 'php' (vazio = auto-detect)
-      project-path: '.'     # Opcional: caminho do código (para monorepos/subpastas)
-      coverage-min: 80     # Porcentagem mínima de cobertura exigida
-      coverage-mode: block # 'block' (falha o job) | 'info' (alerta) | 'decrease' (bloqueia queda)
-```
-
-#### 🛡️ Modos de Avaliação do Quality Gate:
-- **`block`**: Se a cobertura ficar abaixo de `coverage-min`, o job falha com erro vermelho. Como o Auto PR depende do sucesso do CI, o PR **não é aberto**.
-- **`info`**: O CI sempre conclui com sucesso, mas anexa a etiqueta vermelha `coverage-failed` e a tabela detalhada de cobertura no PR para os revisores.
-- **`decrease`**: Compara com a cobertura da branch de destino e impede regressões.
-
----
-
-### 2️⃣ CD — Promoção Automática de Branches (`cd-pull-request.yml`)
+### 1️⃣ CD — Promoção Automática de Branches (`cd-pull-request.yml`)
 
 Abre ou atualiza Pull Requests automaticamente, injetando o laudo de cobertura e métricas diretamente no corpo do PR.
 
@@ -212,14 +171,26 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     uses: heliomarpm/reusable-workflows/.github/workflows/cd-pull-request.yml@main
     with:
-      strategy: develop                    # trunk | develop | gitflow
-      main-branch: 'main'                  # Nome da branch principal
-      develop-branch: 'develop'            # Nome da branch de integração
-      prefix-release-branch: 'release-'    # Prefixo usado no GitFlow (ex: release-1.2.0)
-      pr-title: '🔀 PR ({{yyyy-MM-dd}}): {{HEAD_BRANCH}} → {{BASE_BRANCH}}'
+      strategy: develop                    # Opcional: trunk | develop (default) | gitflow
+      main-branch: 'main'                  # Opcional: Nome da branch principal (default: main)
+      develop-branch: 'develop'            # Opcional: Nome da branch de integração (default: develop)
+      prefix-release-branch: 'release-'    # Opcional: Prefixo usado no GitFlow (ex: release-1.2.0)
+      pr-title: '🔀 PR ({{yyyy-MM-dd}}): {{HEAD_BRANCH}} → {{BASE_BRANCH}}'   # Opcional
+
+      # Qaulity Gate (Ci Quality Gate)
+      stack: ''            # Opcional: 'node' ou 'php' (vazio = auto-detect)
+      project-path: '.'    # Opcional: caminho do código (para monorepos/subpastas)
+      coverage-min: 80     # Opcional: Porcentagem mínima de cobertura exigida (default: 80)
+      coverage-mode: block # Opcional: 'block' (falha o job) | 'info' (alerta) | 'decrease' (bloqueia queda) (default: info)
+      
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+#### 🛡️ Modos de Avaliação do Quality Gate:
+- **`block`**: Se a cobertura ficar abaixo de `coverage-min`, o job falha com erro vermelho. Como o Auto PR depende do sucesso do CI, o PR **não é aberto**.
+- **`info`**: O CI sempre conclui com sucesso, mas anexa a etiqueta vermelha `coverage-failed` e a tabela detalhada de cobertura no PR para os revisores.
+- **`decrease`**: Compara com a cobertura da branch de destino e impede regressões.
 
 > [!TIP]
 > **Título Personalizado na Aba Actions (`run-name`):**  
@@ -227,12 +198,15 @@ jobs:
 > ```yaml
 > run-name: "🔀 Auto PR: ${{ github.event.workflow_run.head_branch }} → ${{ github.event.workflow_run.head_branch == 'develop' && 'main' || 'develop' }}"
 > ```
+>
+> Revise a documentação para mais detalhes.
+
 
 ---
 
-### 3️⃣ CD — Release Nativa & Zero-Dependency (`cd-release.yml`)
+### 2️⃣ CD — Release Nativa & Zero-Dependency (`cd-release.yml`)
 
-Engine ultra-rápida (< 2 segundos) para criação de **Git Tag**, **GitHub Release** e atualização opcional do `CHANGELOG.md` sem necessidade de Node.js, `npm install` ou ferramentas externas:
+Engine ultra-rápida (< 2 segundos) para criação de **Git Tag**, **GitHub Release** e atualização opcional do `CHANGELOG.md` sem necessidade de Node.js, `npm install` ou ferramentas externas. Segue as mesmas regras de SemVer e Conventional Commits do Semantic Release (veja a tabela abaixo):
 
 ```yaml
 jobs:
@@ -256,7 +230,7 @@ jobs:
 
 ---
 
-### 4️⃣ CD — Semantic Release (`cd-semantic-release.yml`)
+### 3️⃣ CD — Semantic Release (`cd-semantic-release.yml`)
 
 Para projetos que necessitam do ecossistema de plugins do `semantic-release` (análise avançada de commits, plugins npm, etc.):
 
@@ -266,6 +240,8 @@ jobs:
     uses: heliomarpm/reusable-workflows/.github/workflows/cd-semantic-release.yml@main
     with:
       project-path: '.'                       # Subpasta onde está o código (opcional)
+      skip-version-file: false                # Opcional (default: false): não altera a versão em package.json, composer.json, etc.
+      skip-changelog: false                   # Opcional (default: false): não gera nem comita CHANGELOG.md
       prerelease-strategy: 'rc'               # 'rc' (default: v1.0.0-rc.1 em release-*) | 'same-tag' (v1.0.0)
       prerelease-suffix: 'rc'                 # Sufixo da pré-release (default: 'rc')
     secrets:
@@ -274,7 +250,7 @@ jobs:
 
 ---
 
-### 5️⃣ CD — Publish Multi-Registry (`cd-publish.yml`)
+### 4️⃣ CD — Publish Multi-Registry (`cd-publish.yml`)
 
 Publicação automatizada e agnóstica de pacotes para **um ou múltiplos registries simultâneos**, com suporte a Node.js (`npm`), PHP (`Packagist`) ou comandos customizados:
 

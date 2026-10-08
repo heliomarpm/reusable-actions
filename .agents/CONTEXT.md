@@ -26,8 +26,7 @@
 ```text
 reusable-workflows/
 ├── .github/workflows/         # Reusable Workflows chamados via 'uses: ...@main'
-│   ├── ci-quality-gate.yml    # CI: Detecção, runtime, testes unitários, validação de cobertura
-│   ├── cd-pull-request.yml    # CD: Promoção automática de branches, Auto PR com laudo de qualidade
+│   ├── cd-pull-request.yml    # CI/CD: Quality Gate, Auto PR e Promoção automática de branches com laudo de qualidade
 │   ├── cd-release.yml         # CD: Release nativa com tags SemVer, notas formatadas e changelog
 │   ├── cd-semantic-release.yml# CD: Semantic release avançado com plugins npm
 │   ├── cd-publish.yml         # CD: Publicação multi-registry (npm, github, packagist, etc.)

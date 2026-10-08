@@ -39,7 +39,7 @@ O ecossistema é dividido em duas camadas estritas (conforme formalizado na **AD
 
 | Diretório | Responsabilidade |
 | :--- | :--- |
-| `.github/workflows/` | **Reusable Workflows** (`ci-quality-gate.yml`, `cd-pull-request.yml`, `cd-release.yml`, `cd-semantic-release.yml`, `cd-publish.yml`). |
+| `.github/workflows/` | **Reusable Workflows** (`cd-pull-request.yml`, `cd-release.yml`, `cd-semantic-release.yml`, `cd-publish.yml`). |
 | `actions/` | **Composite Actions** atômicas prontas para consumo direto em pipelines customizados. |
 | `scripts/shared/` | Engines centrais escritas em Bash (shell helpers, detect-stack, parser de commits, run.sh das actions). |
 | `scripts/plugins/<stack>/` | Plugins especializados por linguagem (`node`, `php`). Contém scripts de teste, cobertura, build e publish. |
@@ -63,7 +63,7 @@ O ecossistema é dividido em duas camadas estritas (conforme formalizado na **AD
     "mode": "block"
   }
   ```
-- **Single Source of Truth (SSOT):** O workflow `ci-quality-gate.yml` avalia os critérios (`block`, `info`, `decrease`) e faz upload desse JSON como artefato do GitHub Actions. O workflow seguinte (`cd-pull-request.yml`) **apenas lê** o artefato já julgado, evitando recalcular testes ou métricas.
+- **Single Source of Truth (SSOT):** O workflow unificado `cd-pull-request.yml` avalia os critérios (`block`, `info`, `decrease`) e injeta o status de cobertura diretamente como input para o job subsequente que abre o Pull Request, garantindo agilidade e coesão na mesma pipeline.
 
 ---
 
@@ -74,8 +74,8 @@ O ecossistema é dividido em duas camadas estritas (conforme formalizado na **AD
   - `develop`: `feature/**` → `develop`; se `develop` → avalia se gera versão e promove para `main`.
   - `gitflow`: `feature/**` → `develop`; se `develop` → avalia versão e promove para `release-x.y.z`; se `release-x.y.z` → promove para `main`.
   - `hotfix`: `hotfix/**` → intercepta imediatamente e direciona para `main`.
-- **Prevenção de Falhas em `workflow_run`:**
-  O evento `workflow_run` inicia no contexto da branch default (`main`). O checkout do repositório consumidor **obrigatoriamente** recebe `ref: ${{ needs.resolve.outputs.head }}` com `fetch-depth: 0` para carregar a branch e tags reais.
+- **Execução Nativa e Segura:**
+  O evento inicia diretamente via `push` ou `pull_request` no contexto da branch em alteração (`github.head_ref`). O checkout recebe a referência atualizada (`ref: ${{ needs.resolve.outputs.head }}`) com `fetch-depth: 0` para garantir validação e auto-promoção confiáveis.
 - **Skip Gracioso:**
   Se não houver novos commits de versão em `develop`, o workflow emite um notice amigável e define `skip=true`, finalizando a execução verde (`exit 0`) sem abrir PRs vazios.
 
@@ -102,13 +102,13 @@ O ecossistema é dividido em duas camadas estritas (conforme formalizado na **AD
 ---
 
 ### 5. Engine de Publicação Multi-Registry (`actions/publish` e `scripts/shared/publish/run.sh`)
-- **Iteração Sequencial:** Recebe `registries: 'npm, github'` (separados por vírgula) e itera sobre cada registry.
+- **Matriz de Execução Paralela:** Recebe `registries: 'npm, github'` (separados por vírgula), converte-os em um Array JSON e utiliza GitHub Actions `strategy.matrix` para paralelisar a publicação com eficiência máxima.
 - **Isolamento de Credenciais:**
-  - Configura temporariamente o arquivo `.npmrc` com o token e registry específicos da iteração.
-  - Restaura o `.npmrc` original após cada publicação via bloco seguro e `trap`.
+  - Configura temporariamente o arquivo `.npmrc` com o token e registry específicos do job corrente na matriz.
+  - O isolamento do runner previne vazamento de estado.
 - **Auto-Scoping no Node.js para GitHub Packages:**
-  O GitHub Packages exige que pacotes npm sejam escopados com o usuário/organização (`@owner/nome`). Caso o `package.json` possua nome não escopado (ex: `"minha-lib"`), o script temporariamente injeta `@${OWNER}/minha-lib` durante o upload para o GitHub Packages e restaura o `package.json` original logo após a publicação.
-- **Relatório Consolidado:** Escreve tabela Markdown em `$GITHUB_STEP_SUMMARY` com o status de cada registry e exporta outputs `published`, `total-success` e `total-failed`.
+  O GitHub Packages exige que pacotes npm sejam escopados com o usuário/organização (`@owner/nome`). Caso o `package.json` possua nome não escopado (ex: `"minha-lib"`), o script temporariamente injeta `@${OWNER}/minha-lib` durante o upload para o GitHub Packages e restaura o `package.json` original logo após a publicação via `trap`.
+- **Relatório Paralelizado:** Escreve tabela Markdown no resumo do job específico da matriz com o status da publicação na plataforma destino.
 
 ---
 

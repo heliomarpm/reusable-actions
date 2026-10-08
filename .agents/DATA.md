@@ -11,7 +11,7 @@ Como este projeto atua na camada de infraestrutura e esteiras de automação (se
 ### 1.1. Contrato de Cobertura de Testes (SSOT)
 - **Caminho:** `coverage/coverage-summary.normalized.json`
 - **Produtores:** Plugins de stack (`scripts/plugins/node/coverage.sh`, `scripts/plugins/php/coverage.sh`).
-- **Consumidores:** `actions/run-coverage`, `actions/create-pr`, `ci-quality-gate.yml`, `cd-pull-request.yml`.
+- **Consumidores:** `actions/run-coverage`, `actions/create-pr`, `cd-pull-request.yml`.
 - **Esquema JSON:**
 ```json
 {
