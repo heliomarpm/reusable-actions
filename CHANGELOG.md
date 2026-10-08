@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+\n---\n\n## [v0.3.0.1] - 2026-10-08
+
+### 🚀 Features
+- add changelog run script and update changelog entries ([220b90d](https://github.com/heliomarpm/reusable-workflows/commit/220b90d3db361cb6444053edaf45127fc8b96315))
+- **qa**: ✨ adicionar suporte a comando customizado de testes test-command ([c77fbfb](https://github.com/heliomarpm/reusable-workflows/commit/c77fbfb7b828c5fbf591bfb3330f31397bb46871))
+- **pr**: ✨ adicionar opção skip-quality-gate no workflow cd-pull-request ([e06c42a](https://github.com/heliomarpm/reusable-workflows/commit/e06c42a9dac9926a743ac54776ff5db7253ed17c))
+
 ## [v0.3.0] - 2026-10-08
 
 ### 🚀 Features
