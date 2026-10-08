@@ -73,6 +73,11 @@ on:
         required: false
         type: string
         default: ''
+      skip-quality-gate:
+        description: 'Skip quality gate execution (tests, coverage, and blocking rules)'
+        required: false
+        type: boolean
+        default: false
       coverage-min:
         description: 'Minimum coverage threshold (0-100)'
         type: number
@@ -215,8 +220,8 @@ jobs:
 
 
   quality-gate:
-    needs: workdir
-    if: needs.resolve.outputs.skip != 'true'
+    needs: [resolve, workdir]
+    if: needs.resolve.outputs.skip != 'true' && inputs.skip-quality-gate != true
     runs-on: ubuntu-latest
     outputs:
       tests_status: ${{ steps.tests.outputs.status }}
@@ -272,7 +277,7 @@ jobs:
 
   promote:    
     needs: [resolve, workdir, quality-gate]
-    if: needs.resolve.outputs.skip != 'true'
+    if: needs.resolve.outputs.skip != 'true' && !failure() && !cancelled()
     runs-on: ubuntu-latest
 
     defaults:
@@ -308,10 +313,17 @@ jobs:
       - name: 📊 Map coverage report
         id: coverage
         run: |
-          echo "line=${{ needs.quality-gate.outputs.coverage_line }}" >> $GITHUB_OUTPUT
-          echo "min=${{ needs.quality-gate.outputs.coverage_min }}" >> $GITHUB_OUTPUT
-          echo "status=${{ needs.quality-gate.outputs.coverage_status || 'missing' }}" >> $GITHUB_OUTPUT
-          echo "mode=${{ needs.quality-gate.outputs.coverage_mode }}" >> $GITHUB_OUTPUT
+          if [[ "${{ inputs.skip-quality-gate }}" == "true" ]]; then
+            echo "line=" >> $GITHUB_OUTPUT
+            echo "min=" >> $GITHUB_OUTPUT
+            echo "status=skipped" >> $GITHUB_OUTPUT
+            echo "mode=skipped" >> $GITHUB_OUTPUT
+          else
+            echo "line=${{ needs.quality-gate.outputs.coverage_line }}" >> $GITHUB_OUTPUT
+            echo "min=${{ needs.quality-gate.outputs.coverage_min }}" >> $GITHUB_OUTPUT
+            echo "status=${{ needs.quality-gate.outputs.coverage_status || 'missing' }}" >> $GITHUB_OUTPUT
+            echo "mode=${{ needs.quality-gate.outputs.coverage_mode }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: 🚀 Resolve Semantic Release
         id: semantic-release
@@ -428,7 +440,7 @@ jobs:
 
           # 2. Ignorado pelo create-pr (branches idênticas / sem novos commits)
           elif [[ "$PR_ACTION" == "skipped" ]]; then
-            exit 0
+            :
 
           # 3. Pull Request criado ou atualizado com sucesso
           elif [[ -n "$PR_URL" && -n "$BASE_BRANCH" ]]; then
@@ -445,4 +457,12 @@ jobs:
               STRATEGY "${{ inputs.strategy }}" \
               ACTION "${{ needs.resolve.outputs.action }}" \
               HEAD_BRANCH "${{ needs.resolve.outputs.head }}"
+          fi
+
+          # 5. Se o quality gate foi ignorado, informa explicitamente no resumo
+          if [[ "${{ inputs.skip-quality-gate }}" == "true" ]]; then
+            append_template_to_summary "$TEMPLATES_DIR/summary-quality-gate-skipped.md" 2>/dev/null || {
+              echo ""
+              echo "> ℹ️ **Quality Gate ignorado (\`skip-quality-gate: true\`):** A execução de testes unitários e a validação de cobertura foram dispensadas nesta execução."
+            } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
           fi

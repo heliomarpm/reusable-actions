@@ -25,7 +25,7 @@ inputs:
     required: false
     default: ''
   coverage-status:
-    description: 'Coverage status (passed | failed | missing)'
+    description: 'Coverage status (passed | failed | missing | skipped)'
     required: false
     default: ''
   coverage-line:
@@ -103,6 +103,7 @@ runs:
           failed)  ADD="coverage-failed";  DEL="coverage-passed,coverage-missing" ;;
           passed)  ADD="coverage-passed";  DEL="coverage-failed,coverage-missing" ;;
           missing) ADD="coverage-missing"; DEL="coverage-passed,coverage-failed"  ;;
+          skipped) ADD="";                 DEL="coverage-passed,coverage-failed,coverage-missing" ;;
           *)       ADD=""; DEL="" ;;
         esac
 
@@ -111,7 +112,15 @@ runs:
         MODE="${{ inputs.coverage-mode }}"
 
         # 2. Renderiza o bloco de cobertura
-        if [ -n "$COVERAGE_LINE" ]; then
+        if [[ "$STATUS" == "skipped" ]]; then
+          if [[ -f "$TEMPLATES_DIR/pr-quality-gate-skipped.md" ]]; then
+            render_template "$TEMPLATES_DIR/pr-quality-gate-skipped.md" quality_block.tmp
+          else
+            echo "### 📊 Cobertura de Testes" > quality_block.tmp
+            echo "" >> quality_block.tmp
+            echo "> ℹ️ **Quality Gate ignorado:** A execução de testes unitários e a validação de cobertura foram dispensadas (\`skip-quality-gate: true\`)." >> quality_block.tmp
+          fi
+        elif [ -n "$COVERAGE_LINE" ]; then
           render_template "$TEMPLATES_DIR/pr-quality-gate-table.md" quality_block.tmp \
             COVERAGE_LINE "$COVERAGE_LINE" \
             MIN_COVERAGE "$MIN_COVERAGE" \

@@ -101,6 +101,7 @@ jobs:
     uses: heliomarpm/reusable-workflows/.github/workflows/cd-pull-request.yml@main
     with:
       strategy: develop      # Opções: trunk | develop | gitflow
+      # skip-quality-gate: false # Opcional: ignore testes e validação de cobertura
       coverage-min: 80
       coverage-mode: block   # 'block' falha a PR se cobertura < 80%. 'info' apenas alerta.
     secrets:
@@ -201,9 +202,10 @@ jobs:
       prefix-release-branch: 'release-'    # Opcional: Prefixo usado no GitFlow (ex: release-1.2.0)
       pr-title: '🔀 PR ({{yyyy-MM-dd}}): {{HEAD_BRANCH}} → {{BASE_BRANCH}}'   # Opcional
 
-      # Qaulity Gate (Ci Quality Gate)
+      # Quality Gate (CI Quality Gate)
       stack: ''            # Opcional: 'node' ou 'php' (vazio = auto-detect)
       project-path: '.'    # Opcional: caminho do código (para monorepos/subpastas)
+      skip-quality-gate: false # Opcional: ignora testes e validação de cobertura (default: false)
       coverage-min: 80     # Opcional: Porcentagem mínima de cobertura exigida (default: 80)
       coverage-mode: block # Opcional: 'block' (falha o job) | 'info' (alerta) | 'decrease' (bloqueia queda) (default: info)
       
@@ -211,9 +213,10 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-#### 🛡️ Modos de Avaliação do Quality Gate:
+#### 🛡️ Modos de Avaliação e Opções do Quality Gate:
+- **`skip-quality-gate: true`**: Ignora completamente os testes e a verificação de cobertura (inclusive bloqueios de `coverage-mode: block`), avançando diretamente para a abertura/atualização do Pull Request e registrando o bypass no resumo (`GITHUB_STEP_SUMMARY`) e no corpo do PR.
 - **`block`**: Se a cobertura ficar abaixo de `coverage-min`, o job falha com erro vermelho. Como o Auto PR depende do sucesso do CI, o PR **não é aberto**.
-- **`info`**: O CI sempre conclui com sucesso, mas anexa a etiqueta vermelha `coverage-failed` e a tabela detalhada de cobertura no PR para os revisores.
+- **`info`**: O CI sempre conclui com sucesso, mas anexa a etiqueta `coverage-failed` (se abaixo da meta) e a tabela detalhada de cobertura no PR para os revisores.
 - **`decrease`**: Compara com a cobertura da branch de destino e impede regressões.
 
 > [!TIP]
