@@ -22,7 +22,7 @@ if [[ -z "$STACK" ]]; then
     STACK=$(bash "$DETECT_STACK_SCRIPT" 2>/dev/null || true)
   fi
 fi
-STACK="${STACK:-node}"
+STACK="${STACK:-generic}"
 
 IS_DRY_RUN="${SEMANTIC_RELEASE_DRY_RUN:-false}"
 IS_DEBUG_MODE="${SEMANTIC_RELEASE_DEBUG_MODE:-false}"
@@ -52,9 +52,9 @@ GENERIC_CONFIG_JSON="$REUSABLE_PATH/scripts/shared/semantic-release/default-rele
 PLUGIN_CONFIG_JS="$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.js"
 PLUGIN_CONFIG_JSON="$REUSABLE_PATH/scripts/plugins/$STACK/releaserc.json"
 
-if [[ -n "$STACK" && -f "$PLUGIN_CONFIG_JS" ]]; then
+if [[ -n "$STACK" && "$STACK" != "generic" && -f "$PLUGIN_CONFIG_JS" ]]; then
   DEFAULT_CONFIG="$PLUGIN_CONFIG_JS"
-elif [[ -n "$STACK" && -f "$PLUGIN_CONFIG_JSON" ]]; then
+elif [[ -n "$STACK" && "$STACK" != "generic" && -f "$PLUGIN_CONFIG_JSON" ]]; then
   DEFAULT_CONFIG="$PLUGIN_CONFIG_JSON"
 elif [[ -f "$GENERIC_CONFIG_JS" ]]; then
   DEFAULT_CONFIG="$GENERIC_CONFIG_JS"

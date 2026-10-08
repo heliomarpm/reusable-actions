@@ -149,32 +149,88 @@ jobs:
       - name: 🔍 Resolve project stack
         id: stack
         run: |
-          STACK="${{ inputs.stack }}"
-          if [[ -n "$STACK" ]]; then
-            echo "🔹 Using stack from input: $STACK"
-            echo "value=$STACK" >> $GITHUB_OUTPUT
-            echo "source=input" >> $GITHUB_OUTPUT
+          source "$BASH_ENV"
+
+          SKIP_VERSION="${{ inputs.skip-version-file }}"
+          INPUT_STACK="${{ inputs.stack }}"
+
+          # ------------------------------------------------------------
+          # 1. Se skip-version-file = true: resolução de stack é ignorada
+          # ------------------------------------------------------------
+          if [[ "$SKIP_VERSION" == "true" ]]; then
+            log "⏩ skip-version-file ativo: resolução de stack ignorada (modo genérico)"
+            echo "value=generic" >> "$GITHUB_OUTPUT"
+            echo "source=skipped" >> "$GITHUB_OUTPUT"
+            {
+              echo "> ℹ️ **Versionamento de manifesto ignorado (\`skip-version-file: true\`):** A resolução de stack não é necessária. O Semantic Release executará no modo genérico (criação de Git Tag, GitHub Release e CHANGELOG)."
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
+          # ------------------------------------------------------------
+          # 3. Se a stack foi informada pelo consumidor: validação bloqueante
+          # ------------------------------------------------------------
+          if [[ -n "$INPUT_STACK" ]]; then
+            log "🔹 Validando stack informada pelo consumidor: $INPUT_STACK"
+            PLUGIN_CONFIG_JS="$REUSABLE_PATH/scripts/plugins/$INPUT_STACK/releaserc.js"
+            PLUGIN_CONFIG_JSON="$REUSABLE_PATH/scripts/plugins/$INPUT_STACK/releaserc.json"
+
+            if [[ -f "$PLUGIN_CONFIG_JS" || -f "$PLUGIN_CONFIG_JSON" ]]; then
+              log "✅ Stack informada suportada: $INPUT_STACK"
+              echo "value=$INPUT_STACK" >> "$GITHUB_OUTPUT"
+              echo "source=input" >> "$GITHUB_OUTPUT"
+              exit 0
+            else
+              {
+                echo "## ❌ Falha no Semantic Release: Stack Não Suportada"
+                echo ""
+                echo "A stack informada manualmente (**\`$INPUT_STACK\`**) não possui plugin de release para atualização de manifesto."
+                echo ""
+                echo "- **Stacks suportadas para versionamento de arquivos:** \`node\`, \`php\`"
+                echo ""
+                echo "> 💡 **Dica:** Se o projeto não necessita de atualização automática de arquivos de versão (ex: \`package.json\`, \`composer.json\`), defina o input \`skip-version-file: true\` para executar a release no modo genérico."
+              } >> "$GITHUB_STEP_SUMMARY"
+              fail "A stack '$INPUT_STACK' informada pelo consumidor não é suportada para atualização de versão pelo Semantic Release."
+            fi
+          fi
+
+          # ------------------------------------------------------------
+          # 2. Auto-detecção: não bloqueante se não identificada ou diferente das suportadas
+          # ------------------------------------------------------------
           SCRIPT="$REUSABLE_PATH/scripts/shared/detect-stack.sh"
-          chmod +x "$SCRIPT"
-          STACK=$("$SCRIPT")
+          DETECTED_STACK=""
+          if [[ -f "$SCRIPT" ]]; then
+            chmod +x "$SCRIPT"
+            DETECTED_STACK=$(bash "$SCRIPT" 2>/dev/null || true)
+          fi
 
-          if [[ -z "$STACK" ]]; then
-            echo "value=" >> $GITHUB_OUTPUT
-            echo "source=not-detected" >> $GITHUB_OUTPUT
+          if [[ -z "$DETECTED_STACK" ]]; then
+            log "⚠️ Nenhuma stack identificada automaticamente. Prosseguindo no modo genérico."
+            echo "value=generic" >> "$GITHUB_OUTPUT"
+            echo "source=not-detected" >> "$GITHUB_OUTPUT"
+            {
+              echo "> ℹ️ **Stack não identificada automaticamente:** O Semantic Release prosseguirá normalmente no **modo genérico** (criação de Git Tag, GitHub Release e CHANGELOG, sem atualizar arquivos de versão de pacotes)."
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
-          echo "✅ Detected stack: $STACK"
-          echo "value=$STACK" >> $GITHUB_OUTPUT
-          echo "source=detected" >> $GITHUB_OUTPUT
-          
-      - name: ❌ Fail if stack not detected
-        if: steps.stack.outputs.value == ''
-        run: |
-          fail "Stack not detected. Check project-path or repository structure."          
+          PLUGIN_CONFIG_JS="$REUSABLE_PATH/scripts/plugins/$DETECTED_STACK/releaserc.js"
+          PLUGIN_CONFIG_JSON="$REUSABLE_PATH/scripts/plugins/$DETECTED_STACK/releaserc.json"
+
+          if [[ -f "$PLUGIN_CONFIG_JS" || -f "$PLUGIN_CONFIG_JSON" ]]; then
+            log "✅ Stack suportada detectada automaticamente: $DETECTED_STACK"
+            echo "value=$DETECTED_STACK" >> "$GITHUB_OUTPUT"
+            echo "source=detected" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            log "ℹ️ Stack detectada '$DETECTED_STACK' não possui plugin de versão. Prosseguindo no modo genérico."
+            echo "value=generic" >> "$GITHUB_OUTPUT"
+            echo "source=detected-unsupported" >> "$GITHUB_OUTPUT"
+            {
+              echo "> ℹ️ **Stack detectada:** \`$DETECTED_STACK\` (sem plugin dedicado para atualização de arquivos de versão). O Semantic Release prosseguirá normalmente no **modo genérico** (criação de Git Tag, GitHub Release e CHANGELOG)."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
 
       - name: ⚙️ Configurar Usuário Git
         run: |
@@ -183,7 +239,6 @@ jobs:
 
       - name: 🚀 Run Release
         id: release
-        if: steps.stack.outputs.value != ''
         run: |
           SCRIPT="$REUSABLE_PATH/scripts/shared/semantic-release/run.sh"
           chmod +x "$SCRIPT"
@@ -202,15 +257,14 @@ jobs:
           SEMANTIC_RELEASE_SKIP_VERSION: ${{ inputs.skip-version-file }}
           SEMANTIC_RELEASE_SKIP_CHANGELOG: ${{ inputs.skip-changelog }}
 
-      - name: 🧾 Job Summary (Fallback)
-        if: failure() && steps.stack.outputs.value == ''
+      - name: 🧾 Job Summary (Fallback em Falha)
+        if: failure() && steps.release.outcome == 'failure'
         run: |
           {
-            echo "## 📌 Semantic Release"
+            echo "## ❌ Falha no Semantic Release"
             echo ""
             echo "**📂 Project path:** \`${{ inputs.project-path }}\`"
+            echo "**🧱 Stack:** \`${{ steps.stack.outputs.value || 'não definida' }}\`"
             echo ""
-            echo "**🧱 Stack:** ❌ not detected"
-            echo ""
-            echo "> ⚠️ Não foi possível detectar a stack do projeto. Informe explicitamente via input \`stack\`."
+            echo "> ⚠️ Ocorreu um erro durante a execução do Semantic Release. Verifique os logs da etapa anterior para mais detalhes."
           } >> "$GITHUB_STEP_SUMMARY"
