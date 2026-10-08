@@ -41,6 +41,10 @@ inputs:
     description: 'Skip generating CHANGELOG.md'
     required: false
     default: 'false'
+  changelog-title:
+    description: 'Header/Title of the CHANGELOG.md'
+    required: false
+    default: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file."
   prerelease-strategy:
     description: 'Pre-release strategy: "rc" (default: v1.0.0-rc.1 on release-*) or "same-tag" (v1.0.0 on release-*)'
     required: false
@@ -86,6 +90,8 @@ runs:
         PROJECT_PATH: ${{ inputs.project-path }}
         SEMANTIC_RELEASE_SKIP_VERSION: ${{ inputs.skip-version-file }}
         SEMANTIC_RELEASE_SKIP_CHANGELOG: ${{ inputs.skip-changelog }}
+        CHANGELOG_TITLE: ${{ inputs.changelog-title }}
+        SEMANTIC_RELEASE_CHANGELOG_TITLE: ${{ inputs.changelog-title }}
       run: |
         SCRIPT="${{ github.action_path }}/../../scripts/shared/semantic-release/run.sh"
         chmod +x "$SCRIPT"

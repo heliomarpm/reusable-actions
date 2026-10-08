@@ -40,6 +40,24 @@ if (skipChangelog) {
     const name = Array.isArray(plugin) ? plugin[0] : plugin;
     return name !== '@semantic-release/changelog';
   });
+} else {
+  const changelogTitle = process.env.CHANGELOG_TITLE || process.env.SEMANTIC_RELEASE_CHANGELOG_TITLE;
+  if (changelogTitle) {
+    plugins = plugins.map(plugin => {
+      const name = Array.isArray(plugin) ? plugin[0] : plugin;
+      if (name === '@semantic-release/changelog') {
+        const opts = Array.isArray(plugin) && plugin[1] ? plugin[1] : {};
+        return [
+          '@semantic-release/changelog',
+          {
+            ...opts,
+            changelogTitle: changelogTitle.replace(/\\n/g, '\n')
+          }
+        ];
+      }
+      return plugin;
+    });
+  }
 }
 
 // Se não houver assets para commit, remove o plugin git

@@ -6,6 +6,10 @@ inputs:
     description: 'Path to the changelog file'
     required: false
     default: 'CHANGELOG.md'
+  changelog-title:
+    description: 'Header/Title of the changelog file'
+    required: false
+    default: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file."
   project-path:
     description: 'Path to the project root containing the git repository'
     required: false
@@ -74,6 +78,7 @@ runs:
       working-directory: ${{ inputs.project-path }}
       env:
         CHANGELOG_FILE: ${{ inputs.changelog-file }}
+        CHANGELOG_TITLE: ${{ inputs.changelog-title }}
         PROJECT_PATH: ${{ inputs.project-path }}
         INPUT_BRANCH: ${{ inputs.branch }}
         RELEASE_BRANCHES: ${{ inputs.release-branches }}

@@ -28,6 +28,11 @@ on:
         type: string
         required: false
         default: 'CHANGELOG.md'
+      changelog-title:
+        description: 'Título/cabeçalho inicial do CHANGELOG.md'
+        type: string
+        required: false
+        default: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file."
       project-path:
         description: 'Caminho da raiz do projeto contendo o repositório git'
         type: string
@@ -106,6 +111,7 @@ jobs:
         with:
           project-path: ${{ inputs.project-path || '.' }}
           changelog-file: ${{ inputs.changelog-file || 'CHANGELOG.md' }}
+          changelog-title: ${{ inputs.changelog-title }}
           version-format: ${{ inputs.version-format || '' }}
           prerelease-strategy: ${{ inputs.prerelease-strategy || 'rc' }}
           prerelease-suffix: ${{ inputs.prerelease-suffix || 'rc' }}

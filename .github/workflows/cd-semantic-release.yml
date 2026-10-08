@@ -13,6 +13,11 @@ on:
         required: false
         type: boolean
         default: false
+      changelog-title:
+        description: 'Título/cabeçalho inicial do CHANGELOG.md'
+        required: false
+        type: string
+        default: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file."
       stack:
         description: 'Stack the project. (node | php | dotnet | python | go | empty for auto-detect)'
         required: false
@@ -256,6 +261,8 @@ jobs:
           PRERELEASE_SUFFIX: ${{ inputs.prerelease-suffix || 'rc' }}
           SEMANTIC_RELEASE_SKIP_VERSION: ${{ inputs.skip-version-file }}
           SEMANTIC_RELEASE_SKIP_CHANGELOG: ${{ inputs.skip-changelog }}
+          CHANGELOG_TITLE: ${{ inputs.changelog-title }}
+          SEMANTIC_RELEASE_CHANGELOG_TITLE: ${{ inputs.changelog-title }}
 
       - name: 🧾 Job Summary (Fallback em Falha)
         if: failure() && steps.release.outcome == 'failure'

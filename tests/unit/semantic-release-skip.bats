@@ -13,7 +13,7 @@ setup() {
     fi
   fi
   export NODE_BIN
-  export WSLENV="SEMANTIC_RELEASE_SKIP_VERSION:SEMANTIC_RELEASE_SKIP_CHANGELOG:${WSLENV:-}"
+  export WSLENV="SEMANTIC_RELEASE_SKIP_VERSION:SEMANTIC_RELEASE_SKIP_CHANGELOG:CHANGELOG_TITLE:SEMANTIC_RELEASE_CHANGELOG_TITLE:${WSLENV:-}"
 }
 
 @test "semantic-release/node: configura plugins padrao quando skips sao falso" {
@@ -117,6 +117,42 @@ setup() {
     const pluginNames = config.plugins.map(p => Array.isArray(p) ? p[0] : p);
     if (pluginNames.includes("@semantic-release/changelog")) process.exit(1);
     if (pluginNames.includes("@semantic-release/git")) process.exit(2);
+  '
+  [ "$status" -eq 0 ]
+}
+
+@test "semantic-release/generic: customiza changelogTitle em default-releaserc.js via CHANGELOG_TITLE" {
+  if ! command -v "$NODE_BIN" >/dev/null 2>&1; then
+    skip "node/node.exe não disponível no ambiente"
+  fi
+
+  cd "$ROOT_DIR"
+  export CHANGELOG_TITLE="# 🚀 Custom Title\n\nCustom description"
+
+  run "$NODE_BIN" -e '
+    const config = require("./scripts/shared/semantic-release/default-releaserc.js");
+    const changelogPlugin = config.plugins.find(p => Array.isArray(p) && p[0] === "@semantic-release/changelog");
+    if (!changelogPlugin) process.exit(1);
+    if (!changelogPlugin[1].changelogTitle.includes("# 🚀 Custom Title")) process.exit(2);
+    if (!changelogPlugin[1].changelogTitle.includes("Custom description")) process.exit(3);
+  '
+  [ "$status" -eq 0 ]
+}
+
+@test "semantic-release/node: customiza changelogTitle em node/releaserc.js via CHANGELOG_TITLE" {
+  if ! command -v "$NODE_BIN" >/dev/null 2>&1; then
+    skip "node/node.exe não disponível no ambiente"
+  fi
+
+  cd "$ROOT_DIR"
+  export CHANGELOG_TITLE="# 🚀 Custom Node Title\n\nCustom node description"
+
+  run "$NODE_BIN" -e '
+    const config = require("./scripts/plugins/node/releaserc.js");
+    const changelogPlugin = config.plugins.find(p => Array.isArray(p) && p[0] === "@semantic-release/changelog");
+    if (!changelogPlugin) process.exit(1);
+    if (!changelogPlugin[1].changelogTitle.includes("# 🚀 Custom Node Title")) process.exit(2);
+    if (!changelogPlugin[1].changelogTitle.includes("Custom node description")) process.exit(3);
   '
   [ "$status" -eq 0 ]
 }

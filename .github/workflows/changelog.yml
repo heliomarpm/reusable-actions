@@ -7,6 +7,10 @@ on:
         description: 'Formato da versão (ex: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd")'
         type: string
         default: ''
+      changelog-title:
+        description: 'Título/cabeçalho do CHANGELOG.md'
+        type: string
+        default: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file."
 
   push:
     branches:
@@ -35,6 +39,8 @@ jobs:
 
       - name: 🚀 Run Changelog Action
         uses: ./actions/changelog
+        with:
+          changelog-title: ${{ inputs.changelog-title || '' }}
         # with:
         #   branch: ${{ github.ref_name }}
         #   create-release: ${{ (github.event_name == 'workflow_dispatch' && inputs.create-release) || github.ref_name == 'main' }}

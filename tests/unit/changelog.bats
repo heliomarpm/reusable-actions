@@ -137,3 +137,24 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "changelog: respeita changelog-title customizado na inicialização" {
+  echo "conteudo inicial" > file.txt
+  git add file.txt
+  git commit -m "feat: suporte a changelog customizado" >/dev/null 2>&1
+
+  export CURRENT_BRANCH="develop"
+  export INPUT_BRANCH="develop"
+  export COMMIT_CHANGELOG="false"
+  export CHANGELOG_FILE="CHANGELOG.md"
+  export CHANGELOG_TITLE="# 🚀 Histórico do Projeto\n\nTodas as mudanças."
+
+  run bash "$ROOT_DIR/scripts/shared/changelog/run.sh"
+  [ "$status" -eq 0 ]
+  [ -f "CHANGELOG.md" ]
+
+  run grep -F "# 🚀 Histórico do Projeto" CHANGELOG.md
+  [ "$status" -eq 0 ]
+  run grep -F "Todas as mudanças." CHANGELOG.md
+  [ "$status" -eq 0 ]
+}
+

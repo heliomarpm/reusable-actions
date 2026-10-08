@@ -241,6 +241,7 @@ jobs:
     uses: heliomarpm/reusable-workflows/.github/workflows/cd-release.yml@main
     with:
       enable-changelog: true                  # Opcional (default: true): atualiza o CHANGELOG.md
+      changelog-title: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file." # Opcional: título/cabeçalho inicial
       version-format: "v%major.%minor.%patch" # Opcional: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd"
       changelog-file: "CHANGELOG.md"          # Caminho do arquivo de changelog
       commit-changelog: true                  # Fazer commit e push do CHANGELOG.md
@@ -272,6 +273,7 @@ jobs:
     uses: heliomarpm/reusable-workflows/.github/workflows/cd-semantic-release.yml@main
     with:
       project-path: '.'                       # Subpasta onde está o código (opcional)
+      changelog-title: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file." # Opcional: cabeçalho inicial do CHANGELOG.md
       skip-version-file: false                # Opcional (default: false): não altera a versão em package.json, composer.json, etc.
       skip-changelog: false                   # Opcional (default: false): não gera nem comita CHANGELOG.md
       prerelease-strategy: 'rc'               # 'rc' (default: v1.0.0-rc.1 em release-*) | 'same-tag' (v1.0.0)

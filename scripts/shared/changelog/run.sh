@@ -107,6 +107,7 @@ log "🚀 Changelog Action - Initializing"
 # Inputs & Configuration
 # ─────────────────────────────────────────────────────────────
 CHANGELOG_FILE="${CHANGELOG_FILE:-CHANGELOG.md}"
+CHANGELOG_TITLE="${CHANGELOG_TITLE:-"# 📦 Changelog\n\nAll notable changes to this project will be documented in this file."}"
 PROJECT_PATH="${PROJECT_PATH:-.}"
 INPUT_BRANCH="${INPUT_BRANCH:-}"
 RELEASE_BRANCHES="${RELEASE_BRANCHES:-main,master}"
@@ -389,12 +390,7 @@ append_section "🔄 Other Changes" "$OTHER_FILE"
 # Verifica se o arquivo CHANGELOG.md existe
 if [[ ! -f "$CHANGELOG_FILE" ]]; then
   log "📝 Initializing $CHANGELOG_FILE"
-  cat <<'EOF' > "$CHANGELOG_FILE"
-# 📦 Changelog
-
-All notable changes to this project will be documented in this file.
-
-EOF
+  printf "%b\n\n" "$CHANGELOG_TITLE" > "$CHANGELOG_FILE"
 fi
 
 # Checa se o CHANGELOG.md já possui seção [Unreleased] pré-existente
