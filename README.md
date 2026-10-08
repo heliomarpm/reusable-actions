@@ -205,6 +205,7 @@ jobs:
       # Quality Gate (CI Quality Gate)
       stack: ''            # Opcional: 'node' ou 'php' (vazio = auto-detect)
       project-path: '.'    # Opcional: caminho do código (para monorepos/subpastas)
+      test-command: ''     # Opcional: comando customizado para testes (ex: 'npm test', 'pytest') (default: padrão da stack)
       skip-quality-gate: false # Opcional: ignora testes e validação de cobertura (default: false)
       coverage-min: 80     # Opcional: Porcentagem mínima de cobertura exigida (default: 80)
       coverage-mode: block # Opcional: 'block' (falha o job) | 'info' (alerta) | 'decrease' (bloqueia queda) (default: info)
@@ -214,6 +215,7 @@ jobs:
 ```
 
 #### 🛡️ Modos de Avaliação e Opções do Quality Gate:
+- **`test-command`**: Permite definir um comando customizado para executar a suíte de testes (ex: `npm run test:unit`, `pnpm test`, `pytest`, `./vendor/bin/pest`). Se omitido, utiliza a engine padrão da stack detectada (ex: `npm test` para Node, `phpunit`/`pest` para PHP).
 - **`skip-quality-gate: true`**: Ignora completamente os testes e a verificação de cobertura (inclusive bloqueios de `coverage-mode: block`), avançando diretamente para a abertura/atualização do Pull Request e registrando o bypass no resumo (`GITHUB_STEP_SUMMARY`) e no corpo do PR.
 - **`block`**: Se a cobertura ficar abaixo de `coverage-min`, o job falha com erro vermelho. Como o Auto PR depende do sucesso do CI, o PR **não é aberto**.
 - **`info`**: O CI sempre conclui com sucesso, mas anexa a etiqueta `coverage-failed` (se abaixo da meta) e a tabela detalhada de cobertura no PR para os revisores.

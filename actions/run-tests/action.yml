@@ -13,6 +13,10 @@ inputs:
     description: 'Coverage mode (info | block | decrease)'
     required: false
     default: 'info'
+  test-command:
+    description: 'Custom command to execute unit tests (overrides stack test script)'
+    required: false
+    default: ''
 
 outputs:
   status:
@@ -28,34 +32,42 @@ runs:
       env:
         BASH_ENV: ${{ github.action_path }}/../../scripts/shared/shell-helpers.sh
       run: |
-        SCRIPT="${{ github.action_path }}/../../scripts/plugins/${{ inputs.stack }}/test.sh"
         MODE="${{ inputs.coverage-mode }}"
-
-        if [[ ! -f "$SCRIPT" ]]; then
-          echo "⚠️ No test.sh found for stack ${{ inputs.stack }}"
-          echo "status=skipped" >> $GITHUB_OUTPUT
-          if [[ "$MODE" == "block" || "$MODE" == "decrease" ]]; then
-            fail "❌ Quality Gate Bloqueado: Script de testes não encontrado para a stack '${{ inputs.stack }}' e coverage-mode está como '$MODE'."
-          fi
-          exit 0
-        fi
-
-        chmod +x "$SCRIPT"
-        MARKER_FILE="${RUNNER_TEMP:-/tmp}/reusable_tests_skipped"
-        rm -f "$MARKER_FILE"
+        CUSTOM_CMD="${{ inputs.test-command }}"
 
         TEST_EXIT=0
-        "$SCRIPT" || TEST_EXIT=$?
 
-        # 1. Se o script sinalizou que não há testes configurados
-        if [[ -f "$MARKER_FILE" ]]; then
-          rm -f "$MARKER_FILE"
-          echo "status=skipped" >> $GITHUB_OUTPUT
-          echo "⚠️ Nenhum runner ou script de testes configurado para este projeto."
-          if [[ "$MODE" == "block" || "$MODE" == "decrease" ]]; then
-            fail "❌ Quality Gate Bloqueado: Nenhum teste configurado e coverage-mode está como '$MODE'."
+        if [[ -n "$CUSTOM_CMD" ]]; then
+          echo "🧪 Running custom test command: $CUSTOM_CMD"
+          eval "$CUSTOM_CMD" || TEST_EXIT=$?
+        else
+          SCRIPT="${{ github.action_path }}/../../scripts/plugins/${{ inputs.stack }}/test.sh"
+
+          if [[ ! -f "$SCRIPT" ]]; then
+            echo "⚠️ No test.sh found for stack ${{ inputs.stack }}"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+            if [[ "$MODE" == "block" || "$MODE" == "decrease" ]]; then
+              fail "❌ Quality Gate Bloqueado: Script de testes não encontrado para a stack '${{ inputs.stack }}' e coverage-mode está como '$MODE'."
+            fi
+            exit 0
           fi
-          exit 0
+
+          chmod +x "$SCRIPT"
+          MARKER_FILE="${RUNNER_TEMP:-/tmp}/reusable_tests_skipped"
+          rm -f "$MARKER_FILE"
+
+          "$SCRIPT" || TEST_EXIT=$?
+
+          # 1. Se o script sinalizou que não há testes configurados
+          if [[ -f "$MARKER_FILE" ]]; then
+            rm -f "$MARKER_FILE"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+            echo "⚠️ Nenhum runner ou script de testes configurado para este projeto."
+            if [[ "$MODE" == "block" || "$MODE" == "decrease" ]]; then
+              fail "❌ Quality Gate Bloqueado: Nenhum teste configurado e coverage-mode está como '$MODE'."
+            fi
+            exit 0
+          fi
         fi
 
         # 2. Testes foram executados
