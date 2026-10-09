@@ -43,13 +43,13 @@ on:
         type: string
         required: false
         default: ''
-      prerelease-strategy:
-        description: 'Estratégia de pre-release para branches de release ("rc" ou "same-tag")'
-        type: string
+      prerelease-incremental:
+        description: 'Gera tags incrementais com sufixo (ex: v1.0.0-rc.1) ou mesma tag final em pre-releases'
+        type: boolean
         required: false
-        default: 'rc'
+        default: true
       prerelease-suffix:
-        description: 'Sufixo da pre-release quando strategy for "rc" (default: "rc")'
+        description: 'Sufixo da pre-release quando incremental for true (default: "rc")'
         type: string
         required: false
         default: 'rc'
@@ -105,7 +105,7 @@ jobs:
         with:
           project-path: ${{ inputs.project-path || '.' }}
           version-format: ${{ inputs.version-format || '' }}
-          prerelease-strategy: ${{ inputs.prerelease-strategy || 'rc' }}
+          prerelease-incremental: ${{ inputs.prerelease-incremental != false }}
           prerelease-suffix: ${{ inputs.prerelease-suffix || 'rc' }}
           prerelease-branches: ${{ inputs.prerelease-branches || 'release-*,release/*' }}
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}

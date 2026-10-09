@@ -2,12 +2,12 @@ const path = require('path');
 const base = require(path.resolve(__dirname, 'default-releaserc.json'));
 
 const skipChangelog = process.env.SEMANTIC_RELEASE_SKIP_CHANGELOG === 'true' || process.env.ENABLE_CHANGELOG === 'false';
-const prereleaseStrategy = process.env.PRERELEASE_STRATEGY || 'rc';
+const prereleaseIncremental = process.env.PRERELEASE_INCREMENTAL !== 'false' && process.env.PRERELEASE_STRATEGY !== 'same-tag';
 const prereleaseSuffix = process.env.PRERELEASE_SUFFIX || 'rc';
 
 const branches = base.branches.map(b => {
   if (typeof b === 'object' && b.name === 'release-*') {
-    if (prereleaseStrategy === 'same-tag') {
+    if (!prereleaseIncremental) {
       return { ...b, prerelease: false };
     }
     return { ...b, prerelease: prereleaseSuffix };

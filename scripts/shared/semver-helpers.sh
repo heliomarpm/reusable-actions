@@ -377,7 +377,7 @@ calculate_semver_version() {
   local has_feat="${4:-false}"
   local has_fix="${5:-false}"
   local version_format="${6:-}"
-  local prerelease_strategy="${7:-rc}"
+  local prerelease_incremental="${7:-true}"
   local prerelease_suffix="${8:-rc}"
   local branch_target_semver="${9:-}"
   local prerelease_target_semver="${10:-}"
@@ -435,7 +435,7 @@ calculate_semver_version() {
   resolved="${resolved//\%d/$day_1}"
 
   if [[ "$mode" == "prerelease" ]]; then
-    if [[ "$prerelease_strategy" == "rc" ]]; then
+    if [[ "$prerelease_incremental" == "true" || "$prerelease_incremental" == "rc" ]]; then
       local clean_tag="$resolved"
       local existing_rcs
       existing_rcs=$(git tag -l "${clean_tag}-${prerelease_suffix}.*" 2>/dev/null | sort -V || true)

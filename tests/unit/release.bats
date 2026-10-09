@@ -96,7 +96,7 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "release: gera tag de pré-release RC em release branch" {
+@test "release: gera tag de pré-release RC em release branch com PRERELEASE_INCREMENTAL=true" {
   echo "v1.0.0" > version.txt
   git add version.txt
   git commit -m "chore: v1.0.0" >/dev/null 2>&1
@@ -107,7 +107,7 @@ teardown() {
   git commit -m "feat: nova feature para release 1.1.0" >/dev/null 2>&1
 
   export INPUT_BRANCH="release-1.1.0"
-  export PRERELEASE_STRATEGY="rc"
+  export PRERELEASE_INCREMENTAL="true"
   export PRERELEASE_SUFFIX="rc"
   export GITHUB_OUTPUT="$TEST_TMPDIR/github_output.txt"
   touch "$GITHUB_OUTPUT"
@@ -119,6 +119,31 @@ teardown() {
   [ "$status" -eq 0 ]
 
   run grep -F "tag=v1.1.0-rc.1" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+}
+
+@test "release: gera tag de pré-release não incremental (same-tag) quando PRERELEASE_INCREMENTAL=false" {
+  echo "v1.0.0" > version.txt
+  git add version.txt
+  git commit -m "chore: v1.0.0" >/dev/null 2>&1
+  git tag -a "v1.0.0" -m "v1.0.0"
+
+  echo "same-tag" >> version.txt
+  git add version.txt
+  git commit -m "feat: nova feature para release 1.1.0" >/dev/null 2>&1
+
+  export INPUT_BRANCH="release-1.1.0"
+  export PRERELEASE_INCREMENTAL="false"
+  export GITHUB_OUTPUT="$TEST_TMPDIR/github_output.txt"
+  touch "$GITHUB_OUTPUT"
+
+  run bash "$ROOT_DIR/scripts/shared/release/run.sh"
+  [ "$status" -eq 0 ]
+
+  run grep -F "version=v1.1.0" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+
+  run grep -F "tag=v1.1.0" "$GITHUB_OUTPUT"
   [ "$status" -eq 0 ]
 }
 

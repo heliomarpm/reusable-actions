@@ -45,12 +45,12 @@ inputs:
     description: 'Header/Title of the CHANGELOG.md'
     required: false
     default: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file."
-  prerelease-strategy:
-    description: 'Pre-release strategy: "rc" (default: v1.0.0-rc.1 on release-*) or "same-tag" (v1.0.0 on release-*)'
+  prerelease-incremental:
+    description: 'Whether to generate incremental pre-release tags (e.g. v1.0.0-rc.1) or use the same tag (v1.0.0)'
     required: false
-    default: 'rc'
+    default: 'true'
   prerelease-suffix:
-    description: 'Pre-release tag suffix for rc strategy (default: "rc")'
+    description: 'Pre-release tag suffix when prerelease-incremental is true (default: "rc")'
     required: false
     default: 'rc'
 
@@ -84,7 +84,7 @@ runs:
         SEMANTIC_RELEASE_DRY_RUN: ${{ inputs.dry-run }}
         STRICT_CONVENTIONAL_COMMITS: ${{ inputs.strict-mode }}
         SEMANTIC_RELEASE_DEBUG_MODE: ${{ inputs.debug }}
-        PRERELEASE_STRATEGY: ${{ inputs.prerelease-strategy }}
+        PRERELEASE_INCREMENTAL: ${{ inputs.prerelease-incremental }}
         PRERELEASE_SUFFIX: ${{ inputs.prerelease-suffix }}
         REUSABLE_PATH: ${{ github.action_path }}/../..
         PROJECT_PATH: ${{ inputs.project-path }}

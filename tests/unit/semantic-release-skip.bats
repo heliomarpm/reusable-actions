@@ -13,7 +13,7 @@ setup() {
     fi
   fi
   export NODE_BIN
-  export WSLENV="SEMANTIC_RELEASE_SKIP_VERSION:SEMANTIC_RELEASE_SKIP_CHANGELOG:CHANGELOG_TITLE:SEMANTIC_RELEASE_CHANGELOG_TITLE:${WSLENV:-}"
+  export WSLENV="SEMANTIC_RELEASE_SKIP_VERSION:SEMANTIC_RELEASE_SKIP_CHANGELOG:CHANGELOG_TITLE:SEMANTIC_RELEASE_CHANGELOG_TITLE:PRERELEASE_INCREMENTAL:PRERELEASE_STRATEGY:PRERELEASE_SUFFIX:${WSLENV:-}"
 }
 
 @test "semantic-release/node: configura plugins padrao quando skips sao falso" {
@@ -153,6 +153,41 @@ setup() {
     if (!changelogPlugin) process.exit(1);
     if (!changelogPlugin[1].changelogTitle.includes("# 🚀 Custom Node Title")) process.exit(2);
     if (!changelogPlugin[1].changelogTitle.includes("Custom node description")) process.exit(3);
+  '
+  [ "$status" -eq 0 ]
+}
+
+@test "semantic-release/generic: release-* recebe prerelease suffix quando PRERELEASE_INCREMENTAL=true" {
+  if ! command -v "$NODE_BIN" >/dev/null 2>&1; then
+    skip "node/node.exe não disponível no ambiente"
+  fi
+
+  cd "$ROOT_DIR"
+  export PRERELEASE_INCREMENTAL="true"
+  export PRERELEASE_SUFFIX="beta"
+
+  run "$NODE_BIN" -e '
+    delete require.cache[require.resolve("./scripts/shared/semantic-release/default-releaserc.js")];
+    const config = require("./scripts/shared/semantic-release/default-releaserc.js");
+    const relBranch = config.branches.find(b => typeof b === "object" && b.name === "release-*");
+    if (!relBranch || relBranch.prerelease !== "beta") process.exit(1);
+  '
+  [ "$status" -eq 0 ]
+}
+
+@test "semantic-release/generic: release-* recebe prerelease=false quando PRERELEASE_INCREMENTAL=false" {
+  if ! command -v "$NODE_BIN" >/dev/null 2>&1; then
+    skip "node/node.exe não disponível no ambiente"
+  fi
+
+  cd "$ROOT_DIR"
+  export PRERELEASE_INCREMENTAL="false"
+
+  run "$NODE_BIN" -e '
+    delete require.cache[require.resolve("./scripts/shared/semantic-release/default-releaserc.js")];
+    const config = require("./scripts/shared/semantic-release/default-releaserc.js");
+    const relBranch = config.branches.find(b => typeof b === "object" && b.name === "release-*");
+    if (!relBranch || relBranch.prerelease !== false) process.exit(1);
   '
   [ "$status" -eq 0 ]
 }

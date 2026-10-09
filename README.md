@@ -249,16 +249,16 @@ jobs:
       changelog-title: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file." # Opcional: título/cabeçalho inicial
       version-format: "v%major.%minor.%patch" # Opcional: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd"
       changelog-file: "CHANGELOG.md"          # Caminho do arquivo de changelog
-      prerelease-strategy: 'rc'               # 'rc' (default: v1.0.0-rc.1 em release-*) | 'same-tag' (v1.0.0 como pré-release)
-      prerelease-suffix: 'rc'                 # Sufixo da pré-release para a estratégia 'rc' (default: 'rc')
+      prerelease-incremental: true            # Opcional (default: true): tags incrementais (v1.0.0-rc.1) | false para mesma tag final (v1.0.0)
+      prerelease-suffix: 'rc'                 # Opcional (default: 'rc'): sufixo de pré-release quando incremental for true
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 > [!NOTE]
-> **Estratégias de Pré-Release em Branches `release-*`:**  
-> - **`rc` (Padrão / Recomendado)**: Na branch de release gera tags incrementais (`v1.0.0-rc.1`, `v1.0.0-rc.2`, etc.) marcadas como Pre-Release no GitHub. Ao fazer merge na `main`, publica a tag final limpa (`v1.0.0`) classificada como **Latest**.
-> - **`same-tag`**: Na branch de release gera a tag de destino final (`v1.0.0`) como Pre-Release no GitHub. Ao fazer merge na `main`, essa mesma release é editada e promovida para **Latest** (`prerelease: false`).
+> **Modos de Pré-Release em Branches `release-*`:**  
+> - **`prerelease-incremental: true` (Padrão / Recomendado)**: Na branch de release gera tags incrementais (`v1.0.0-rc.1`, `v1.0.0-rc.2`, etc.) marcadas como Pre-Release no GitHub. Ao fazer merge na `main`, publica a tag final limpa (`v1.0.0`) classificada como **Latest**.
+> - **`prerelease-incremental: false`**: Na branch de release gera a tag de destino final (`v1.0.0`) marcada como Pre-Release no GitHub. Ao fazer merge na `main`, essa mesma release é promovida para **Latest** (`prerelease: false`).
 
 ---
 
@@ -280,8 +280,8 @@ jobs:
       changelog-title: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file." # Opcional: cabeçalho inicial do CHANGELOG.md
       skip-version-file: false                # Opcional (default: false): não altera a versão em package.json, composer.json, etc.
       skip-changelog: false                   # Opcional (default: false): não gera nem comita CHANGELOG.md
-      prerelease-strategy: 'rc'               # 'rc' (default: v1.0.0-rc.1 em release-*) | 'same-tag' (v1.0.0)
-      prerelease-suffix: 'rc'                 # Sufixo da pré-release (default: 'rc')
+      prerelease-incremental: true            # Opcional (default: true): tags incrementais (v1.0.0-rc.1) | false para mesma tag final (v1.0.0)
+      prerelease-suffix: 'rc'                 # Opcional (default: 'rc'): sufixo de pré-release quando incremental for true
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```

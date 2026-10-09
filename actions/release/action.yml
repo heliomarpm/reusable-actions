@@ -22,12 +22,12 @@ inputs:
     description: 'Comma-separated glob patterns for pre-release branches (e.g. "release-*,release/*")'
     required: false
     default: 'release-*,release/*'
-  prerelease-strategy:
-    description: 'Pre-release strategy: "rc" (default: v1.0.0-rc.1 on release-*) or "same-tag" (v1.0.0 on release-*)'
+  prerelease-incremental:
+    description: 'Whether to generate incremental pre-release tags (e.g. v1.0.0-rc.1) or use the same tag (v1.0.0)'
     required: false
-    default: 'rc'
+    default: 'true'
   prerelease-suffix:
-    description: 'Pre-release tag suffix for rc strategy (default: "rc")'
+    description: 'Pre-release tag suffix when prerelease-incremental is true (default: "rc")'
     required: false
     default: 'rc'
   version:
@@ -73,7 +73,7 @@ runs:
         RELEASE_BRANCHES: ${{ inputs.release-branches }}
         DEVELOP_BRANCHES: ${{ inputs.develop-branches }}
         PRERELEASE_BRANCHES: ${{ inputs.prerelease-branches }}
-        PRERELEASE_STRATEGY: ${{ inputs.prerelease-strategy }}
+        PRERELEASE_INCREMENTAL: ${{ inputs.prerelease-incremental }}
         PRERELEASE_SUFFIX: ${{ inputs.prerelease-suffix }}
         INPUT_VERSION: ${{ inputs.version }}
         VERSION_FORMAT: ${{ inputs.version-format }}
