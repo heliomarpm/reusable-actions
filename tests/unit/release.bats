@@ -252,3 +252,41 @@ teardown() {
   [ "$LATEST_TAG" = "v1.0.0" ]
 }
 
+@test "release: prioriza INPUT_VERSION e INPUT_RELEASE_NOTES quando fornecidos pelo step anterior (changelog)" {
+  echo "v0.3.0" > version.txt
+  git add version.txt
+  git commit -m "chore(release): v0.3.0 [skip ci]" >/dev/null 2>&1
+  git tag -a "v0.3.0" -m "v0.3.0"
+
+  # Simula commit gerado pelo step changelog
+  echo "v0.3.1 changelog" > CHANGELOG.md
+  git add CHANGELOG.md
+  git commit -m "chore(release): v0.3.1 [skip ci]" >/dev/null 2>&1
+
+  export INPUT_BRANCH="main"
+  export RELEASE_BRANCHES="main"
+  export INPUT_VERSION="v0.3.1"
+  export INPUT_RELEASE_NOTES="### 🚀 Features"$'\n'"- nova feature repassada pelo changelog"
+  export GITHUB_OUTPUT="$TEST_TMPDIR/github_output.txt"
+  touch "$GITHUB_OUTPUT"
+
+  run bash "$ROOT_DIR/scripts/shared/release/run.sh"
+  [ "$status" -eq 0 ]
+
+  run grep -F "version=v0.3.1" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+
+  run grep -F "tag=v0.3.1" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+
+  run grep -F "has_changes=true" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+
+  run grep -F "nova feature repassada pelo changelog" "$GITHUB_OUTPUT"
+  [ "$status" -eq 0 ]
+
+  # Tag v0.3.1 deve ter sido criada e apontar para o commit atual
+  LATEST_TAG="$(git describe --tags --abbrev=0)"
+  [ "$LATEST_TAG" = "v0.3.1" ]
+}
+

@@ -216,3 +216,12 @@ on_error() {
   exit "$EXIT_CODE"
 }
 trap on_error ERR
+
+# ────────────────────────────────────────
+# Carregamento de helpers SemVer
+# ────────────────────────────────────────
+_HELPERS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$_HELPERS_DIR/semver-helpers.sh" ]]; then
+  # shellcheck source=scripts/shared/semver-helpers.sh
+  source "$_HELPERS_DIR/semver-helpers.sh"
+fi

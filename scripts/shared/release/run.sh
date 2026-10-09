@@ -8,98 +8,19 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REUSABLE_PATH="${REUSABLE_PATH:-$SCRIPT_DIR/../../..}"
 
-# Carrega helpers se existirem
+# Carrega helpers compartilhados
 if [[ -f "$SCRIPT_DIR/../shell-helpers.sh" ]]; then
+  # shellcheck source=scripts/shared/shell-helpers.sh
   source "$SCRIPT_DIR/../shell-helpers.sh"
 else
   log() { echo "→ $*" >&2; }
   fail() { echo "::error::$*" >&2; exit 1; }
 fi
 
-# ─────────────────────────────────────────────────────────────
-# Emoji Shortcode Converter (e.g. :gear: -> ⚙️)
-# ─────────────────────────────────────────────────────────────
-convert_emojis() {
-  local cmd=(
-    sed
-    -e 's/:art:/🎨/g'
-    -e 's/:zap:/⚡/g'
-    -e 's/:fire:/🔥/g'
-    -e 's/:bug:/🐛/g'
-    -e 's/:ambulance:/🚑/g'
-    -e 's/:sparkles:/✨/g'
-    -e 's/:memo:/📝/g'
-    -e 's/:rocket:/🚀/g'
-    -e 's/:lipstick:/💄/g'
-    -e 's/:tada:/🎉/g'
-    -e 's/:white_check_mark:/✅/g'
-    -e 's/:lock:/🔒/g'
-    -e 's/:bookmark:/🔖/g'
-    -e 's/:rotating_light:/🚨/g'
-    -e 's/:construction:/🚧/g'
-    -e 's/:green_heart:/💚/g'
-    -e 's/:arrow_down:/⬇️/g'
-    -e 's/:arrow_up:/⬆️/g'
-    -e 's/:pushpin:/📌/g'
-    -e 's/:construction_worker:/👷/g'
-    -e 's/:chart_with_upwards_trend:/📈/g'
-    -e 's/:recycle:/♻️/g'
-    -e 's/:heavy_plus_sign:/➕/g'
-    -e 's/:heavy_minus_sign:/➖/g'
-    -e 's/:wrench:/🔧/g'
-    -e 's/:hammer:/🔨/g'
-    -e 's/:globe_with_meridians:/🌐/g'
-    -e 's/:pencil2:/✏️/g'
-    -e 's/:poop:/💩/g'
-    -e 's/:rewind:/⏪/g'
-    -e 's/:twisted_rightwards_arrows:/🔀/g'
-    -e 's/:package:/📦/g'
-    -e 's/:alien:/👽/g'
-    -e 's/:truck:/🚚/g'
-    -e 's/:page_facing_up:/📄/g'
-    -e 's/:boom:/💥/g'
-    -e 's/:bento:/🍱/g'
-    -e 's/:wheelchair:/♿/g'
-    -e 's/:bulb:/💡/g'
-    -e 's/:beers:/🍻/g'
-    -e 's/:speech_balloon:/💬/g'
-    -e 's/:card_file_box:/🗃️/g'
-    -e 's/:loud_sound:/🔊/g'
-    -e 's/:mute:/🔇/g'
-    -e 's/:busts_in_silhouette:/👥/g'
-    -e 's/:children_crossing:/🚸/g'
-    -e 's/:building_construction:/🏗️/g'
-    -e 's/:iphone:/📱/g'
-    -e 's/:clown_face:/🤡/g'
-    -e 's/:egg:/🥚/g'
-    -e 's/:see_no_evil:/🙈/g'
-    -e 's/:camera_flash:/📸/g'
-    -e 's/:alembic:/⚗️/g'
-    -e 's/:mag:/🔍/g'
-    -e 's/:label:/🏷️/g'
-    -e 's/:seedling:/🌱/g'
-    -e 's/:triangular_flag_on_post:/🚩/g'
-    -e 's/:goal_net:/🥅/g'
-    -e 's/:dizzy:/💫/g'
-    -e 's/:wastebasket:/🗑️/g'
-    -e 's/:passport_control:/🛂/g'
-    -e 's/:adhesive_bandage:/🩹/g'
-    -e 's/:monocle_face:/🧐/g'
-    -e 's/:coffin:/⚰️/g'
-    -e 's/:test_tube:/🧪/g'
-    -e 's/:necktie:/👔/g'
-    -e 's/:stethoscope:/🩺/g'
-    -e 's/:bricks:/🧱/g'
-    -e 's/:technologist:/🧑💻/g'
-    -e 's/:gear:/⚙️/g'
-  )
-
-  if [[ $# -gt 0 ]]; then
-    echo "$1" | "${cmd[@]}"
-  else
-    "${cmd[@]}"
-  fi
-}
+if [[ -f "$SCRIPT_DIR/../semver-helpers.sh" ]]; then
+  # shellcheck source=scripts/shared/semver-helpers.sh
+  source "$SCRIPT_DIR/../semver-helpers.sh"
+fi
 
 log "🚀 Release Engine - Initializing"
 
@@ -137,29 +58,7 @@ else
 fi
 log "📌 Current branch: $CURRENT_BRANCH"
 
-# Determina o modo de operação via glob pattern matching
-matches_pattern_csv() {
-  local item="$1"
-  local csv="$2"
-  local IFS=','
-  for entry in $csv; do
-    entry="$(echo "$entry" | xargs)" # trim
-    # Sem aspas em $entry para permitir glob pattern matching (ex: release-*, release/*)
-    if [[ "$item" == $entry ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
-
-MODE="preview"
-if matches_pattern_csv "$CURRENT_BRANCH" "$RELEASE_BRANCHES"; then
-  MODE="release"
-elif matches_pattern_csv "$CURRENT_BRANCH" "$PRERELEASE_BRANCHES"; then
-  MODE="prerelease"
-elif matches_pattern_csv "$CURRENT_BRANCH" "$DEVELOP_BRANCHES"; then
-  MODE="develop"
-fi
+MODE="$(determine_release_mode "$CURRENT_BRANCH" "$RELEASE_BRANCHES" "$PRERELEASE_BRANCHES" "$DEVELOP_BRANCHES")"
 log "🎯 Operating mode: $MODE"
 
 # Se não estiver em branch de release ou prerelease e nenhuma versão explícita foi fornecida (ou for Unreleased), não cria release
@@ -181,203 +80,52 @@ if [[ "$MODE" != "release" && "$MODE" != "prerelease" && ( -z "$INPUT_VERSION" |
 fi
 
 # ─────────────────────────────────────────────────────────────
-# Determina o range de commits a inspecionar
+# Setup de Diretório Temporário
 # ─────────────────────────────────────────────────────────────
-LAST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-LAST_STABLE_TAG="$(git tag -l --sort=-v:refname 2>/dev/null | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)"
-RANGE=""
-SINCE_LABEL=""
-
-if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - && -n "$LAST_STABLE_TAG" ]]; then
-  # Ao promover de release branch (RC) para release final na main, abrange todos os commits desde a última versão estável
-  RANGE="${LAST_STABLE_TAG}..HEAD"
-  SINCE_LABEL="última release estável '$LAST_STABLE_TAG'"
-elif [[ -n "$LAST_TAG" ]]; then
-  RANGE="${LAST_TAG}..HEAD"
-  SINCE_LABEL="tag '$LAST_TAG'"
-else
-  LAST_RELEASE_COMMIT="$(git log -n 1 --grep="^chore(release)" --format="%H" 2>/dev/null || true)"
-  if [[ -n "$LAST_RELEASE_COMMIT" && "$LAST_RELEASE_COMMIT" != "$(git rev-parse HEAD 2>/dev/null || true)" ]]; then
-    RANGE="${LAST_RELEASE_COMMIT}..HEAD"
-    SINCE_LABEL="commit de release '${LAST_RELEASE_COMMIT:0:7}'"
-  fi
-fi
-
-if [[ -z "$RANGE" ]]; then
-  RANGE="HEAD"
-  SINCE_LABEL="início do repositório"
-fi
-log "🔍 Commit range: $RANGE ($SINCE_LABEL)"
-
-# ─────────────────────────────────────────────────────────────
-# Extração e Classificação de Conventional Commits
-# ─────────────────────────────────────────────────────────────
-REPO_URL=""
-if [[ -n "${GITHUB_SERVER_URL:-}" && -n "${GITHUB_REPOSITORY:-}" ]]; then
-  REPO_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
-else
-  REMOTE_ORIGIN="$(git config --get remote.origin.url 2>/dev/null || true)"
-  if [[ "$REMOTE_ORIGIN" =~ github\.com[:/]([^/]+/[^/.]+)(\.git)? ]]; then
-    REPO_URL="https://github.com/${BASH_REMATCH[1]}"
-  fi
-fi
-
 TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TEMP_DIR:-}"' EXIT
+NOTES_FILE="$TEMP_DIR/release_notes.md"
+touch "$NOTES_FILE"
 
-FEAT_FILE="$TEMP_DIR/feat.txt"
-FIX_FILE="$TEMP_DIR/fix.txt"
-PERF_FILE="$TEMP_DIR/perf.txt"
-REFACTOR_FILE="$TEMP_DIR/refactor.txt"
-DOCS_FILE="$TEMP_DIR/docs.txt"
-TEST_FILE="$TEMP_DIR/test.txt"
-CI_FILE="$TEMP_DIR/ci.txt"
-CHORE_FILE="$TEMP_DIR/chore.txt"
-REVERT_FILE="$TEMP_DIR/revert.txt"
-BREAKING_FILE="$TEMP_DIR/breaking.txt"
-OTHER_FILE="$TEMP_DIR/other.txt"
+REPO_URL="$(get_repo_url)"
 
-touch "$FEAT_FILE" "$FIX_FILE" "$PERF_FILE" "$REFACTOR_FILE" "$DOCS_FILE" \
-      "$TEST_FILE" "$CI_FILE" "$CHORE_FILE" "$REVERT_FILE" "$BREAKING_FILE" "$OTHER_FILE"
+LAST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+LAST_STABLE_TAG="$(git tag -l --sort=-v:refname 2>/dev/null | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)"
+LAST_RELEASE_COMMIT="$(git log -n 1 --grep="^chore(release)" --grep="^chore(changelog)" --format="%H" 2>/dev/null || true)"
 
+# ─────────────────────────────────────────────────────────────
+# Resolução de Versão e Notas de Release
+# Prioridade 1: INPUT_VERSION e INPUT_RELEASE_NOTES (repassados pelo changelog)
+# Prioridade 2: Cálculo autônomo baseado no histórico Git
+# ─────────────────────────────────────────────────────────────
 HAS_BREAKING=false
 HAS_FEAT=false
 HAS_FIX=false
 TOTAL_COMMITS=0
 
-COMMITS_RAW="$(git log "$RANGE" --no-merges --pretty=format:"%H%x1f%h%x1f%s%x1f%b%x1e" -- . 2>/dev/null || true)"
-
-if [[ -n "$COMMITS_RAW" ]]; then
-  while IFS=$'\x1f' read -d $'\x1e' -r FULL_HASH SHORT_HASH SUBJECT BODY; do
-    FULL_HASH="${FULL_HASH//$'\r'/}"
-    FULL_HASH="${FULL_HASH//$'\n'/}"
-    FULL_HASH="$(echo "$FULL_HASH" | tr -d '[:space:]')"
-    SHORT_HASH="${SHORT_HASH//$'\r'/}"
-    SHORT_HASH="${SHORT_HASH//$'\n'/}"
-    SHORT_HASH="$(echo "$SHORT_HASH" | tr -d '[:space:]')"
-    SUBJECT="${SUBJECT//$'\r'/}"
-    SUBJECT="$(echo "$SUBJECT" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-
-    [[ -z "$FULL_HASH" ]] && continue
-
-    # Ignora commits automáticos de release, changelog ou skip ci
-    if echo "$SUBJECT" | grep -qiE "^chore\((release|changelog)\)|^Merge (pull request|branch)|\[(skip ci|ci skip)\]"; then
-      continue
-    fi
-
-    TOTAL_COMMITS=$((TOTAL_COMMITS + 1))
-
-    if [[ -n "$REPO_URL" ]]; then
-      COMMIT_LINK="([${SHORT_HASH}](${REPO_URL}/commit/${FULL_HASH}))"
-    else
-      COMMIT_LINK="(${SHORT_HASH})"
-    fi
-
-    IS_BREAKING_COMMIT=false
-    if echo "$SUBJECT" | grep -qE "^[a-zA-Z]+(\([^\)]+\))?!:"; then
-      IS_BREAKING_COMMIT=true
-    elif echo "$BODY" | grep -qiE "BREAKING[ -]CHANGE:"; then
-      IS_BREAKING_COMMIT=true
-    fi
-
-    REGEX_CONVENTIONAL='^([a-zA-Z]+)(\(([^)]+)\))?!?:[[:space:]]*(.+)$'
-    if [[ "$SUBJECT" =~ $REGEX_CONVENTIONAL ]]; then
-      TYPE="${BASH_REMATCH[1],,}"
-      SCOPE="${BASH_REMATCH[3]:-}"
-      DESC="$(convert_emojis "${BASH_REMATCH[4]}")"
-
-      if [[ -n "$SCOPE" ]]; then
-        ENTRY="- **${SCOPE}**: ${DESC} ${COMMIT_LINK}"
-      else
-        ENTRY="- ${DESC} ${COMMIT_LINK}"
-      fi
-
-      if [[ "$IS_BREAKING_COMMIT" == "true" ]]; then
-        echo "$ENTRY" >> "$BREAKING_FILE"
-        HAS_BREAKING=true
-      fi
-
-      case "$TYPE" in
-        feat)
-          echo "$ENTRY" >> "$FEAT_FILE"
-          HAS_FEAT=true
-          ;;
-        fix)
-          echo "$ENTRY" >> "$FIX_FILE"
-          HAS_FIX=true
-          ;;
-        perf)
-          echo "$ENTRY" >> "$PERF_FILE"
-          HAS_FIX=true
-          ;;
-        refactor)
-          echo "$ENTRY" >> "$REFACTOR_FILE"
-          ;;
-        docs)
-          echo "$ENTRY" >> "$DOCS_FILE"
-          ;;
-        test)
-          echo "$ENTRY" >> "$TEST_FILE"
-          ;;
-        ci|build)
-          echo "$ENTRY" >> "$CI_FILE"
-          ;;
-        chore)
-          echo "$ENTRY" >> "$CHORE_FILE"
-          ;;
-        revert)
-          echo "$ENTRY" >> "$REVERT_FILE"
-          HAS_FIX=true
-          ;;
-        *)
-          echo "$ENTRY" >> "$OTHER_FILE"
-          ;;
-      esac
-    else
-      CLEAN_SUBJECT="$(convert_emojis "$SUBJECT")"
-      ENTRY="- ${CLEAN_SUBJECT} ${COMMIT_LINK}"
-      if [[ "$IS_BREAKING_COMMIT" == "true" ]]; then
-        echo "$ENTRY" >> "$BREAKING_FILE"
-        HAS_BREAKING=true
-      fi
-      echo "$ENTRY" >> "$OTHER_FILE"
-    fi
-  done <<< "$COMMITS_RAW"
-fi
-
-log "📊 Analyzed $TOTAL_COMMITS relevant commits (Breaking: $HAS_BREAKING, Feat: $HAS_FEAT, Fix: $HAS_FIX)"
-
-# ─────────────────────────────────────────────────────────────
-# Geração / Obtenção das Notas de Release
-# ─────────────────────────────────────────────────────────────
-NOTES_FILE="$TEMP_DIR/release_notes.md"
-touch "$NOTES_FILE"
-
-if [[ -n "$INPUT_RELEASE_NOTES" ]]; then
-  echo "$INPUT_RELEASE_NOTES" > "$NOTES_FILE"
+if [[ -n "$INPUT_VERSION" && "$INPUT_VERSION" != "Unreleased" ]]; then
+  log "💡 Using provided version from input/changelog: $INPUT_VERSION"
+  RESOLVED_VERSION="$INPUT_VERSION"
+  RESOLVED_TAG="$RESOLVED_VERSION"
   HAS_CHANGES=true
-else
-  append_section() {
-    local title="$1"
-    local file="$2"
-    if [[ -s "$file" ]]; then
-      echo "### $title" >> "$NOTES_FILE"
-      convert_emojis < "$file" >> "$NOTES_FILE"
-      echo "" >> "$NOTES_FILE"
-    fi
-  }
 
-  append_section "⚠️ Breaking Changes" "$BREAKING_FILE"
-  append_section "🚀 Features" "$FEAT_FILE"
-  append_section "🐛 Bug Fixes" "$FIX_FILE"
-  append_section "⚡ Performance Improvements" "$PERF_FILE"
-  append_section "♻️ Code Refactoring" "$REFACTOR_FILE"
-  append_section "📝 Documentation" "$DOCS_FILE"
-  append_section "🧪 Tests" "$TEST_FILE"
-  append_section "🔧 CI & Build System" "$CI_FILE"
-  append_section "📦 Miscellaneous" "$CHORE_FILE"
-  append_section "⏪ Reverts" "$REVERT_FILE"
-  append_section "🔄 Other Changes" "$OTHER_FILE"
+  if [[ -n "$INPUT_RELEASE_NOTES" ]]; then
+    echo "$INPUT_RELEASE_NOTES" > "$NOTES_FILE"
+  fi
+else
+  # Determina range de commits
+  resolve_commit_range "$MODE" "$LAST_TAG" "$LAST_STABLE_TAG" "$LAST_RELEASE_COMMIT" false
+  log "🔍 Commit range: $RANGE ($SINCE_LABEL)"
+
+  parse_conventional_commits "$RANGE" "$REPO_URL" "$TEMP_DIR"
+  if [[ -f "$TEMP_DIR/stats.env" ]]; then
+    # shellcheck source=/dev/null
+    source "$TEMP_DIR/stats.env"
+  fi
+
+  log "📊 Analyzed $TOTAL_COMMITS relevant commits (Breaking: $HAS_BREAKING, Feat: $HAS_FEAT, Fix: $HAS_FIX)"
+
+  build_release_notes_md "$TEMP_DIR" "$NOTES_FILE"
 
   HAS_CHANGES=false
   if [[ -s "$NOTES_FILE" ]]; then
@@ -388,66 +136,53 @@ else
   if [[ "$HAS_BREAKING" == "true" || "$HAS_FEAT" == "true" || "$HAS_FIX" == "true" ]]; then
     HAS_BUMP=true
   fi
-fi
 
-PRERELEASE_PROMOTION=false
-if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - ]]; then
-  PRERELEASE_PROMOTION=true
-fi
-
-# Se não há mudanças com impacto SemVer identificadas e nenhuma versão explícita foi dada
-if [[ "$HAS_BUMP" == "false" && "$PRERELEASE_PROMOTION" == "false" && ( -z "$INPUT_VERSION" || "$INPUT_VERSION" == "Unreleased" ) ]]; then
-  log "ℹ️ No SemVer-impacting changes detected since last release ($LAST_TAG). No new release needed."
-  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-    echo "version=" >> "$GITHUB_OUTPUT"
-    echo "tag=" >> "$GITHUB_OUTPUT"
-    echo "has_changes=false" >> "$GITHUB_OUTPUT"
-    echo "release_notes=" >> "$GITHUB_OUTPUT"
+  PRERELEASE_PROMOTION=false
+  if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - ]]; then
+    PRERELEASE_PROMOTION=true
   fi
-  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-    LAST_TAG_URL=""
-    if [[ -n "$REPO_URL" && -n "$LAST_TAG" ]]; then
-      LAST_TAG_URL="${REPO_URL}/releases/tag/${LAST_TAG}"
-    fi
 
-    LAST_VERSION_CELL="_(Nenhuma tag anterior encontrada)_"
-    if [[ -n "$LAST_TAG_URL" ]]; then
-      LAST_VERSION_CELL="[**\`$LAST_TAG\`**]($LAST_TAG_URL)"
-    elif [[ -n "$LAST_TAG" ]]; then
-      LAST_VERSION_CELL="\`$LAST_TAG\`"
+  # Se não há mudanças com impacto SemVer identificadas
+  if [[ "$HAS_BUMP" == "false" && "$PRERELEASE_PROMOTION" == "false" ]]; then
+    log "ℹ️ No SemVer-impacting changes detected since last release ($LAST_TAG). No new release needed."
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+      echo "version=" >> "$GITHUB_OUTPUT"
+      echo "tag=" >> "$GITHUB_OUTPUT"
+      echo "has_changes=false" >> "$GITHUB_OUTPUT"
+      echo "release_notes=" >> "$GITHUB_OUTPUT"
     fi
+    if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+      LAST_TAG_URL=""
+      if [[ -n "$REPO_URL" && -n "$LAST_TAG" ]]; then
+        LAST_TAG_URL="${REPO_URL}/releases/tag/${LAST_TAG}"
+      fi
 
-    EXTRA_METADATA="| **Commits Analisados** | $TOTAL_COMMITS |"
-    EXPLANATION=$(cat <<EOF
+      LAST_VERSION_CELL="_(Nenhuma tag anterior encontrada)_"
+      if [[ -n "$LAST_TAG_URL" ]]; then
+        LAST_VERSION_CELL="[**\`$LAST_TAG\`**]($LAST_TAG_URL)"
+      elif [[ -n "$LAST_TAG" ]]; then
+        LAST_VERSION_CELL="\`$LAST_TAG\`"
+      fi
+
+      EXTRA_METADATA="| **Commits Analisados** | $TOTAL_COMMITS |"
+      EXPLANATION=$(cat <<EOF
 Não foram identificados novos commits com impacto para gerar um release desde a tag \`${LAST_TAG:-inicial}\`.
 > 👉 Para gerar uma nova release, envie commits convencionais como \`feat:\` (minor) ou \`fix:\` (patch).
 EOF
 )
 
-    append_template_to_summary "summary-release-skipped.md" \
-      LAST_VERSION "$LAST_VERSION_CELL" \
-      CURRENT_BRANCH "$CURRENT_BRANCH" \
-      EXTRA_METADATA "$EXTRA_METADATA" \
-      REASON "Nenhuma alteração com impacto de versão encontrada desde $SINCE_LABEL." \
-      EXPLANATION "$EXPLANATION" \
-      LAST_TAG "${LAST_TAG:-inicial}"
+      append_template_to_summary "summary-release-skipped.md" \
+        LAST_VERSION "$LAST_VERSION_CELL" \
+        CURRENT_BRANCH "$CURRENT_BRANCH" \
+        EXTRA_METADATA "$EXTRA_METADATA" \
+        REASON "Nenhuma alteração com impacto de versão encontrada desde $SINCE_LABEL." \
+        EXPLANATION "$EXPLANATION" \
+        LAST_TAG "${LAST_TAG:-inicial}"
+    fi
+    exit 0
   fi
-  exit 0
-fi
 
-# ─────────────────────────────────────────────────────────────
-# Resolução de Versão
-# ─────────────────────────────────────────────────────────────
-RESOLVED_VERSION=""
-RESOLVED_TAG=""
-
-if [[ -n "$INPUT_VERSION" && "$INPUT_VERSION" != "Unreleased" ]]; then
-  RESOLVED_VERSION="$INPUT_VERSION"
-  RESOLVED_TAG="$RESOLVED_VERSION"
-else
-  FORMAT="${VERSION_FORMAT:-v%major.%minor.%patch}"
-
-  # Se a branch de release contiver versão no nome (ex: release-1.0.0, release/v1.0.0)
+  # Branch target semver
   BRANCH_TARGET_SEMVER=""
   if [[ "$CURRENT_BRANCH" =~ ^release[-/][vV]?([0-9]+\.[0-9]+(\.[0-9]+)?) ]]; then
     BRANCH_TARGET_SEMVER="${BASH_REMATCH[1]}"
@@ -456,8 +191,7 @@ else
     fi
   fi
 
-  # Se estiver na branch main (release) e a última tag for um pre-release (ex: v1.0.0-rc.2),
-  # a versão limpa alvo é o prefixo semântico dessa tag pre-release
+  # Pre-release promotion target
   PRERELEASE_TARGET_SEMVER=""
   if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - ]]; then
     CLEAN_FROM_TAG="${LAST_TAG#v}"
@@ -467,98 +201,14 @@ else
     fi
   fi
 
-  if [[ -n "$PRERELEASE_TARGET_SEMVER" ]]; then
-    IFS='.' read -r MAJOR MINOR PATCH <<< "$PRERELEASE_TARGET_SEMVER"
-  elif [[ -n "$BRANCH_TARGET_SEMVER" ]]; then
-    IFS='.' read -r MAJOR MINOR PATCH <<< "$BRANCH_TARGET_SEMVER"
-  else
-    # Calcula SemVer a partir da última tag estável ou LAST_TAG limpa
-    BASE_SEMVER="0.0.0"
-    if [[ -n "${LAST_STABLE_TAG:-}" ]]; then
-      BASE_SEMVER="${LAST_STABLE_TAG#v}"
-    elif [[ -n "$LAST_TAG" ]]; then
-      BASE_SEMVER="${LAST_TAG#v}"
-    fi
-
-    IFS='.' read -r MAJOR MINOR PATCH <<< "${BASE_SEMVER%%-*}"
-    MAJOR="${MAJOR:-0}"
-    MINOR="${MINOR:-0}"
-    PATCH="${PATCH:-0}"
-
-    if [[ "$HAS_BREAKING" == "true" ]]; then
-      MAJOR=$((MAJOR + 1))
-      MINOR=0
-      PATCH=0
-    elif [[ "$HAS_FEAT" == "true" ]]; then
-      MINOR=$((MINOR + 1))
-      PATCH=0
-    elif [[ "$HAS_FIX" == "true" ]]; then
-      PATCH=$((PATCH + 1))
-    fi
+  BASE_SEMVER="0.0.0"
+  if [[ -n "${LAST_STABLE_TAG:-}" ]]; then
+    BASE_SEMVER="${LAST_STABLE_TAG#v}"
+  elif [[ -n "$LAST_TAG" ]]; then
+    BASE_SEMVER="${LAST_TAG#v}"
   fi
 
-  YEAR_4="$(date +"%Y")"
-  YEAR_2="$(date +"%y")"
-  MONTH_2="$(date +"%m")"
-  MONTH_1="$(date +"%-m" 2>/dev/null || echo "$((10#$MONTH_2))")"
-  DAY_2="$(date +"%d")"
-  DAY_1="$(date +"%-d" 2>/dev/null || echo "$((10#$DAY_2))")"
-
-  RESOLVED_VERSION="$FORMAT"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%MAJOR/$MAJOR}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%major/$MAJOR}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%MINOR/$MINOR}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%minor/$MINOR}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%PATCH/$PATCH}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%patch/$PATCH}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%path/$PATCH}"
-
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%YYYY/$YEAR_4}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%YY/$YEAR_2}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%mm/$MONTH_2}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%dd/$DAY_2}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%m/$MONTH_1}"
-  RESOLVED_VERSION="${RESOLVED_VERSION//\%d/$DAY_1}"
-
-  if [[ "$MODE" == "prerelease" ]]; then
-    if [[ "$PRERELEASE_STRATEGY" == "rc" ]]; then
-      CLEAN_TAG="$RESOLVED_VERSION"
-      EXISTING_RCS=$(git tag -l "${CLEAN_TAG}-${PRERELEASE_SUFFIX}.*" 2>/dev/null | sort -V || true)
-      if [[ -n "$EXISTING_RCS" ]]; then
-        LATEST_RC="$(echo "$EXISTING_RCS" | tail -n 1)"
-        RC_NUM="${LATEST_RC##*.}"
-        if [[ "$RC_NUM" =~ ^[0-9]+$ ]]; then
-          NEXT_NUM=$((RC_NUM + 1))
-        else
-          NEXT_NUM=1
-        fi
-      else
-        NEXT_NUM=1
-      fi
-      RESOLVED_VERSION="${CLEAN_TAG}-${PRERELEASE_SUFFIX}.${NEXT_NUM}"
-    fi
-  else
-    # Evita duplicar tag existente se for formato por data ou SemVer
-    if [[ -z "$PRERELEASE_TARGET_SEMVER" ]] && git rev-parse "$RESOLVED_VERSION" >/dev/null 2>&1; then
-      if [[ "$RESOLVED_VERSION" =~ ^(v?)([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-        V_PREFIX="${BASH_REMATCH[1]}"
-        V_MAJ="${BASH_REMATCH[2]}"
-        V_MIN="${BASH_REMATCH[3]}"
-        V_PAT="${BASH_REMATCH[4]}"
-        while git rev-parse "${V_PREFIX}${V_MAJ}.${V_MIN}.${V_PAT}" >/dev/null 2>&1; do
-          V_PAT=$((V_PAT + 1))
-        done
-        RESOLVED_VERSION="${V_PREFIX}${V_MAJ}.${V_MIN}.${V_PAT}"
-      else
-        COUNT=1
-        while git rev-parse "${RESOLVED_VERSION}.${COUNT}" >/dev/null 2>&1; do
-          COUNT=$((COUNT + 1))
-        done
-        RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
-      fi
-    fi
-  fi
-
+  RESOLVED_VERSION="$(calculate_semver_version "$MODE" "$BASE_SEMVER" "$HAS_BREAKING" "$HAS_FEAT" "$HAS_FIX" "${VERSION_FORMAT:-}" "$PRERELEASE_STRATEGY" "$PRERELEASE_SUFFIX" "$BRANCH_TARGET_SEMVER" "$PRERELEASE_TARGET_SEMVER" "")"
   RESOLVED_TAG="$RESOLVED_VERSION"
 fi
 
