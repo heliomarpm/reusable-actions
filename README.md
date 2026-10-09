@@ -249,7 +249,6 @@ jobs:
       changelog-title: "# 📦 Changelog\n\nAll notable changes to this project will be documented in this file." # Opcional: título/cabeçalho inicial
       version-format: "v%major.%minor.%patch" # Opcional: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd"
       changelog-file: "CHANGELOG.md"          # Caminho do arquivo de changelog
-      commit-changelog: true                  # Fazer commit e push do CHANGELOG.md
       prerelease-strategy: 'rc'               # 'rc' (default: v1.0.0-rc.1 em release-*) | 'same-tag' (v1.0.0 como pré-release)
       prerelease-suffix: 'rc'                 # Sufixo da pré-release para a estratégia 'rc' (default: 'rc')
     secrets:

@@ -46,12 +46,12 @@ inputs:
     description: 'Format template for version (e.g. "v%major.%minor.%patch", "%YYYY-%mm-%dd"). Defaults to "v%major.%minor.%patch" on release branches, or "%YYYY-%mm-%dd" otherwise.'
     required: false
     default: ''
-  commit-changelog:
-    description: 'Whether to automatically commit and push the updated CHANGELOG.md'
+  enable-changelog:
+    description: 'Whether to enable changelog generation and commit'
     required: false
     default: 'true'
   commit-message:
-    description: 'Custom commit message when commit-changelog is true'
+    description: 'Custom commit message for changelog updates'
     required: false
     default: ''
   github-token:
@@ -88,7 +88,7 @@ runs:
         PRERELEASE_SUFFIX: ${{ inputs.prerelease-suffix }}
         INPUT_VERSION: ${{ inputs.version }}
         VERSION_FORMAT: ${{ inputs.version-format }}
-        COMMIT_CHANGELOG: ${{ inputs.commit-changelog }}
+        ENABLE_CHANGELOG: ${{ inputs.enable-changelog }}
         COMMIT_MESSAGE: ${{ inputs.commit-message }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
         REUSABLE_PATH: ${{ github.action_path }}/../..

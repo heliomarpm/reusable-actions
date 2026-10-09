@@ -38,11 +38,6 @@ on:
         type: string
         required: false
         default: '.'
-      commit-changelog:
-        description: 'Fazer commit e push do CHANGELOG.md'
-        type: boolean
-        required: false
-        default: true
       version-format:
         description: 'Formato da versão (ex: "v%major.%minor.%patch" ou "%YYYY-%mm-%dd")'
         type: string
@@ -93,9 +88,9 @@ jobs:
     name: 🚀 Release & Changelog
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.release.outputs.version || steps.changelog.outputs.version }}
+      version: ${{ steps.release.outputs.version }}
       tag: ${{ steps.release.outputs.tag }}
-      has-changes: ${{ steps.release.outputs.has-changes || steps.changelog.outputs.has-changes }}
+      has-changes: ${{ steps.release.outputs.has-changes }}
 
     steps:
       - name: 📌 Checkout repository
@@ -103,6 +98,17 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: 🚀 Create Git Tag & Release
+        id: release
+        uses: heliomarpm/reusable-workflows/actions/release@main
+        with:
+          project-path: ${{ inputs.project-path || '.' }}
+          version-format: ${{ inputs.version-format || '' }}
+          prerelease-strategy: ${{ inputs.prerelease-strategy || 'rc' }}
+          prerelease-suffix: ${{ inputs.prerelease-suffix || 'rc' }}
+          prerelease-branches: ${{ inputs.prerelease-branches || 'release-*,release/*' }}
+          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: 📝 Update Changelog
         if: ${{ inputs.enable-changelog != false }}
@@ -112,24 +118,9 @@ jobs:
           project-path: ${{ inputs.project-path || '.' }}
           changelog-file: ${{ inputs.changelog-file || 'CHANGELOG.md' }}
           changelog-title: ${{ inputs.changelog-title }}
-          version-format: ${{ inputs.version-format || '' }}
-          prerelease-strategy: ${{ inputs.prerelease-strategy || 'rc' }}
-          prerelease-suffix: ${{ inputs.prerelease-suffix || 'rc' }}
-          prerelease-branches: ${{ inputs.prerelease-branches || 'release-*,release/*' }}
-          commit-changelog: ${{ inputs.commit-changelog != false }}
-          github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
-
-      - name: 🚀 Create Git Tag & Release
-        id: release
-        uses: heliomarpm/reusable-workflows/actions/release@main
-        with:
-          project-path: ${{ inputs.project-path || '.' }}
-          version: ${{ steps.changelog.outputs.version }}
-          version-format: ${{ inputs.version-format || '' }}
-          prerelease-strategy: ${{ inputs.prerelease-strategy || 'rc' }}
-          prerelease-suffix: ${{ inputs.prerelease-suffix || 'rc' }}
-          prerelease-branches: ${{ inputs.prerelease-branches || 'release-*,release/*' }}
-          release-notes: ${{ steps.changelog.outputs.release-notes }}
+          version: ${{ steps.release.outputs.version }}
+          release-notes: ${{ steps.release.outputs.release-notes }}
+          enable-changelog: ${{ inputs.enable-changelog != false }}
           github-token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: 🧾 Job Summary (Fallback em Falha)

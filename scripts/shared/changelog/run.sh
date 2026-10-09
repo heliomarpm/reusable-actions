@@ -27,6 +27,12 @@ log "🚀 Changelog Action - Initializing"
 # ─────────────────────────────────────────────────────────────
 # Inputs & Configuration
 # ─────────────────────────────────────────────────────────────
+ENABLE_CHANGELOG="${ENABLE_CHANGELOG:-true}"
+if [[ "$ENABLE_CHANGELOG" != "true" ]]; then
+  log "ℹ️ Changelog is disabled (enable-changelog=false). Skipping."
+  exit 0
+fi
+
 CHANGELOG_FILE="${CHANGELOG_FILE:-CHANGELOG.md}"
 CHANGELOG_TITLE="${CHANGELOG_TITLE:-"# 📦 Changelog\n\nAll notable changes to this project will be documented in this file."}"
 PROJECT_PATH="${PROJECT_PATH:-.}"
@@ -38,7 +44,6 @@ PRERELEASE_STRATEGY="${PRERELEASE_STRATEGY:-rc}"
 PRERELEASE_SUFFIX="${PRERELEASE_SUFFIX:-rc}"
 INPUT_VERSION="${INPUT_VERSION:-}"
 VERSION_FORMAT="${VERSION_FORMAT:-}"
-COMMIT_CHANGELOG="${COMMIT_CHANGELOG:-true}"
 COMMIT_MESSAGE="${COMMIT_MESSAGE:-}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 
@@ -115,8 +120,7 @@ if grep -qiE "^## \[Unreleased\]" "$CHANGELOG_FILE"; then
   HAS_EXISTING_UNRELEASED=true
 fi
 
-# Se não há notas geradas neste range, mas já havia [Unreleased] no changelog:
-# No modo release, usaremos o conteúdo pré-existente de [Unreleased] para promover a versão!
+# Extrai conteúdo de [Unreleased] pré-existente se houver
 EXISTING_UNRELEASED_CONTENT="$TEMP_DIR/existing_unreleased.txt"
 if [[ "$HAS_EXISTING_UNRELEASED" == "true" ]]; then
   awk '
@@ -130,45 +134,13 @@ fi
 HAS_CHANGES=false
 if [[ -s "$NOTES_FILE" ]]; then
   HAS_CHANGES=true
-elif [[ ("$MODE" == "release" || "$MODE" == "prerelease") && -s "$EXISTING_UNRELEASED_CONTENT" ]]; then
+elif [[ -s "$EXISTING_UNRELEASED_CONTENT" ]]; then
   HAS_CHANGES=true
   cat "$EXISTING_UNRELEASED_CONTENT" > "$NOTES_FILE"
 fi
 
-HAS_BUMP=false
-if [[ "$HAS_BREAKING" == "true" || "$HAS_FEAT" == "true" || "$HAS_FIX" == "true" ]]; then
-  HAS_BUMP=true
-fi
-
-if [[ -s "$EXISTING_UNRELEASED_CONTENT" ]]; then
-  if grep -qiE "Breaking Changes|Features|Bug Fixes|Performance Improvements|Reverts" "$EXISTING_UNRELEASED_CONTENT"; then
-    HAS_BUMP=true
-  fi
-fi
-
-PRERELEASE_PROMOTION=false
-if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - ]]; then
-  PRERELEASE_PROMOTION=true
-fi
-
-if [[ "$MODE" != "develop" && "$HAS_BUMP" == "false" && "$PRERELEASE_PROMOTION" == "false" && ( -z "$INPUT_VERSION" || "$INPUT_VERSION" == "Unreleased" ) ]]; then
-  log "ℹ️ No SemVer-impacting changes detected since last release ($LAST_TAG). No new changelog version needed."
-  echo "version=" >> "${GITHUB_OUTPUT:-/dev/null}"
-  echo "tag=" >> "${GITHUB_OUTPUT:-/dev/null}"
-  echo "has_changes=false" >> "${GITHUB_OUTPUT:-/dev/null}"
-  echo "release_notes=" >> "${GITHUB_OUTPUT:-/dev/null}"
-  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-    append_template_to_summary "summary-changelog-skipped.md" \
-      CHANGELOG_FILE "$CHANGELOG_FILE" \
-      CURRENT_BRANCH "$CURRENT_BRANCH" \
-      MODE "$MODE" \
-      COMMITS_COUNT "$TOTAL_COMMITS" \
-      SINCE_LABEL "$SINCE_LABEL"
-  fi
-  exit 0
-fi
-
-if [[ "$HAS_CHANGES" == "false" && "$MODE" != "develop" ]]; then
+# Se não há absolutamente nenhuma alteração
+if [[ "$HAS_CHANGES" == "false" ]]; then
   log "ℹ️ No changes detected. Changelog is up to date."
   echo "version=" >> "${GITHUB_OUTPUT:-/dev/null}"
   echo "tag=" >> "${GITHUB_OUTPUT:-/dev/null}"
@@ -187,60 +159,23 @@ fi
 
 # ─────────────────────────────────────────────────────────────
 # Resolução de Versão
+# Changelog NUNCA calcula versão sozinho:
+# - Se INPUT_VERSION foi fornecida (ex: via release): promove para a versão informada.
+# - Se INPUT_VERSION NÃO foi fornecida: sempre registra sob [Unreleased].
 # ─────────────────────────────────────────────────────────────
 RESOLVED_VERSION=""
-RESOLVED_TAG=""
 TODAY="$(date +"%Y-%m-%d")"
 
-if [[ "$MODE" == "develop" || "$MODE" == "preview" ]]; then
-  RESOLVED_VERSION="Unreleased"
-  SECTION_HEADER="## [Unreleased]"
-else
-  # Modo release ou prerelease
-  if [[ -n "$INPUT_VERSION" && "$INPUT_VERSION" != "Unreleased" ]]; then
-    RESOLVED_VERSION="$INPUT_VERSION"
-    RESOLVED_TAG="$RESOLVED_VERSION"
-  else
-    FORMAT="${VERSION_FORMAT:-v%major.%minor.%patch}"
-
-    BRANCH_TARGET_SEMVER=""
-    if [[ "$CURRENT_BRANCH" =~ ^release[-/][vV]?([0-9]+\.[0-9]+(\.[0-9]+)?) ]]; then
-      BRANCH_TARGET_SEMVER="${BASH_REMATCH[1]}"
-      if [[ "$BRANCH_TARGET_SEMVER" =~ ^[0-9]+\.[0-9]+$ ]]; then
-        BRANCH_TARGET_SEMVER="${BRANCH_TARGET_SEMVER}.0"
-      fi
-    fi
-
-    PRERELEASE_TARGET_SEMVER=""
-    if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - ]]; then
-      CLEAN_FROM_TAG="${LAST_TAG#v}"
-      CLEAN_FROM_TAG="${CLEAN_FROM_TAG%%-*}"
-      if [[ "$CLEAN_FROM_TAG" =~ ^[0-9]+\.[0-9]+$ ]]; then
-        PRERELEASE_TARGET_SEMVER="$CLEAN_FROM_TAG"
-      fi
-    fi
-
-    BASE_SEMVER="0.0.0"
-    if [[ "${USE_RELEASE_COMMIT:-false}" == "true" && -f "$CHANGELOG_FILE" ]]; then
-      LATEST_CHANGELOG_VERSION="$(grep -E '^## \[(v?[0-9]+\.[0-9]+(\.[0-9]+)?)\]' "$CHANGELOG_FILE" 2>/dev/null | head -n 1 | sed -E 's/^## \[(.*)\].*/\1/' || true)"
-      if [[ -n "$LATEST_CHANGELOG_VERSION" ]]; then
-        BASE_SEMVER="${LATEST_CHANGELOG_VERSION#v}"
-      fi
-    elif [[ -n "${LAST_STABLE_TAG:-}" ]]; then
-      BASE_SEMVER="${LAST_STABLE_TAG#v}"
-    elif [[ -n "$LAST_TAG" ]]; then
-      BASE_SEMVER="${LAST_TAG#v}"
-    fi
-
-    RESOLVED_VERSION="$(calculate_semver_version "$MODE" "$BASE_SEMVER" "$HAS_BREAKING" "$HAS_FEAT" "$HAS_FIX" "$FORMAT" "$PRERELEASE_STRATEGY" "$PRERELEASE_SUFFIX" "$BRANCH_TARGET_SEMVER" "$PRERELEASE_TARGET_SEMVER" "$CHANGELOG_FILE")"
-    RESOLVED_TAG="$RESOLVED_VERSION"
-  fi
-
+if [[ -n "$INPUT_VERSION" && "$INPUT_VERSION" != "Unreleased" ]]; then
+  RESOLVED_VERSION="$INPUT_VERSION"
   if [[ "$RESOLVED_VERSION" =~ [0-9]{4}[.-][0-9]{2} ]]; then
     SECTION_HEADER="## [${RESOLVED_VERSION}]"
   else
     SECTION_HEADER="## [${RESOLVED_VERSION}] - ${TODAY}"
   fi
+else
+  RESOLVED_VERSION="Unreleased"
+  SECTION_HEADER="## [Unreleased]"
 fi
 
 log "🏷️ Target Version: $RESOLVED_VERSION (Header: $SECTION_HEADER)"
@@ -343,32 +278,30 @@ else:
 log "✅ $CHANGELOG_FILE updated successfully"
 
 # ─────────────────────────────────────────────────────────────
-# Commit & Push do CHANGELOG.md (se configurado)
+# Commit & Push do CHANGELOG.md
 # ─────────────────────────────────────────────────────────────
-if [[ "$COMMIT_CHANGELOG" == "true" ]]; then
-  git config user.name "${GIT_USER_NAME:-github-actions[bot]}"
-  git config user.email "${GIT_USER_EMAIL:-github-actions[bot]@users.noreply.github.com}"
+git config user.name "${GIT_USER_NAME:-github-actions[bot]}"
+git config user.email "${GIT_USER_EMAIL:-github-actions[bot]@users.noreply.github.com}"
 
-  if [[ -n "$COMMIT_MESSAGE" ]]; then
-    MSG="$COMMIT_MESSAGE"
-  elif [[ "$MODE" == "release" ]]; then
-    MSG="chore(release): ${RESOLVED_VERSION} [skip ci]"
-  else
-    MSG="chore(changelog): update [Unreleased] in CHANGELOG.md [skip ci]"
-  fi
+if [[ -n "$COMMIT_MESSAGE" ]]; then
+  MSG="$COMMIT_MESSAGE"
+elif [[ "$RESOLVED_VERSION" != "Unreleased" ]]; then
+  MSG="chore(release): ${RESOLVED_VERSION} [skip ci]"
+else
+  MSG="chore(changelog): update [Unreleased] in CHANGELOG.md [skip ci]"
+fi
 
-  git add "$CHANGELOG_FILE"
-  if ! git diff --cached --quiet; then
-    log "💾 Committing $CHANGELOG_FILE with message: '$MSG'"
-    git commit -m "$MSG"
-    if git remote get-url origin >/dev/null 2>&1; then
-      git push origin "$CURRENT_BRANCH" || log "⚠️ Failed to push changelog commit"
-    else
-      log "ℹ️ Skipping git push commit (no 'origin' remote configured)"
-    fi
+git add "$CHANGELOG_FILE"
+if ! git diff --cached --quiet; then
+  log "💾 Committing $CHANGELOG_FILE with message: '$MSG'"
+  git commit -m "$MSG"
+  if git remote get-url origin >/dev/null 2>&1; then
+    git push origin "$CURRENT_BRANCH" || log "⚠️ Failed to push changelog commit"
   else
-    log "ℹ️ No git changes to commit"
+    log "ℹ️ Skipping git push commit (no 'origin' remote configured)"
   fi
+else
+  log "ℹ️ No git changes to commit"
 fi
 
 # ─────────────────────────────────────────────────────────────
