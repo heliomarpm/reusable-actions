@@ -173,16 +173,30 @@ LAST_STABLE_TAG="$(git tag -l --sort=-v:refname 2>/dev/null | grep -E '^v?[0-9]+
 RANGE=""
 SINCE_LABEL=""
 
+LAST_RELEASE_COMMIT="$(git log -n 1 --grep="^chore(release)" --grep="^chore(changelog)" --format="%H" 2>/dev/null || true)"
+
+# Verifica se o último commit de release é mais recente que a última tag Git
+USE_RELEASE_COMMIT=false
+if [[ -n "${LAST_RELEASE_COMMIT:-}" && "${LAST_RELEASE_COMMIT:-}" != "$(git rev-parse HEAD 2>/dev/null || true)" ]]; then
+  if [[ -z "$LAST_TAG" ]]; then
+    USE_RELEASE_COMMIT=true
+  elif git log "${LAST_TAG}..HEAD" --format="%H" 2>/dev/null | grep -q "$LAST_RELEASE_COMMIT"; then
+    USE_RELEASE_COMMIT=true
+  fi
+fi
+
 if [[ "$MODE" == "release" && -n "$LAST_TAG" && "$LAST_TAG" =~ - && -n "$LAST_STABLE_TAG" ]]; then
   # Ao promover de release branch (RC) para release final na main, abrange todos os commits desde a última versão estável
   RANGE="${LAST_STABLE_TAG}..HEAD"
   SINCE_LABEL="última release estável '$LAST_STABLE_TAG'"
+elif [[ "$USE_RELEASE_COMMIT" == "true" ]]; then
+  RANGE="${LAST_RELEASE_COMMIT}..HEAD"
+  SINCE_LABEL="commit de release '${LAST_RELEASE_COMMIT:0:7}'"
 elif [[ -n "$LAST_TAG" ]]; then
   RANGE="${LAST_TAG}..HEAD"
   SINCE_LABEL="tag '$LAST_TAG'"
 else
   # Se não houver tag, busca o commit do último release registrado
-  LAST_RELEASE_COMMIT="$(git log -n 1 --grep="^chore(release)" --grep="^chore(changelog)" --format="%H" 2>/dev/null || true)"
   if [[ -n "$LAST_RELEASE_COMMIT" && "$LAST_RELEASE_COMMIT" != "$(git rev-parse HEAD 2>/dev/null || true)" ]]; then
     RANGE="${LAST_RELEASE_COMMIT}..HEAD"
     SINCE_LABEL="commit de release '${LAST_RELEASE_COMMIT:0:7}'"
@@ -523,7 +537,12 @@ else
     else
       # 2. Calcula SemVer (Major, Minor, Patch)
       BASE_SEMVER="0.0.0"
-      if [[ -n "${LAST_STABLE_TAG:-}" ]]; then
+      if [[ "${USE_RELEASE_COMMIT:-false}" == "true" && -f "$CHANGELOG_FILE" ]]; then
+        LATEST_CHANGELOG_VERSION="$(grep -E '^## \[(v?[0-9]+\.[0-9]+(\.[0-9]+)?)\]' "$CHANGELOG_FILE" 2>/dev/null | head -n 1 | sed -E 's/^## \[(.*)\].*/\1/' || true)"
+        if [[ -n "$LATEST_CHANGELOG_VERSION" ]]; then
+          BASE_SEMVER="${LATEST_CHANGELOG_VERSION#v}"
+        fi
+      elif [[ -n "${LAST_STABLE_TAG:-}" ]]; then
         BASE_SEMVER="${LAST_STABLE_TAG#v}"
       elif [[ -n "$LAST_TAG" ]]; then
         BASE_SEMVER="${LAST_TAG#v}"
@@ -589,13 +608,25 @@ else
         RESOLVED_VERSION="${CLEAN_TAG}-${PRERELEASE_SUFFIX}.${NEXT_NUM}"
       fi
     else
-      # 5. Evita duplicação caso seja versão puramente por data
+      # 5. Evita duplicação caso a versão já exista no CHANGELOG.md
       if [[ -z "$PRERELEASE_TARGET_SEMVER" ]] && [[ -f "$CHANGELOG_FILE" ]] && grep -qE "^## \[${RESOLVED_VERSION}\]" "$CHANGELOG_FILE" 2>/dev/null; then
-        COUNT=1
-        while grep -qE "^## \[${RESOLVED_VERSION}\.${COUNT}\]" "$CHANGELOG_FILE" 2>/dev/null; do
-          COUNT=$((COUNT + 1))
-        done
-        RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
+        if [[ "$RESOLVED_VERSION" =~ ^(v?)([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+          V_PREFIX="${BASH_REMATCH[1]}"
+          V_MAJ="${BASH_REMATCH[2]}"
+          V_MIN="${BASH_REMATCH[3]}"
+          V_PAT="${BASH_REMATCH[4]}"
+          while grep -qE "^## \[${V_PREFIX}${V_MAJ}\.${V_MIN}\.${V_PAT}\]" "$CHANGELOG_FILE" 2>/dev/null; do
+            V_PAT=$((V_PAT + 1))
+          done
+          RESOLVED_VERSION="${V_PREFIX}${V_MAJ}.${V_MIN}.${V_PAT}"
+        else
+          # Formato puramente por data (CalVer)
+          COUNT=1
+          while grep -qE "^## \[${RESOLVED_VERSION}\.${COUNT}\]" "$CHANGELOG_FILE" 2>/dev/null; do
+            COUNT=$((COUNT + 1))
+          done
+          RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
+        fi
       fi
     fi
 
@@ -618,23 +649,54 @@ log "🏷️ Target Version: $RESOLVED_VERSION (Header: $SECTION_HEADER)"
 # ─────────────────────────────────────────────────────────────
 NEW_SECTION_FILE="$TEMP_DIR/new_section.md"
 {
-  echo "\\n---\\n\\n$SECTION_HEADER"
+  echo "$SECTION_HEADER"
   echo ""
   if [[ -s "$NOTES_FILE" ]]; then
     cat "$NOTES_FILE"
+    echo ""
   fi
 } > "$NEW_SECTION_FILE"
 
 UPDATED_CHANGELOG="$TEMP_DIR/CHANGELOG.updated.md"
 
-awk -v new_sec_file="$NEW_SECTION_FILE" '
+# Atualização do arquivo CHANGELOG.md via Python 3 (com fallback em awk)
+python3 -c '
+import sys, re
+
+target_path = sys.argv[1]
+new_sec_path = sys.argv[2]
+
+with open(target_path, "r", encoding="utf-8") as f:
+    content = f.read()
+
+with open(new_sec_path, "r", encoding="utf-8") as f:
+    new_sec = f.read().strip()
+
+if re.search(r"^##\s+\[Unreleased\]", content, flags=re.MULTILINE):
+    pattern = r"##\s+\[Unreleased\].*?(?=(?:\n##\s+\[\S+\]|\Z))"
+    replacement = new_sec + "\n"
+    updated = re.sub(pattern, replacement, content, count=1, flags=re.DOTALL)
+    with open(target_path, "w", encoding="utf-8") as f:
+        f.write(updated.strip() + "\n")
+else:
+    match = re.search(r"^##\s+\[", content, flags=re.MULTILINE)
+    if match:
+        header = content[:match.start()].rstrip()
+        rest = content[match.start():].lstrip("\n")
+        result = header + "\n\n" + new_sec + "\n\n" + rest.strip() + "\n"
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.write(result)
+    else:
+        result = content.rstrip() + "\n\n" + new_sec + "\n"
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.write(result)
+' "$CHANGELOG_FILE" "$NEW_SECTION_FILE" 2>/dev/null || awk -v new_sec_file="$NEW_SECTION_FILE" '
   BEGIN {
     inserted = 0
     skipping_unreleased = 0
   }
 
   /^## \[Unreleased\]/ {
-    # Substitui a seção unreleased existente
     while ((getline line < new_sec_file) > 0) {
       print line
     }
@@ -645,17 +707,16 @@ awk -v new_sec_file="$NEW_SECTION_FILE" '
   }
 
   /^## \[/ {
-    # Se estávamos ignorando o unreleased antigo, agora paramos ao encontrar a próxima versão
     if (skipping_unreleased) {
       skipping_unreleased = 0
     }
-    # Se ainda não havíamos inserido (não tinha [Unreleased] prévio), inserimos logo antes da primeira versão
     if (!inserted) {
       while ((getline line < new_sec_file) > 0) {
         print line
       }
       close(new_sec_file)
       inserted = 1
+      print ""
     }
     print $0
     next
@@ -668,7 +729,6 @@ awk -v new_sec_file="$NEW_SECTION_FILE" '
   }
 
   END {
-    # Se o arquivo não continha nenhuma versão (apenas cabeçalho)
     if (!inserted) {
       print ""
       while ((getline line < new_sec_file) > 0) {
@@ -677,9 +737,7 @@ awk -v new_sec_file="$NEW_SECTION_FILE" '
       close(new_sec_file)
     }
   }
-' "$CHANGELOG_FILE" > "$UPDATED_CHANGELOG"
-
-cp "$UPDATED_CHANGELOG" "$CHANGELOG_FILE"
+' "$CHANGELOG_FILE" > "$UPDATED_CHANGELOG" && cp "$UPDATED_CHANGELOG" "$CHANGELOG_FILE" 2>/dev/null || true
 log "✅ $CHANGELOG_FILE updated successfully"
 
 # ─────────────────────────────────────────────────────────────

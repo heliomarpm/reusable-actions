@@ -538,13 +538,24 @@ else
       RESOLVED_VERSION="${CLEAN_TAG}-${PRERELEASE_SUFFIX}.${NEXT_NUM}"
     fi
   else
-    # Evita duplicar tag existente se for formato por data
+    # Evita duplicar tag existente se for formato por data ou SemVer
     if [[ -z "$PRERELEASE_TARGET_SEMVER" ]] && git rev-parse "$RESOLVED_VERSION" >/dev/null 2>&1; then
-      COUNT=1
-      while git rev-parse "${RESOLVED_VERSION}.${COUNT}" >/dev/null 2>&1; do
-        COUNT=$((COUNT + 1))
-      done
-      RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
+      if [[ "$RESOLVED_VERSION" =~ ^(v?)([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+        V_PREFIX="${BASH_REMATCH[1]}"
+        V_MAJ="${BASH_REMATCH[2]}"
+        V_MIN="${BASH_REMATCH[3]}"
+        V_PAT="${BASH_REMATCH[4]}"
+        while git rev-parse "${V_PREFIX}${V_MAJ}.${V_MIN}.${V_PAT}" >/dev/null 2>&1; do
+          V_PAT=$((V_PAT + 1))
+        done
+        RESOLVED_VERSION="${V_PREFIX}${V_MAJ}.${V_MIN}.${V_PAT}"
+      else
+        COUNT=1
+        while git rev-parse "${RESOLVED_VERSION}.${COUNT}" >/dev/null 2>&1; do
+          COUNT=$((COUNT + 1))
+        done
+        RESOLVED_VERSION="${RESOLVED_VERSION}.${COUNT}"
+      fi
     fi
   fi
 

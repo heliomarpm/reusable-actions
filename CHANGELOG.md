@@ -2,22 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
----
-
-\n---\n\n## [v0.3.0.1] - 2026-10-08
+## [v0.3.1] - 2026-10-08
 
 ### 🚀 Features
 - add changelog run script and update changelog entries ([220b90d](https://github.com/heliomarpm/reusable-workflows/commit/220b90d3db361cb6444053edaf45127fc8b96315))
-- **qa**: ✨ adicionar suporte a comando customizado de testes test-command ([c77fbfb](https://github.com/heliomarpm/reusable-workflows/commit/c77fbfb7b828c5fbf591bfb3330f31397bb46871))
-- **pr**: ✨ adicionar opção skip-quality-gate no workflow cd-pull-request ([e06c42a](https://github.com/heliomarpm/reusable-workflows/commit/e06c42a9dac9926a743ac54776ff5db7253ed17c))
 
 ## [v0.3.0] - 2026-10-08
 
 ### 🚀 Features
 - **qa**: ✨ adicionar suporte a comando customizado de testes test-command ([c77fbfb](https://github.com/heliomarpm/reusable-workflows/commit/c77fbfb7b828c5fbf591bfb3330f31397bb46871))
 - **pr**: ✨ adicionar opção skip-quality-gate no workflow cd-pull-request ([e06c42a](https://github.com/heliomarpm/reusable-workflows/commit/e06c42a9dac9926a743ac54776ff5db7253ed17c))
-
----
 
 ## [v0.2.0] - 2026-10-08
 
@@ -65,7 +59,6 @@ All notable changes to this project will be documented in this file.
 ### 🔄 Other Changes
 - **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://github.com/heliomarpm/reusable-workflows/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
 
----
 
 ## [v0.1.0] - 2026-10-08
 
@@ -112,7 +105,6 @@ All notable changes to this project will be documented in this file.
 ### 🔄 Other Changes
 - **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://github.com/heliomarpm/reusable-workflows/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
 
----
 
 ## [v0.0.14] - 2026-10-08
 
@@ -158,7 +150,7 @@ All notable changes to this project will be documented in this file.
 ### 🔄 Other Changes
 - **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://github.com/heliomarpm/reusable-workflows/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
 
----
+
 
 ## [v0.0.13] - 2026-10-08
 
@@ -203,7 +195,6 @@ All notable changes to this project will be documented in this file.
 ### 🔄 Other Changes
 - **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://github.com/heliomarpm/reusable-workflows/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
 
----
 
 ## [v0.0.12] - 2026-10-08
 
@@ -247,7 +238,6 @@ All notable changes to this project will be documented in this file.
 ### 🔄 Other Changes
 - **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://github.com/heliomarpm/reusable-workflows/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
 
----
 
 ## [v0.0.11] - 2026-10-07
 
@@ -286,7 +276,6 @@ All notable changes to this project will be documented in this file.
 ### 🔄 Other Changes
 - **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://github.com/heliomarpm/reusable-workflows/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
 
----
 
 ## [v0.0.10] - 2026-10-06
 
@@ -323,7 +312,6 @@ All notable changes to this project will be documented in this file.
 ### 🔄 Other Changes
 - **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://github.com/heliomarpm/reusable-workflows/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
 
----
 
 ## [v0.0.9] - 2026-10-06
 
@@ -357,7 +345,6 @@ All notable changes to this project will be documented in this file.
 ### 🔄 Other Changes
 - **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://github.com/heliomarpm/reusable-workflows/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
 
----
 
 ## [v0.0.8] - 2026-10-06
 
@@ -386,7 +373,6 @@ All notable changes to this project will be documented in this file.
 ### 🔄 Other Changesreusable-workflows
 - **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://greusable-workflowsarpm/reusable-workflows/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
 
----
 
 ## [v0.0.7] - 2026-10-06
 
@@ -414,7 +400,6 @@ All notable changes to this project will be documented in this file.
 ### 🔄 Other Changes
 - **templates**: 🎨 ajustar formatação de tabelas nos resumos de release ([e5d6e2f](https://github.com/heliomarpm/reusable-workflows/commit/e5d6e2f69503f415a49b34ff4a5bc81b48f764ca))
 
----
 
 ## [v0.0.6] - 2026-10-06
 
@@ -434,7 +419,6 @@ All notable changes to this project will be documented in this file.
 - 📝 renomear workflow de changelog ([d23e661](https://github.com/heliomarpm/reusable-workflows/commit/d23e66120efb913835fed8b99c1033c7be8f30f4))
 - 👷 atualizar nome do fluxo de trabalho de PR automático ([42cb7eb](https://github.com/heliomarpm/reusable-workflows/commit/42cb7eb5302314958ec016b4813654e5ee271be4))
 
----
 
 ## [v0.0.5] - 2026-10-06
 
@@ -449,7 +433,6 @@ All notable changes to this project will be documented in this file.
 - 📝 renomear workflow de changelog ([d23e661](https://github.com/heliomarpm/reusable-workflows/commit/d23e66120efb913835fed8b99c1033c7be8f30f4))
 - 👷 atualizar nome do fluxo de trabalho de PR automático ([42cb7eb](https://github.com/heliomarpm/reusable-workflows/commit/314958ec016b4813654e5ee271be4))
 
----
 
 ## [v0.0.4] - 2026-10-06
 
@@ -464,7 +447,6 @@ All notable changes to this project will be documented in this file.
 - 📝 renomear workflow de changelog ([d23e661](https://github.com/heliomarpm/reusable-workflows/commit/d23e66120efb913835fed8b99c1033c7be8f30f4))
 - 👷 atualizar nome do fluxo de trabalho de PR automático ([42cb7eb](https://github.com/heliomarpm/reusable-workflows/commit/42cb7eb5302314958ec016b4813654e5ee271be4))
 
----
 
 ## [v0.0.3] - 2026-10-04
 
@@ -483,7 +465,6 @@ All notable changes to this project will be documented in this file.
 - ﻿fix(cd-pr): forward project-path to semantic-release and improve error summaries ([cfc255d](https://github.com/heliomarpm/reusable-workflows/commit/cfc255d7f6f0263e744f76707a0accaa02ac2bec))
 - ﻿fix(semantic-release): prevent stdout pollution in config resolution and fix plugin paths ([c952641](https:reusable-workflowsiomarpm/reusable-workflows/commit/c952641fac6d7662d4349f941ba134a44cd25253))
 
----
 
 ## [v0.0.2] - 2026-10-03
 
@@ -503,7 +484,6 @@ All notable changes to this project will be documented in this file.
 ### ⚠️ Breaking Changes
 - **workflows**: ♻️ reestruturar CI/CD com composite actions e estratégias de promoção ([0dc3a69](https://github.com/heliomarpm/reusable-workflows/commit/0dc3a69f1646580c9f96f44afdceabcc1ff19e96))
 
----
 
 ## [v0.0.1] - 2026-10-03
 

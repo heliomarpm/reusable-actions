@@ -158,3 +158,83 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "changelog: bump PATCH ao colidir com versão SemVer existente no CHANGELOG (ex: v0.3.0 -> v0.3.1)" {
+  cat <<'EOF' > CHANGELOG.md
+# 📦 Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [v0.3.0] - 2026-10-08
+
+### 🚀 Features
+- funcionalidade inicial ([1111111](http://commit))
+EOF
+  git add CHANGELOG.md
+  git commit -m "chore(release): v0.3.0 [skip ci]" >/dev/null 2>&1
+  git tag -a "v0.3.0" -m "v0.3.0"
+
+  echo "novo fix" >> file.txt
+  git add file.txt
+  git commit -m "fix: correcao subsequente" >/dev/null 2>&1
+
+  export CURRENT_BRANCH="main"
+  export INPUT_BRANCH="main"
+  export COMMIT_CHANGELOG="false"
+  export CHANGELOG_FILE="CHANGELOG.md"
+  export VERSION_FORMAT="v%major.%minor.%patch"
+
+  run bash "$ROOT_DIR/scripts/shared/changelog/run.sh"
+  [ "$status" -eq 0 ]
+
+  # Deve ter criado a versão v0.3.1 e NÃO v0.3.0.1
+  run grep -F "## [v0.3.1] - " CHANGELOG.md
+  [ "$status" -eq 0 ]
+
+  run grep -F "v0.3.0.1" CHANGELOG.md
+  [ "$status" -ne 0 ]
+
+  # Não deve conter literais de escape ou divisores '---' antes das seções
+  run grep -F '\n' CHANGELOG.md
+  [ "$status" -ne 0 ]
+  run grep -E '^---$' CHANGELOG.md
+  [ "$status" -ne 0 ]
+}
+
+@test "changelog: insere nova versão no topo preservando estrutura sem divisores redundantes '---'" {
+  cat <<'EOF' > CHANGELOG.md
+# 📦 Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [v0.3.0] - 2026-10-08
+
+### 🚀 Features
+- feature v0.3.0 ([1111111](http://commit))
+EOF
+  git add CHANGELOG.md
+  git commit -m "chore(release): v0.3.0 [skip ci]" >/dev/null 2>&1
+  git tag -a "v0.3.0" -m "v0.3.0"
+
+  echo "nova feature" >> file.txt
+  git add file.txt
+  git commit -m "feat: nova feature apos v0.3.0" >/dev/null 2>&1
+
+  export CURRENT_BRANCH="main"
+  export INPUT_BRANCH="main"
+  export COMMIT_CHANGELOG="false"
+  export CHANGELOG_FILE="CHANGELOG.md"
+  export VERSION_FORMAT="v%major.%minor.%patch"
+
+  run bash "$ROOT_DIR/scripts/shared/changelog/run.sh"
+  [ "$status" -eq 0 ]
+
+  # Não deve conter divisores '---' antes de cabeçalhos de versão
+  run grep -E '^---$' CHANGELOG.md
+  [ "$status" -ne 0 ]
+
+  # Garante ordem das versões
+  run head -n 10 CHANGELOG.md
+  [ "$status" -eq 0 ]
+}
+
+
