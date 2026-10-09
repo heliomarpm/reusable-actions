@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.4.0] - 2026-10-09
+
+### 🚀 Features
+- teste ([04b596b](https://github.com/heliomarpm/reusable-workflows/commit/04b596b8e458192a8a2b82676edbc091ab4264cf))
+
+### 🐛 Bug Fixes
+- **changelog**: 🐛 corrigir escape de divisores e incremento semver de patch ([61c6702](https://github.com/heliomarpm/reusable-workflows/commit/61c67027dfb1651e4a01ee7f23a4189271b80cb3))
+
+### ♻️ Code Refactoring
+- **release**: ♻️ extrair semver-helpers e priorizar inputs ([01fdebb](https://github.com/heliomarpm/reusable-workflows/commit/01fdebbcabd0a1a0ac0be77a927217e4f850db3a))
+
 ## [v0.3.1] - 2026-10-08
 
 ### 🚀 Features
@@ -557,4 +568,3 @@ reusable-workflows
 
 ### 🔄 Other Changes
 - Initial commit ([e7518b7](https://github.com/heliomarpm/reusable-workflows/commit/e7518b753c4e6da322f1557dbf171de9629d3bb4))
-
